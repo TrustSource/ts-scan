@@ -1,0 +1,9 @@
+# Include the license file
+include LICENSE
+
+# Markdown readme files
+include README.md
+include _config.yml
+
+# Include the data files
+recursive-include data *
