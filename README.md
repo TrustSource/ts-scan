@@ -1,7 +1,12 @@
-# TrustSource PIP Plugin
+# TrustSource scanner
 
-The **ts-pip-plugin** scans a Python project for all installed pip modules. The plugin parses import statements of all project's source files and recursively extracts the complete module dependency tree. 
-The collected information is posted to the TrustSource service or will store it locally as JSON structure.
+The **ts-scan** scans your project for all package depedencies. It supports following build systems
+
+- Python (wheel) 
+- Maven
+
+The collected information is stored locally as JSON structure and can be posted to the TrustSource service for the analysis.  
+
 
 ## Installation
 
@@ -9,31 +14,69 @@ The collected information is posted to the TrustSource service or will store it 
 
 - **pip** - is often already contained in the Python distribution but in some cases, please, follow the pip's [installation instruction](https://pip.pypa.io/en/stable/installing/) 
 
+#### Installation from the PyPI repository
+
+```shell
+pip install ts-scan
+```
+
 #### Installation from a local folder
 
-```markdown
+```shell
 cd <path to the ts-pip-plugin>
 pip install ./ --process-dependency-links
 ```
 
 ## Usage
 
-```markdown
-ts-pip-plugin <path to the project directory>
+### Help
+
+```shell
+ts-scan --help
 ```
 
-#### Requirements
+### Scan
 
-- **ts-plugin.json** - settings file in the project's directory
+```shell
+ts-scan scan -o <path to the output file> <path to the project directory>
+```
 
-## Project settings (ts-plugin.json)
+More info
 
-- **project** : String - project name
-- **credentials** : String [optional] - location of the file containing login information (userName and appKey) for the ECS service. Ignored: if a userName or appKey keys are present in the config file
-- **userName** : String - TrustSource login name (optional)
-- **appKey** : String - TrustSource key for apps
-- **skipTransfer** : Bool - outputs the scan results into the stdout without submitting to the ECS service
+```shell
+ts-scan scan --help
+```
+
+### Upload
+
+```shell
+ts-scan upload --project-name <TrustSource project name> --api-key <TrustSource API key> <path to the scan JSON file>
+```
+
+#### More info
+
+```shell
+ts-scan upload --help
+```
+
+### Import SBOMs
+
+Supported formats
+
+- SPDX RDF (spdx-rdf)
+- SPDX JSON (spdx-json)
+- CycloneDX (cyclonedx)
+
+```shell
+ts-scan import -f <SBOM format> -v <SBOM format version> --module <SBOM module name> --module-id <SBOM module id> --project-name <TrustSource project name> --api-key <TrustSource API key> <path to the SBOM file>
+```
+
+#### More info
+
+```shell
+ts-scan import --help
+```
 
 ## License
 
-[ASL-2.0](https://github.com/trustsource/ts-pip-plugin/blob/master/LICENSE)
+[Apache-2.0](https://github.com/trustsource/ts-pip-plugin/blob/master/LICENSE)

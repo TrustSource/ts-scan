@@ -13,6 +13,7 @@ from pathlib import Path
 from alive_progress import alive_bar
 
 from ts_python_client.cli import start, scan, upload, UploadCommand
+from ts_python_client.commands import parse_cmd_opts_from_args
 
 from .pm import DependencyScan
 
@@ -53,7 +54,7 @@ def scan_dependencies(paths: [Path], enable_deepscan: bool, xdeepscan: []) -> De
 @click.option('--Xdeepscan',
               default=[],
               multiple=True,
-              help='Specifies an option which should be passed to the DeepScan')
+              help='Specifies an option which should be passed to the DeepScan (used when DeepScan results are uploaded)')
 @upload.impl
 def upload_data(data, base_url, api_key, xdeepscan: [str]):
     from ts_deepscan.cli import upload as ds_cmd
@@ -64,7 +65,7 @@ def upload_data(data, base_url, api_key, xdeepscan: [str]):
         deepscans_uploaded = {}
 
         ds_args = list(itertools.chain.from_iterable(xd.split(',') for xd in xdeepscan))
-        ds_opts = ds_cmd.parse_opts_from_args(ds_args)
+        ds_opts = parse_cmd_opts_from_args(ds_cmd, ds_args)
 
         with alive_bar(len(deepscans), title='Uploading deepscans') as progress:
             for k, d in deepscans:
