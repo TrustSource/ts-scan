@@ -1,53 +1,11 @@
 import os
-import sys
 
 from graph_tool.all import load_graph, Graph, Vertex
 
 from pathlib import Path
 from typing import Iterable
 
-#from . import DependencyScan, Dependency, License
-
-#######################################################
-# IMPORT BY COPY-PASTE (tm) ONLY FOR TESTING PURPOSES #
-# REMOVE AFTER TESTING                                #
-#######################################################
-
-class DependencyScan:
-    """dummy class for testing purposes"""
-    def __init__(self):
-        pass
-
-from dataclasses import dataclass, field
-from typing import List, Dict
-
-@dataclass
-class Dependency:
-    key: str
-    name: str
-
-    repoUrl: str = ''
-    homepageUrl: str = ''
-    description: str = ''
-    checksum: str = ''
-    private: bool = False
-
-    versions: List[str] = field(default_factory=lambda: [])
-    dependencies: List['Dependency'] = field(default_factory=lambda: [])
-    licenses: List['License'] = field(default_factory=lambda: [])
-
-    meta: Dict = field(default_factory=lambda: {})
-
-    def __post_init__(self):
-        self.__files = []
-
-    @property
-    def files(self):
-        return self.__files
-    
-#####################
-# END OF COPY-PASTE #
-#####################
+from . import DependencyScan, Dependency
 
 
 def scan(path: Path) -> DependencyScan:
@@ -139,8 +97,3 @@ class MavenScan(DependencyScan):
             dep.dependencies = [self._create_dep_from_vertex(child) for child in v.out_neighbors()]
 
         return dep
-    
-
-if __name__ == "__main__":
-    test_scan = scan("/home/soren/eacg/sample_projects/maven/maven-project-example/")
-

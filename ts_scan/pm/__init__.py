@@ -3,6 +3,7 @@ import abc
 from pathlib import Path
 from typing import Optional, List, Dict, Iterable
 from dataclasses import dataclass, field, asdict
+from itertools import chain
 
 from ts_deepscan.scanner import Scan as DSScan
 from ts_python_client.commands.ScanCommand import Scan
@@ -45,6 +46,35 @@ class DependencyScan(Scan, abc.ABC):
             d = deps.pop()
             deps.extend(d.dependencies)
             yield d
+
+
+class MergedScan(DependencyScan):
+    def __init__(self, *scans: DependencyScan):
+        self.__scans = list(scans)
+        
+        if scans:
+            self.__module = scans[0].module
+            self.__module_id = scans[0].moduleId
+
+        else:
+            self.__module = self.__module_id = None
+
+    
+    @property
+    def module(self):
+        return self.__module
+    
+    @property
+    def moduleId(self):
+        return self.__module_id
+    
+    @property
+    def dependencies(self) -> Iterable['Dependency']:
+        return chain(scan.dependencies for scan in self.__scans)
+
+
+    def append(self, scan):
+        self.__scans.append(scan)
 
 
 @dataclass
