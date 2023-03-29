@@ -3,16 +3,16 @@ import os
 from graph_tool.all import load_graph, Graph, Vertex
 
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Optional
 
-from . import DependencyScan, Dependency
+from . import DependencyScan, Dependency, License
 
 
-def scan(path: Path) -> DependencyScan:
+def scan(path: Path) -> Optional[DependencyScan]:
     _scan = MavenScan(path)
     _scan.execute()
 
-    return _scan
+    if len(_scan) > 0: return _scan
 
 
 class MavenScan(DependencyScan):
@@ -40,6 +40,10 @@ class MavenScan(DependencyScan):
     @property
     def dependencies(self) -> Iterable['Dependency']:
         return self.__dependencies
+    
+
+    def __len__(self):
+        return len(self.dependencies)
     
     
     def execute(self):
