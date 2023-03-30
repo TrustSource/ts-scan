@@ -39,7 +39,7 @@ def scan_dependencies(paths: [Path], enable_deepscan: bool, xdeepscan: []) -> De
 
     if res and enable_deepscan:
         ds_args = list(itertools.chain.from_iterable(xd.split(',') for xd in xdeepscan))
-        ds_opts = ds_cmd.parse_opts_from_args(ds_args)
+        ds_opts = parse_cmd_opts_from_args(ds_cmd, ds_args)
 
         scanner = ts_deepscan.create_scanner(**ds_opts)
         for dep in res.iterdeps():
