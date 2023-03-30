@@ -16,6 +16,7 @@ setup(
     classifiers=[],
     install_requires=[
         'wheel',
+        'defusedxml',
         'build',
         'importlib-metadata',
         'alive-progress',

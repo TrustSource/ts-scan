@@ -1,0 +1,6 @@
+defusedxml
+build
+importlib-metadata
+alive-progress
+ts-python-client>=2.0.0
+ts-deepscan>=2.0.0
