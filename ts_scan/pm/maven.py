@@ -1,9 +1,6 @@
 import os
 import subprocess
 
-# TODO: change to igraph library, since graph-tool is not available on PyPI
-from graph_tool.all import load_graph, Graph, Vertex
-
 from pathlib import Path
 from typing import Iterable, Optional, Tuple, List
 from glob import glob
@@ -11,6 +8,7 @@ from glob import glob
 from defusedxml import ElementTree
 
 from . import DependencyScan, Dependency, License
+from .tree_utils import Tree
 
 
 def scan(path: Path) -> Optional[DependencyScan]:
@@ -28,7 +26,7 @@ class MavenScan(DependencyScan):
         self.__processed_deps = set()
         self.__module = None
         self.__module_id = None
-        self.__graph = None
+        self.__tree = None
         self.__local_rep = None
 
         self.__dependencies = []
@@ -54,47 +52,25 @@ class MavenScan(DependencyScan):
     
     def execute(self):
         os.chdir(self.__path)
-        os.system("mvn dependency:tree -DoutputType=dot -DoutputFile=deps.dot")
+        os.system("mvn dependency:tree -DoutputType=text -DoutputFile=deps.tree")
 
         self.__local_rep = _find_local_repository()
 
-        self.__graph = g = load_graph("deps.dot")
+        self.__tree = t = Tree.from_maven_file("deps.tree")
 
-        os.remove("deps.dot")
-        
-        root = self._find_root(g)
+        os.remove("deps.tree")
+    
 
-        group_id, artifact_id, *_ = self._vertex_name(root, g)
+        group_id, artifact_id, *_ = t.data
         self.__module = artifact_id
         self.__module_id = group_id + ":" + artifact_id
 
-        self.__dependencies = [self._create_dep_from_vertex(child) for child in root.out_neighbors()]
-
-
-    def _find_root(self, g: Graph) -> Vertex:
-        vertex = g.vertex(0)
-        depth = 0
-
-        while depth < 100:
-            parents = list(vertex.in_neighbors())
-
-            if len(parents) == 0:
-                return vertex
-            
-            else:
-                vertex = parents[0]
-
-        raise ValueError("dependency graph not a tree or too deep")
-
-
-    def _vertex_name(self, v: Vertex, g: Graph) -> str:
-        return g.vertex_properties["vertex_name"][v]
+        self.__dependencies = [self._create_dep_from_node(child) for child in t._children]
     
 
-    def _create_dep_from_vertex(self, v: Vertex) -> Dependency:
+    def _create_dep_from_node(self, node: Tree) -> Dependency:
         # example coordinates: org.tmatesoft.svnkit:svnkit:jar:1.8.7:provided
-
-        coords = self._vertex_name(v, self.__graph)
+        coords = node.data
         print(coords) 
         group_id, artifact_id, *_, version, _ = coords.split(":")
 
@@ -119,7 +95,7 @@ class MavenScan(DependencyScan):
         if artifact_id not in self.__processed_deps:
             self.__processed_deps.add(artifact_id)
 
-            dep.dependencies = [self._create_dep_from_vertex(child) for child in v.out_neighbors()]
+            dep.dependencies = [self._create_dep_from_node(child) for child in node.children]
 
         return dep
     
