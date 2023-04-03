@@ -81,8 +81,3 @@ class Tree:
     @property
     def children(self) -> List['Tree']:
         return self._children
-
-
-if __name__ == "__main__":
-    t = Tree.from_maven_file("/home/soren/eacg/sample_projects/maven/maven-project-example/deps.tree")
-    print(t)

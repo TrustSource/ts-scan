@@ -139,6 +139,3 @@ def _parse_pom(path: Path) -> Tuple[str, List["License"]]:
     licenses = [License(n.text.strip(), u.text.strip()) for n, u in zip(license_names, license_urls)]
 
     return url, licenses
-
-if __name__ == "__main__":
-    test_scan = scan("/home/soren/eacg/sample_projects/maven/maven-project-example")
