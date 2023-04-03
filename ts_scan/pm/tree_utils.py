@@ -21,10 +21,7 @@ class Tree:
                 else:
                     new_indent = 0
 
-
                 rest = re.search(r'[a-zA-Z].*', line)
-
-                print(new_indent, line, sep="")
 
                 new_vertex = Tree()
                 new_vertex._data = line[rest.start() : rest.end()].strip()
