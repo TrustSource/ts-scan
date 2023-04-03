@@ -1,6 +1,7 @@
 import abc
 
-from typing import List, Dict, Iterable
+from pathlib import Path
+from typing import Optional, List, Dict, Iterable
 from dataclasses import dataclass, field, asdict
 
 from ts_deepscan.scanner import Scan as DSScan
@@ -63,12 +64,23 @@ class Dependency:
 
     meta: Dict = field(default_factory=lambda: {})
 
+
     def __post_init__(self):
-        self.__files = []
+        self.__files: List[Path] = []
+        self.__license_file: Optional[Path] = None
+
 
     @property
-    def files(self):
+    def files(self) -> List[Path]:
         return self.__files
+
+    @property
+    def license_file(self) -> Optional[Path]:
+        return self.__license_file
+
+    @license_file.setter
+    def license_file(self, value: Path):
+        self.__license_file = value
 
 
 @dataclass

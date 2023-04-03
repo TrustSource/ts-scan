@@ -7,16 +7,17 @@ import glob
 import build.util
 
 from pathlib import Path
-from typing import List, Iterable, Optional
+from typing import List, Optional, Iterable
 from importlib.metadata import distribution, PackageNotFoundError
 
 from . import DependencyScan, Dependency, License
 
 
-def scan(path: Path) -> DependencyScan:
+def scan(path: Path) -> Optional[DependencyScan]:
     _scan = PypiScan(path)
     _scan.execute()
-    return _scan
+
+    return _scan if _scan.dependencies else None
 
 
 class PypiScan(DependencyScan):
@@ -99,8 +100,11 @@ class PypiScan(DependencyScan):
             if reqs := dist.requires:
                 dep.dependencies = [d for pkg in _extract_required_pkgs(reqs) if (d := self._create_dep(pkg))]
 
-            if srcs := [dist.locate_file(f) for f in dist.files]:
+            if srcs := [Path(dist.locate_file(f)) for f in dist.files]:
                 dep.files.extend(srcs)
+
+            if lic_file := metadata.get('License-File', None):
+                dep.license_file = next((f for f in dep.files if f.name == lic_file), None)
 
         return dep
 

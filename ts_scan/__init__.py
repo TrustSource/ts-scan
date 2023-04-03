@@ -10,6 +10,8 @@ import itertools
 import ts_deepscan
 
 from pathlib import Path
+from typing import Iterable
+
 from alive_progress import alive_bar
 
 from ts_python_client.cli import start, scan, upload, UploadCommand
@@ -22,6 +24,19 @@ def main():
     start()
 
 
+def _do_scan(paths: [Path]) -> Iterable[DependencyScan]:
+    """
+    Imports and excutes actual scan routines
+    :param paths: List of paths to be scanned
+    :return: An iterable over scan results
+    """
+    from .pm.pypi import scan as pypi_scan
+
+    for p in paths:
+        if scan := pypi_scan(p):
+            yield scan
+
+
 @click.option('--enable-deepscan',
               default=False,
               is_flag=True,
@@ -32,23 +47,36 @@ def main():
               help='Specifies an option which should be passed to the DeepScan')
 @scan.impl
 def scan_dependencies(paths: [Path], enable_deepscan: bool, xdeepscan: []) -> DependencyScan:
-    from .pm.pypi import scan as pypi_scan
     from ts_deepscan.cli import scan as ds_cmd
 
-    res = pypi_scan(paths[0]) if paths else DependencyScan()
+    ds_scanner = None
+    ds_dataset = None
 
-    if res and enable_deepscan:
+    if enable_deepscan:
         ds_args = list(itertools.chain.from_iterable(xd.split(',') for xd in xdeepscan))
         ds_opts = parse_cmd_opts_from_args(ds_cmd, ds_args)
 
-        scanner = ts_deepscan.create_scanner(**ds_opts)
+        ds_scanner = ts_deepscan.create_scanner(**ds_opts)
+        for analyser in ds_scanner.analysers:
+            if ds_dataset := getattr(analyser, 'dataset', None):
+                break
+
+    if not ds_dataset:
+        ds_dataset = ts_deepscan.create_dataset()
+
+    for res in _do_scan(paths):
         for dep in res.iterdeps():
-            if sources := dep.files:
+            if sources := dep.files and ds_scanner:
                 sources = [Path(src) for src in sources]
-                ds_res = ts_deepscan.execute_scan(sources, scanner, title=dep.key)
+                ds_res = ts_deepscan.execute_scan(sources, ds_scanner, title=dep.key)
                 res.deepscans[dep.key] = ds_res
 
-    return res
+            if (lic_file := dep.license_file) and lic_file.exists() and ds_dataset:
+                with lic_file.open(errors="surrogateescape") as fp:
+                    if lic_file_res := ts_deepscan.analyser.textutils.analyse_license_text(fp.read(), ds_dataset):
+                        dep.meta['license_file'] = lic_file_res
+
+        yield res
 
 
 @click.option('--Xdeepscan',
