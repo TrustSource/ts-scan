@@ -15,7 +15,7 @@ def scan(path: Path) -> Optional[DependencyScan]:
     _scan = MavenScan(path)
     _scan.execute()
 
-    if len(_scan) > 0: return _scan
+    return _scan if _scan.dependencies else None
 
 
 class MavenScan(DependencyScan):

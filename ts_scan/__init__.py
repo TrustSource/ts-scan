@@ -17,9 +17,13 @@ def do_scan(paths: [Path]) -> Iterable[DependencyScan]:
     :return: An iterable over scan results
     """
     from .pm.pypi import scan as pypi_scan
+    from .pm.maven import scan as maven_scan
 
     for p in paths:
         if scan := pypi_scan(p):
+            yield scan
+
+        if scan := maven_scan(p):
             yield scan
 
 
