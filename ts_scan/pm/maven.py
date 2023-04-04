@@ -84,10 +84,13 @@ class MavenScan(DependencyScan):
             path = _artifact_dir_from_coords(coords, self.__local_rep)
             pom = glob(str(path / "*.pom"))[0]
 
-            url, licenses = _parse_pom(pom)
+            url, description, licenses = _parse_pom(pom)
 
             dep.homepageUrl = url
+            dep.description = description
             dep.licenses = licenses
+
+            dep.files.append(path)
 
         except:
             pass
@@ -127,15 +130,16 @@ def _artifact_dir_from_coords(coords: str, local_rep: Path) -> Path:
         raise FileNotFoundError(f"The directory for {coords} is not at the suspected location: {full_path}")
     
 
-def _parse_pom(path: Path) -> Tuple[str, List["License"]]:
+def _parse_pom(path: Path) -> Tuple[str, str, List["License"]]:
     tree = ElementTree.parse(path)
     namespaces = {'xmlns' : 'http://maven.apache.org/POM/4.0.0'}
 
     url = tree.find("/xmlns:url", namespaces=namespaces).text
+    description = tree.find("/xmlns:description", namespaces=namespaces).text
 
     license_names = tree.findall("/xmlns:licenses/xmlns:license/xmlns:name", namespaces=namespaces)
     license_urls = tree.findall("/xmlns:licenses/xmlns:license/xmlns:url", namespaces=namespaces)
 
     licenses = [License(n.text.strip(), u.text.strip()) for n, u in zip(license_names, license_urls)]
 
-    return url, licenses
+    return url, description, licenses
