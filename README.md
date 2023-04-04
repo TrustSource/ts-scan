@@ -3,6 +3,7 @@
 The **ts-scan** scans your project for all package depedencies. It supports following build systems
 
 - Python (wheel)
+- Maven
 
 The collected information is stored locally as JSON structure and can be posted to the TrustSource service for the analysis.  
 
