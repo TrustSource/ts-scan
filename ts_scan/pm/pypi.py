@@ -51,7 +51,12 @@ class PypiScan(DependencyScan):
             if p.is_dir():
                 pkg_setup = p / "setup.py"
                 if pkg_setup.exists():
-                    metadata = build.util.project_wheel_metadata(p, isolated=False)
+                    try:
+                        metadata = build.util.project_wheel_metadata(p, isolated=False)
+                    except Exception as err:
+                        print(f'An error occured while building packages metadata')
+                        exit(2)
+
                     self.__dependencies.append(self._create_dep_from_metadata(metadata))
                 else:
                     stack.extend([p/f for f in glob.glob('*.py', root_dir=p)])

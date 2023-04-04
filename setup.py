@@ -6,7 +6,7 @@ setup(
         'ts_scan',
         'ts_scan.pm'
     ],
-    version='0.1.1',
+    version='0.1.2',
     description='TrustSource PM scanner',
     author='EACG GmbH',
     license='Apache-2.0',
@@ -19,11 +19,11 @@ setup(
         'build',
         'importlib-metadata',
         'alive-progress',
-        'ts-python-client==2.0.1',
-        'ts-deepscan==2.0.1'
+        'ts-python-client==2.0.2',
+        'ts-deepscan==2.0.2'
     ],
     scripts=['ts-scan'],
     entry_points={
-        'console_scripts': ['ts-scan=ts_scan:main'],
+        'console_scripts': ['ts-scan=ts_scan.cli:main'],
     }
 )
