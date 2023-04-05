@@ -38,6 +38,10 @@ class DependencyScan(Scan, abc.ABC):
     @abc.abstractmethod
     def dependencies(self) -> Iterable['Dependency']:
         raise NotImplemented()
+    
+    @abc.abstractmethod
+    def __len__(self):
+        raise NotImplemented()
 
     def iterdeps(self) -> Iterable['Dependency']:
         deps = list(self.dependencies)

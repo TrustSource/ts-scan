@@ -16,9 +16,12 @@ setup(
     classifiers=[],
     install_requires=[
         'wheel',
+        'defusedxml',
         'build',
         'importlib-metadata',
         'alive-progress',
+        'requests',
+        'numpy',
         'ts-python-client==2.0.2',
         'ts-deepscan==2.0.2'
     ],
