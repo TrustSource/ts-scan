@@ -7,7 +7,7 @@ from typing import Iterable
 
 from ts_python_client.commands import parse_cmd_opts_from_args
 
-from .pm import DependencyScan, MergedScan
+from .pm import DependencyScan
 
 
 def do_scan(paths: [Path]) -> Iterable[DependencyScan]:

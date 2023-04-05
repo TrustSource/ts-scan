@@ -7,7 +7,7 @@ from glob import glob
 
 from defusedxml import ElementTree
 
-from . import DependencyScan, Dependency, License
+from .. import DependencyScan, Dependency, License
 from .tree_utils import Tree
 
 

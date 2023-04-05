@@ -4,5 +4,5 @@ importlib-metadata
 alive-progress
 numpy
 requests
-ts-python-client>=2.0.0
-ts-deepscan>=2.0.0
+ts-python-client>=2.0.2
+ts-deepscan>=2.0.2
