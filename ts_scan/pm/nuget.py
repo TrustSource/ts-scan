@@ -11,7 +11,6 @@ from defusedxml import ElementTree
 
 from . import Dependency, DependencyScan, License
 
-
 class ProjectType(Enum):
     NUSPEC = 1
     PACKAGE_REFERENCE = 2
@@ -115,7 +114,8 @@ class NugetScan(DependencyScan):
         names, paths = zip(*[p.split(",")[:2] for p in projects])
 
         names = [n.strip(' "') for n in names]
-        paths = [PureWindowsPath(p.strip(' "')).parent for p in paths]
+        paths = [Path(PureWindowsPath(p.strip(' "')).as_posix()) for p in paths]
+        paths = [p.parent for p in paths if p.exists()]
 
         deps = []
         
@@ -280,6 +280,7 @@ if __name__ == "__main__":
     #test_scan = NugetScan("/home/soren/eacg/sample_projects/nuget/ts-dotnet/TrustSource/TS-NetCore-Scanner.ConsoleApp")
     #test_scan = NugetScan("/home/soren/eacg/sample_projects/nuget/ts-dotnet/TrustSource")
     #test_scan = NugetScan("/home/soren/eacg/sample_projects/nuget/AutoMapper/src/AutoMapper")
-    test_scan = NugetScan("/home/soren/eacg/sample_projects/nuget/AutoMapper")
+    #test_scan = NugetScan("/home/soren/eacg/sample_projects/nuget/AutoMapper")
     #test_scan = NugetScan("/home/soren/eacg/sample_projects/nuget/ts-dotnet/TrustSource/TS-NET-Scanner.Common/")
+    test_scan = NugetScan("/home/soren/eacg/sample_projects/nuget/Castleproject.Core")
     test_scan.execute()
