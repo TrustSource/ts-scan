@@ -2,7 +2,7 @@ import subprocess
 import os
 import json
 
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Iterable, List, Tuple, Dict ,Optional
 from enum import Enum
 from glob import glob
@@ -36,6 +36,7 @@ class NugetScan(DependencyScan):
         self.__module_id = None
         self.__global_packages_dir = None
         self.__nuget_command = ["nuget"]
+        self.__n_fail = 0
 
         self.__dependencies = []
 
@@ -62,6 +63,8 @@ class NugetScan(DependencyScan):
 
         self.__dependencies = self._process_package(self.__path)
 
+        print(f"Scan complete, failed to process {self.__n_fail} dependenc{'y' if self.__n_fail == 1 else 'ies'}.")
+
     
     def _process_package(self, path: Path, depth: int = 0) -> List[Dependency]:
         print(f"Processing dependency at: {' ' * depth}{path}")
@@ -79,28 +82,49 @@ class NugetScan(DependencyScan):
         
         elif ptype is ProjectType.SOLUTION:
             # extract projects from solution file, process them recursively
-            deps = []
+            deps = self._process_solution_file(files[0], depth=depth)
 
         return deps
     
     
     def _determine_project_type(self, path: Path) -> Tuple[ProjectType, Path]:
         if files := glob(str(path / "*.nuspec")):
-            return ProjectType.NUSPEC, files
+            return ProjectType.NUSPEC, [Path(f) for f in files]
         
         elif files := glob(str(path / "*.*proj")):
-            return ProjectType.PACKAGE_REFERENCE, files
+            return ProjectType.PACKAGE_REFERENCE, [Path(f) for f in files]
         
         elif files := glob(str(path / "packages.config")):
-            return ProjectType.PACKAGES_CONFIG, files
+            return ProjectType.PACKAGES_CONFIG, [Path(f) for f in files]
         
         elif files := glob(str(path / "*.sln")):
-            return ProjectType.SOLUTION, files
+            return ProjectType.SOLUTION, [Path(f) for f in files]
         
         else:
             raise FileNotFoundError("Could not determine project type")
         
     
+    def _process_solution_file(self, solution: Path, depth: int = 0) -> List[Dependency]:
+        with open(solution, "r") as f:
+            projects = [line for line in f if line.strip().startswith("Project(")]
+
+        # discard first Project line as it refers to itself
+        projects = projects[1:]
+
+        projects = [p.split("=")[-1].strip() for p in projects]
+        names, paths = zip(*[p.split(",")[:2] for p in projects])
+
+        names = [n.strip(' "') for n in names]
+        paths = [PureWindowsPath(p.strip(' "')).parent for p in paths]
+
+        deps = []
+        
+        for path in paths:
+            deps.extend(self._process_package(solution.parent / path, depth=depth))
+
+        return deps
+    
+
     def _process_with_lock_file(self, path: Path, project_file: Path, depth: int = 0) -> List[Dependency]:
         subprocess.run(self.__nuget_command + ["restore", str(path / project_file), "-UseLockFile"], stdout=subprocess.PIPE)
 
@@ -141,7 +165,7 @@ class NugetScan(DependencyScan):
 
                     elif dep_type == "project":
                         # dependency folder should be on the same level as project folder (i.e. sibling folder)
-                        candidates = glob("../*")
+                        candidates = glob(str(lockfile.parent.parent / "*"))
                         candidates = [d for d in candidates if Path(d.lower()).parts[-1] == dep_name.lower()]
                     
                         dep_id = dep.key
@@ -149,12 +173,18 @@ class NugetScan(DependencyScan):
                     if not dep_id in self.__processed_deps:
                         self.__processed_deps.add(dep_id)
 
-                        dep.files.append(candidates[0])
+                        if candidates:
+                            dep.files.append(candidates[0])
 
-                        # recursively create dependencies of dependency
-                        dep.dependencies = self._process_package(Path(dep.files[0]), depth=depth+1)
+                            # recursively create dependencies of dependency
+                            dep.dependencies = self._process_package(Path(dep.files[0]), depth=depth+1)
 
-                        deps.append(dep)
+                            deps.append(dep)
+                        
+                        else:
+                            self.__n_fail += 1
+                            print(f"Could not find dependency location for {dep.name}")
+                            print(f"Origin: {lockfile}")
 
         return deps
     
@@ -230,7 +260,6 @@ class NugetScan(DependencyScan):
 
         return return_dict
 
-
     @staticmethod
     def _determine_nuget_command() -> List['str']:
         try:
@@ -248,6 +277,9 @@ class NugetScan(DependencyScan):
     
 
 if __name__ == "__main__":
-    test_scan = NugetScan("/home/soren/eacg/sample_projects/nuget/ts-dotnet/TrustSource/TS-NetCore-Scanner.Engine")
+    #test_scan = NugetScan("/home/soren/eacg/sample_projects/nuget/ts-dotnet/TrustSource/TS-NetCore-Scanner.ConsoleApp")
+    #test_scan = NugetScan("/home/soren/eacg/sample_projects/nuget/ts-dotnet/TrustSource")
     #test_scan = NugetScan("/home/soren/eacg/sample_projects/nuget/AutoMapper/src/AutoMapper")
+    test_scan = NugetScan("/home/soren/eacg/sample_projects/nuget/AutoMapper")
+    #test_scan = NugetScan("/home/soren/eacg/sample_projects/nuget/ts-dotnet/TrustSource/TS-NET-Scanner.Common/")
     test_scan.execute()
