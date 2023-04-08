@@ -3,9 +3,11 @@ import os
 import json
 
 from pathlib import Path
-from typing import Iterable, List, Tuple
+from typing import Iterable, List, Tuple, Dict ,Optional
 from enum import Enum
 from glob import glob
+
+from defusedxml import ElementTree
 
 from . import Dependency, DependencyScan, License
 
@@ -15,6 +17,14 @@ class ProjectType(Enum):
     PACKAGE_REFERENCE = 2
     PACKAGES_CONFIG = 3
     SOLUTION = 4
+
+
+def scan(path: Path) -> Optional[DependencyScan]:
+    _scan = NugetScan(path)
+    _scan.execute()
+
+    return _scan if _scan.dependencies else None
+
 
 class NugetScan(DependencyScan):
     def __init__(self, path: Path):
@@ -53,19 +63,19 @@ class NugetScan(DependencyScan):
         self.__dependencies = self._process_package(self.__path)
 
     
-    def _process_package(self, path: Path) -> List[Dependency]:
-        print("Processing package:", path)
+    def _process_package(self, path: Path, depth: int = 0) -> List[Dependency]:
+        print(f"Processing dependency at: {' ' * depth}{path}")
 
         ptype, files = self._determine_project_type(path)
 
         deps = []
         if ptype is ProjectType.PACKAGE_REFERENCE or ptype is ProjectType.PACKAGES_CONFIG:
             # run nuget restore with option to create a lock file
-            deps = self._process_with_lock_file(path, Path(files[0]).parts[-1])
+            deps = self._process_with_lock_file(path, Path(files[0], depth=depth).parts[-1])
 
         elif ptype is ProjectType.NUSPEC:
             # parse nuspec file
-            deps = []
+            deps = self._create_deps_from_nuspec(files[0], depth=depth)
         
         elif ptype is ProjectType.SOLUTION:
             # extract projects from solution file, process them recursively
@@ -91,7 +101,7 @@ class NugetScan(DependencyScan):
             raise FileNotFoundError("Could not determine project type")
         
     
-    def _process_with_lock_file(self, path: Path, project_file: Path) -> List[Dependency]:
+    def _process_with_lock_file(self, path: Path, project_file: Path, depth: int = 0) -> List[Dependency]:
         subprocess.run(self.__nuget_command + ["restore", str(path / project_file), "-UseLockFile"], stdout=subprocess.PIPE)
 
         lockfile = path / "packages.lock.json"
@@ -99,10 +109,10 @@ class NugetScan(DependencyScan):
         if not lockfile.exists():
             raise FileNotFoundError("No lockfile was generated, something must have gone wrong")
         
-        return self._create_deps_from_lockfile(lockfile)
+        return self._create_deps_from_lockfile(lockfile, depth=depth)
         
 
-    def _create_deps_from_lockfile(self, lockfile: Path) -> List['str']:
+    def _create_deps_from_lockfile(self, lockfile: Path, depth: int = 0) -> List[Dependency]:
         with open(lockfile, "r") as f:
             lock_dict = json.load(f)
 
@@ -125,8 +135,7 @@ class NugetScan(DependencyScan):
                         dep.versions.append(dep_version)
 
                         # find package in global-packages
-                        candidates = glob(str(self.__global_packages_dir / "*" / "*"))
-                        candidates = [d for d in candidates if Path(d.lower()).parts[-2] == dep_name.lower() and Path(d.lower()).parts[-1] == dep_version]
+                        candidates = self._find_in_global_packages(dep_name, dep_version)
 
                         dep_id = dep.key + ":" + dep_version
 
@@ -143,9 +152,52 @@ class NugetScan(DependencyScan):
                         dep.files.append(candidates[0])
 
                         # recursively create dependencies of dependency
-                        dep.dependencies = self._process_package(Path(dep.files[0]))
+                        dep.dependencies = self._process_package(Path(dep.files[0]), depth=depth+1)
 
                         deps.append(dep)
+
+        return deps
+    
+
+    def _create_deps_from_nuspec(self, nuspec: Path, depth: int = 0) -> List[Dependency]:
+        ns = {"nuget": "http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd"}
+        tree = ElementTree.parse(nuspec)
+
+        deps = []
+
+        for xml_target in tree.findall("*/nuget:dependencies/nuget:group", namespaces=ns):
+            target = xml_target.get("targetFramework")
+
+            for xml_dep in xml_target.findall("nuget:dependency", namespaces=ns):
+                name = xml_dep.get("id")
+                version = xml_dep.get("version")
+
+                dep_key = "nuget:" + name
+                dep_id = dep_key + ":" + version
+
+                if not dep_id in self.__processed_deps:
+                    self.__processed_deps.add(dep_id)
+
+                    dep = Dependency(dep_key, name)
+                    dep.versions.append(version)
+                    dep.meta[".NET Target"] = target
+                    dep.meta["dependency type"] = "direct"
+
+                    if candidates := self._find_in_global_packages(name, version):
+                        dep_files = candidates[0]
+                        dep.files.append(dep_files)
+
+                        dep_nuspec = glob(str(dep_files / "*.nuspec"))[0]
+                        meta = self._metadata_from_nuspec(dep_nuspec)
+
+                        dep.licenses.append(License("", meta["licenseUrl"]))
+                        dep.homepageUrl = meta["projectUrl"]
+                        dep.description = meta["description"]
+                        dep.meta["copyright"] = meta["copyright"]
+
+                        dep.dependencies = self._process_package(dep_files, depth=depth+1)
+
+                    deps.append(dep)
 
         return deps
 
@@ -156,6 +208,28 @@ class NugetScan(DependencyScan):
 
         return result
     
+    def _find_in_global_packages(self, name: str, version: str) -> List[Path]:
+        """Finds all subfolders of the global-packages directory that match <name>/<version>/ (case insensitive)."""
+
+        candidates = glob(str(self.__global_packages_dir / "*" / "*"))
+        candidates = [Path(d.lower()) for d in candidates]
+        candidates = [d for d in candidates if d.parts[-2] == name.lower() and d.parts[-1] == version.lower()]
+    
+        return candidates
+    
+    @staticmethod
+    def _metadata_from_nuspec(nuspec: Path) -> Dict:
+        ns = {"nuget": "http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd"}
+        tree = ElementTree.parse(nuspec)
+        return_dict = {}
+
+        for tag in ("authors", "licenseUrl", "projectUrl", "description", "copyright"):
+            element = tree.find(f"*/nuget:{tag}", namespaces=ns)
+            
+            return_dict[tag] = element.text if element is not None else ""
+
+        return return_dict
+
 
     @staticmethod
     def _determine_nuget_command() -> List['str']:
@@ -175,4 +249,5 @@ class NugetScan(DependencyScan):
 
 if __name__ == "__main__":
     test_scan = NugetScan("/home/soren/eacg/sample_projects/nuget/ts-dotnet/TrustSource/TS-NetCore-Scanner.Engine")
+    #test_scan = NugetScan("/home/soren/eacg/sample_projects/nuget/AutoMapper/src/AutoMapper")
     test_scan.execute()
