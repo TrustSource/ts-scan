@@ -205,11 +205,12 @@ class NugetScan(DependencyScan):
                 dep_key = "nuget:" + name
                 dep_id = dep_key + ":" + version
 
+                dep = Dependency(dep_key, name)
+                dep.versions.append(version)
+
                 if not dep_id in self.__processed_deps:
                     self.__processed_deps.add(dep_id)
 
-                    dep = Dependency(dep_key, name)
-                    dep.versions.append(version)
                     dep.meta[".NET Target"] = target
                     dep.meta["dependency type"] = "direct"
 
@@ -227,7 +228,7 @@ class NugetScan(DependencyScan):
 
                         dep.dependencies = self._process_package(dep_files, depth=depth+1)
 
-                    deps.append(dep)
+                deps.append(dep)
 
         return deps
 
