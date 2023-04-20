@@ -178,13 +178,13 @@ class NugetScan(DependencyScan):
 
                             # recursively create dependencies of dependency
                             dep.dependencies = self._process_package(Path(dep.files[0]), depth=depth+1)
-
-                            deps.append(dep)
                         
                         else:
                             self.__n_fail += 1
                             print(f"Could not find dependency location for {dep.name}")
                             print(f"Origin: {lockfile}")
+
+                    deps.append(dep)
 
         return deps
     
