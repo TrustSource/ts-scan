@@ -1,4 +1,5 @@
 defusedxml
+semantic-version
 build
 importlib-metadata
 alive-progress

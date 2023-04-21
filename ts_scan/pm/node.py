@@ -1,6 +1,7 @@
 import os
 import json
 import requests
+from semantic_version import Version, NpmSpec
 
 from pathlib import Path
 from typing import Iterable, Optional, List
@@ -26,6 +27,7 @@ class NodeScan(DependencyScan):
         self.__module = None
         self.__module_id = None
         self.__failed_requests = 0
+        self.__lockfile_content = None
         
         self.__dependencies = []
 
@@ -50,26 +52,77 @@ class NodeScan(DependencyScan):
         os.chdir(self.__path)
         os.system("npm install")
 
-        self.__dependencies = self._flat_deps_from_lockfile(self.__path / "package-lock.json")
+        with open(self.__path / "package-lock.json") as lockfile:
+            self.__lockfile_content = json.load(lockfile)
 
 
-    def _flat_deps_from_lockfile(self, lockfile: Path) -> List[Dependency]:
-        with open(lockfile, "r") as f:
-            deps_dict = json.load(f)
+        #self.__dependencies = self._flat_deps_from_lockfile(self.__path / "package-lock.json")
 
-        deps = []
+        # first build dictionary that is indexable by name
+        self.__lookup = self._dict_from_lock(self.__lockfile_content)
 
-        print("Getting metadata for dependencies:")
+        # then traverse graph as described in lockfile
+        self.__dependencies = self._dep_from_lock(self.__lockfile_content).dependencies
 
-        for dep_path, dep_dict in tqdm(deps_dict["packages"].items()):
+
+    def _dict_from_lock(self, lock: dict) -> dict:
+        deps_dict = {}
+
+        for dep_path, dep_dict in lock["packages"].items():
             name = dep_path.split("/")[-1]
-            if name != "":
-                dep = self._metadata_from_registry(name, dep_dict["version"])
+            version = dep_dict["version"]
 
-                if dep: 
-                    deps.append(dep)
+            deps_dict.setdefault(name, {})
+            deps_dict[name][version] = dep_dict
+            deps_dict[name][version]["_path"] = dep_path
 
-        return deps
+        return deps_dict
+    
+
+    def _dep_from_lock(self, lock: dict, package_path: str = "") -> Dependency:
+        name = package_path.split("/")[-1]
+        version = lock["packages"][package_path]["version"]
+
+        dep = Dependency("npm:" + name, name)
+        dep.versions.append(version)
+
+        if name + version not in self.__processed_deps:
+            print(f"Getting metadata for {name} {version}...", end="", flush=True)
+
+            meta = self._metadata_from_registry(name, version)
+
+            if meta:
+                dep.licenses = meta.licenses
+                dep.description = meta.description
+                dep.homepageUrl = meta.homepageUrl
+                dep.repoUrl = meta.repoUrl
+                print(" Success!")
+            else:
+                print(" Failed!")
+
+            for dep_name, dep_version_range in lock["packages"][package_path].get("dependencies", {}).items():
+
+                # find appropriate dependency version
+                for dep_version, dep_version_dict in self.__lookup[dep_name].items():
+                    if dep_version_range == "latest":
+                        break
+
+                    try:
+                        range_spec = NpmSpec(dep_version_range)
+
+                    except ValueError:
+                        range_spec = NpmSpec("")
+
+                    if Version(dep_version) in range_spec:
+                        break
+
+                dep_path = dep_version_dict["_path"]
+
+                dep.dependencies.append(
+                    self._dep_from_lock(self.__lockfile_content, dep_path)
+                )
+
+        return dep
 
 
     def _metadata_from_registry(self, name: str, version: str) -> Optional[Dependency]:
@@ -90,7 +143,7 @@ class NodeScan(DependencyScan):
 
         dep = Dependency("npm:" + name, name)
 
-        dep.versions.append(meta["version"])
+        dep.versions.append(meta.get("version", ""))
 
         dep.description = meta.get("description", "")
         dep.homepageUrl = meta.get("homepage", "")
@@ -101,5 +154,6 @@ class NodeScan(DependencyScan):
         return dep
 
 if __name__ == "__main__":
-    test_scan = NodeScan("/home/soren/eacg/sample_projects/node/ts-node-client")
+    #test_scan = NodeScan("/home/soren/eacg/sample_projects/node/ts-node-client")
+    test_scan = NodeScan("/home/soren/eacg/sample_projects/node/sample-node-project")
     test_scan.execute()
