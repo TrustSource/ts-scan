@@ -17,6 +17,7 @@ setup(
     install_requires=[
         'wheel',
         'defusedxml',
+        'semanticversion',
         'build',
         'importlib-metadata',
         'alive-progress',
