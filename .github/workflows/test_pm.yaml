@@ -17,7 +17,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
-          cache-dependency-path: requirements-testing.txt
+          cache-dependency-path: 'requirements-testing.txt'
       - name: Lint with ruff
         run: |
           # stop the build if there are Python syntax errors or undefined names
