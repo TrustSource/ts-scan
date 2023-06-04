@@ -87,6 +87,7 @@ class NodeScan(DependencyScan):
         dep.versions.append(version)
 
         if name + version not in self.__processed_deps:
+            self.__processed_deps.add(name + version)
             print(f"Getting metadata for {name} {version}...", end="", flush=True)
 
             meta = self._metadata_from_registry(name, version)
@@ -155,5 +156,6 @@ class NodeScan(DependencyScan):
 
 if __name__ == "__main__":
     #test_scan = NodeScan("/home/soren/eacg/sample_projects/node/ts-node-client")
-    test_scan = NodeScan("/home/soren/eacg/sample_projects/node/sample-node-project")
+    #test_scan = NodeScan("/home/soren/eacg/sample_projects/node/sample-node-project")
+    test_scan = NodeScan("C:\\Users\\Soren\\eacg\\samples\\sample-node-project")
     test_scan.execute()
