@@ -104,7 +104,10 @@ class MavenScan(DependencyScan):
     
 
 def _find_local_repository() -> Path:
-    result = subprocess.run(["mvn", "help:evaluate", "-Dexpression=settings.localRepository", "-q", "-DforceStdout=true"], stdout=subprocess.PIPE)
+    result = subprocess.run(["mvn", "help:evaluate", "-Dexpression=settings.localRepository", "-q", "-DforceStdout=true"], 
+        stdout=subprocess.PIPE,
+        shell=True
+    )
 
     return Path(result.stdout.decode("utf-8"))
 
