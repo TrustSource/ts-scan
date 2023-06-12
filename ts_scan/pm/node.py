@@ -3,6 +3,7 @@ import json
 import requests
 from semantic_version import Version, NpmSpec
 
+from glob import glob
 from pathlib import Path
 from typing import Iterable, Optional, List
 
@@ -28,6 +29,7 @@ class NodeScan(DependencyScan):
         self.__module_id = None
         self.__failed_requests = 0
         self.__lockfile_content = None
+        self.__abs_module_path = Path(os.path.abspath(path))
         
         self.__dependencies = []
 
@@ -85,6 +87,12 @@ class NodeScan(DependencyScan):
 
         dep = Dependency("npm:" + name, name)
         dep.versions.append(version)
+
+        dep_dir = self.__abs_module_path / package_path
+        dep_files = glob(str(dep_dir) + "\\**", recursive=True)
+        dep_files = [p for p in dep_files if Path(p).is_file()]
+
+        dep.files.extend(dep_files)
 
         if name + version not in self.__processed_deps:
             self.__processed_deps.add(name + version)
@@ -159,3 +167,6 @@ if __name__ == "__main__":
     #test_scan = NodeScan("/home/soren/eacg/sample_projects/node/sample-node-project")
     test_scan = NodeScan("C:\\Users\\Soren\\eacg\\samples\\sample-node-project")
     test_scan.execute()
+
+    for dep in test_scan.dependencies:
+        print(dep.files)
