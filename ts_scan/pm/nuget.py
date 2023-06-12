@@ -174,10 +174,14 @@ class NugetScan(DependencyScan):
                         self.__processed_deps.add(dep_id)
 
                         if candidates:
-                            dep.files.append(candidates[0])
+                            dep_dir = candidates[0]
 
+                            dep_files = glob(str(dep_dir) + "/**", recursive=True)
+                            dep_files = [p for p in dep_files if Path(p).is_file()]
+                            dep.files.extend(dep_files)
+                            
                             # recursively create dependencies of dependency
-                            dep.dependencies = self._process_package(Path(dep.files[0]), depth=depth+1)
+                            dep.dependencies = self._process_package(Path(dep_dir), depth=depth+1)
                         
                         else:
                             self.__n_fail += 1
@@ -215,10 +219,13 @@ class NugetScan(DependencyScan):
                     dep.meta["dependency type"] = "direct"
 
                     if candidates := self._find_in_global_packages(name, version):
-                        dep_files = candidates[0]
-                        dep.files.append(dep_files)
+                        dep_dir = candidates[0]
+                        
+                        dep_files = glob(str(dep_dir) + "\\**", recursive = True)
+                        dep_files = [p for p in dep_files if Path(p).is_file()]
+                        dep.files.extend(dep_files)
 
-                        dep_nuspec = glob(str(dep_files / "*.nuspec"))[0]
+                        dep_nuspec = glob(str(dep_dir / "*.nuspec"))[0]
                         meta = self._metadata_from_nuspec(dep_nuspec)
 
                         dep.licenses.append(License("", meta["licenseUrl"]))
@@ -226,7 +233,7 @@ class NugetScan(DependencyScan):
                         dep.description = meta["description"]
                         dep.meta["copyright"] = meta["copyright"]
 
-                        dep.dependencies = self._process_package(dep_files, depth=depth+1)
+                        dep.dependencies = self._process_package(dep_dir, depth=depth+1)
 
                 deps.append(dep)
 
@@ -283,5 +290,10 @@ if __name__ == "__main__":
     #test_scan = NugetScan("/home/soren/eacg/sample_projects/nuget/AutoMapper/src/AutoMapper")
     #test_scan = NugetScan("/home/soren/eacg/sample_projects/nuget/AutoMapper")
     #test_scan = NugetScan("/home/soren/eacg/sample_projects/nuget/ts-dotnet/TrustSource/TS-NET-Scanner.Common/")
-    test_scan = NugetScan("/home/soren/eacg/sample_projects/nuget/Castleproject.Core")
+    #test_scan = NugetScan("/home/soren/eacg/sample_projects/nuget/Castleproject.Core")
+    test_scan = NugetScan("C:\\Users\\Soren\\eacg\\samples\\ts-dotnet\\TrustSource")
     test_scan.execute()
+
+    for dep in test_scan.dependencies:
+        print(dep.name)
+        print(dep.files)

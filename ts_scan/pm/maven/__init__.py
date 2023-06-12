@@ -90,7 +90,9 @@ class MavenScan(DependencyScan):
             dep.description = description
             dep.licenses = licenses
 
-            dep.files.append(path)
+            dep_files = glob(str(path) + "\\**", recursive=True)
+            dep_files = [p for p in dep_files if Path(p).is_file()]
+            dep.files.extend(dep_files)
 
         except:
             pass
@@ -104,7 +106,10 @@ class MavenScan(DependencyScan):
     
 
 def _find_local_repository() -> Path:
-    result = subprocess.run(["mvn", "help:evaluate", "-Dexpression=settings.localRepository", "-q", "-DforceStdout=true"], stdout=subprocess.PIPE)
+    result = subprocess.run(["mvn", "help:evaluate", "-Dexpression=settings.localRepository", "-q", "-DforceStdout=true"], 
+        stdout=subprocess.PIPE,
+        shell=True
+    )
 
     return Path(result.stdout.decode("utf-8"))
 
