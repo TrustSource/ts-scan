@@ -90,7 +90,9 @@ class MavenScan(DependencyScan):
             dep.description = description
             dep.licenses = licenses
 
-            dep.files.extend(glob(str(path) + "\\**", recursive=True))
+            dep_files = glob(str(path) + "\\**", recursive=True)
+            dep_files = [p for p in dep_files if Path(p).is_file()]
+            dep.files.extend(dep_files)
 
         except:
             pass
