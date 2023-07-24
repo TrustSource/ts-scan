@@ -45,7 +45,7 @@ class PypiScan(DependencyScan):
         return self.__dependencies
     
     def __len__(self):
-        return self.__dependencies
+        return len(self.__dependencies)
 
     def execute(self):
         stack = [self.__path]

@@ -10,7 +10,7 @@ import itertools
 import ts_deepscan
 
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, List
 
 from alive_progress import alive_bar
 
@@ -34,13 +34,36 @@ def main():
               default=[],
               multiple=True,
               help='Specifies an option which should be passed to the DeepScan')
+@click.option('--enable-ort',
+              default=False,
+              is_flag=True,
+              help='Additionally produce a scan of the package using ORT analyze')
+@click.option("--ort-i",
+              type=click.Path(exists=True, path_type=Path),
+              help="ORT input directory")
+@click.option("--ort-o",
+              type=click.Path(exists=True, path_type=Path),
+              help="ORT output directory")
+@click.option('--Xort',
+              default=[],
+              multiple=True,
+              help="Specifies an option which should be passed to ORT")
 @scan.impl
-def scan_dependencies(paths: [Path], enable_deepscan: bool, xdeepscan: []) -> Iterable[DependencyScan]:
+def scan_dependencies(paths: List[Path], 
+    enable_deepscan: bool, xdeepscan: list, 
+    enable_ort:bool, ort_i: Path, ort_o: Path, xort: list
+) -> Iterable[DependencyScan]:
+    
     for scan in do_scan(paths):
-        yield process_scan(scan, enable_deepscan=enable_deepscan, ds_args=xdeepscan)
-
-
-
+        print(enable_deepscan)
+        yield process_scan(scan, 
+            enable_deepscan=enable_deepscan, 
+            ds_args=xdeepscan,
+            enable_ort=enable_ort,
+            ort_i=ort_i,
+            ort_o=ort_o,
+            ort_args=xort
+        )
 
 
 @click.option('--Xdeepscan',
@@ -48,7 +71,7 @@ def scan_dependencies(paths: [Path], enable_deepscan: bool, xdeepscan: []) -> It
               multiple=True,
               help='Specifies an option which should be passed to the DeepScan (used when DeepScan results are uploaded)')
 @upload.impl
-def upload_data(data, base_url, api_key, xdeepscan: [str]):
+def upload_data(data, base_url, api_key, xdeepscan: List[str]):
     from ts_deepscan.cli import upload as ds_cmd
 
     deepscans = data.pop('deepscans', {})

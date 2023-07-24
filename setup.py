@@ -23,6 +23,7 @@ setup(
         'alive-progress',
         'requests',
         'numpy',
+        'docker',
         'ts-python-client==2.0.2',
         'ts-deepscan==2.0.2'
     ],
