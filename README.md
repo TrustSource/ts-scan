@@ -4,6 +4,8 @@ The **ts-scan** scans your project for all package depedencies. It supports foll
 
 - Python (wheel)
 - Maven
+- Nuget
+- NPM
 
 The collected information is stored locally as JSON structure and can be posted to the TrustSource service for the analysis.  
 

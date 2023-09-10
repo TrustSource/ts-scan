@@ -3,11 +3,9 @@ import json
 import requests
 from semantic_version import Version, NpmSpec
 
-from glob import glob
 from pathlib import Path
-from typing import Iterable, Optional, List
+from typing import Iterable, Optional
 
-from tqdm import tqdm
 
 from . import DependencyScan, Dependency, License
 
@@ -30,7 +28,8 @@ class NodeScan(DependencyScan):
         self.__failed_requests = 0
         self.__lockfile_content = None
         self.__abs_module_path = Path(os.path.abspath(path))
-        
+
+        self.__lookup = {}
         self.__dependencies = []
 
     @property
@@ -44,10 +43,6 @@ class NodeScan(DependencyScan):
     @property
     def dependencies(self) -> Iterable['Dependency']:
         return self.__dependencies
-    
-
-    def __len__(self):
-        return len(self.__dependencies)
     
 
     def execute(self):
@@ -67,7 +62,8 @@ class NodeScan(DependencyScan):
         self.__dependencies = self._dep_from_lock(self.__lockfile_content).dependencies
 
 
-    def _dict_from_lock(self, lock: dict) -> dict:
+    @staticmethod
+    def _dict_from_lock(lock: dict) -> dict:
         deps_dict = {}
 
         for dep_path, dep_dict in lock["packages"].items():
@@ -89,8 +85,8 @@ class NodeScan(DependencyScan):
         dep.versions.append(version)
 
         dep_dir = self.__abs_module_path / package_path
-        dep_files = glob(str(dep_dir) + "\\**", recursive=True)
-        dep_files = [p for p in dep_files if Path(p).is_file()]
+        dep_files = dep_dir.rglob("**")
+        dep_files = [p for p in dep_files if p.is_file()]
 
         dep.files.extend(dep_files)
 
@@ -110,9 +106,12 @@ class NodeScan(DependencyScan):
                 print(" Failed!")
 
             for dep_name, dep_version_range in lock["packages"][package_path].get("dependencies", {}).items():
+                dep_path = None
 
                 # find appropriate dependency version
                 for dep_version, dep_version_dict in self.__lookup[dep_name].items():
+                    dep_path = dep_version_dict["_path"]
+
                     if dep_version_range == "latest":
                         break
 
@@ -125,11 +124,10 @@ class NodeScan(DependencyScan):
                     if Version(dep_version) in range_spec:
                         break
 
-                dep_path = dep_version_dict["_path"]
-
-                dep.dependencies.append(
-                    self._dep_from_lock(self.__lockfile_content, dep_path)
-                )
+                if dep_path:
+                    dep.dependencies.append(
+                        self._dep_from_lock(self.__lockfile_content, dep_path)
+                    )
 
         return dep
 
@@ -150,7 +148,7 @@ class NodeScan(DependencyScan):
             return None
 
 
-        dep = Dependency("npm:" + name, name)
+        dep = Dependency(key=f"npm:{name}", name=name, purl_type='npm')
 
         dep.versions.append(meta.get("version", ""))
 
@@ -163,10 +161,12 @@ class NodeScan(DependencyScan):
         return dep
 
 if __name__ == "__main__":
-    #test_scan = NodeScan("/home/soren/eacg/sample_projects/node/ts-node-client")
-    #test_scan = NodeScan("/home/soren/eacg/sample_projects/node/sample-node-project")
-    test_scan = NodeScan("C:\\Users\\Soren\\eacg\\samples\\sample-node-project")
-    test_scan.execute()
+    import sys
+    if len(sys.argv) > 1:
+        test_scan = NodeScan(Path(sys.argv[1]))
+        test_scan.execute()
 
-    for dep in test_scan.dependencies:
-        print(dep.files)
+        for dep in test_scan.dependencies:
+            print(dep.files)
+    else:
+        print('No path provided')

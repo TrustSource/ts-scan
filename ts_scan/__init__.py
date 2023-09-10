@@ -20,6 +20,8 @@ def do_scan(paths: [Path]) -> Iterable[DependencyScan]:
     from .pm.maven import scan as maven_scan
 
     for p in paths:
+        p = p.resolve()
+
         if scan := pypi_scan(p):
             yield scan
 
@@ -52,6 +54,11 @@ def process_scan(scan: DependencyScan, enable_deepscan: bool, ds_args: []) -> De
             __ds_dataset = ts_deepscan.create_dataset()
 
     for dep in scan.iterdeps():
+        purl_v = '@' + dep.versions[0] if dep.versions else ''
+        purl_ns = '/' + dep.purl_namespace if dep.purl_namespace else ''
+
+        dep.meta['purl'] = f'pkg:{dep.purl_type}{purl_ns}/{dep.name}{purl_v}'
+
         if (sources := dep.files) and __ds_scanner:
             sources = [Path(src) for src in sources]
             ds_res = ts_deepscan.execute_scan(sources, __ds_scanner, title=dep.key)

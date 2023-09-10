@@ -8,6 +8,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2023-09-08
+### New Features
+    * Add support for Maven, NPM and Nuget package managers
+    * Extraction of sources URLs for Maven packages
+
 ## [0.1.2] - 2023-04-04
 ### New Features
     * Improve/adjust interfaces for adding new pakcage managers

@@ -1,6 +1,11 @@
 from . import scan
+from pathlib import Path
 
 if __name__ == "__main__":
-    s = scan("C:\\Users\\Soren\\eacg\\samples\\ts-mvn-plugin")
+    import sys
+    if len(sys.argv) > 1:
+        s = scan(Path(sys.argv[1]))
 
-    print([dep.files for dep in s.dependencies])
+        print([dep.files for dep in s.dependencies])
+    else:
+        print('No path provided')

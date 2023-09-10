@@ -16,7 +16,7 @@ class DependencyScan(Scan, abc.ABC):
         res = {
             'module': self.module,
             'moduleId': self.moduleId,
-            'dependencies': [asdict(d) for d in self.dependencies],
+            'dependencies': [d.to_dict() for d in self.dependencies],
         }
 
         if self.deepscans:
@@ -38,10 +38,6 @@ class DependencyScan(Scan, abc.ABC):
     @abc.abstractmethod
     def dependencies(self) -> Iterable['Dependency']:
         raise NotImplemented()
-    
-    @abc.abstractmethod
-    def __len__(self):
-        raise NotImplemented()
 
     def iterdeps(self) -> Iterable['Dependency']:
         deps = list(self.dependencies)
@@ -56,6 +52,10 @@ class Dependency:
     key: str
     name: str
 
+    # purl components
+    purl_type: str
+    purl_namespace: str = ''
+
     repoUrl: str = ''
     homepageUrl: str = ''
     description: str = ''
@@ -68,23 +68,17 @@ class Dependency:
 
     meta: Dict = field(default_factory=lambda: {})
 
+    # Excluded from serialisation
+    files: List[Path] = field(default_factory=lambda: [])
+    license_file: Optional[Path] = None
 
-    def __post_init__(self):
-        self.__files: List[Path] = []
-        self.__license_file: Optional[Path] = None
+    @staticmethod
+    def dict_factory(d):
+        exclude = ('purl_type', 'purl_namespace', 'files', 'license_file')
+        return {k: v for (k, v) in d if ((v is not None) and (k not in exclude))}
 
-
-    @property
-    def files(self) -> List[Path]:
-        return self.__files
-
-    @property
-    def license_file(self) -> Optional[Path]:
-        return self.__license_file
-
-    @license_file.setter
-    def license_file(self, value: Path):
-        self.__license_file = value
+    def to_dict(self):
+        return asdict(self, dict_factory=Dependency.dict_factory)
 
 
 @dataclass

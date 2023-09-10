@@ -5,7 +5,6 @@ import json
 from pathlib import Path, PureWindowsPath
 from typing import Iterable, List, Tuple, Dict ,Optional
 from enum import Enum
-from glob import glob
 
 from defusedxml import ElementTree
 
@@ -51,9 +50,7 @@ class NugetScan(DependencyScan):
     @property
     def dependencies(self) -> Iterable['Dependency']:
         return self.__dependencies
-    
-    def __len__(self):
-        return len(self.dependencies)
+
     
     def execute(self):
         os.chdir(self.__path)
@@ -73,7 +70,7 @@ class NugetScan(DependencyScan):
         deps = []
         if ptype is ProjectType.PACKAGE_REFERENCE or ptype is ProjectType.PACKAGES_CONFIG:
             # run nuget restore with option to create a lock file
-            deps = self._process_with_lock_file(path, Path(files[0], depth=depth).parts[-1])
+            deps = self._process_with_lock_file(files[0], depth=depth)
 
         elif ptype is ProjectType.NUSPEC:
             # parse nuspec file
@@ -85,20 +82,19 @@ class NugetScan(DependencyScan):
 
         return deps
     
-    
-    def _determine_project_type(self, path: Path) -> Tuple[ProjectType, Path]:
-        if files := glob(str(path / "*.nuspec")):
-            return ProjectType.NUSPEC, [Path(f) for f in files]
+    @staticmethod
+    def _determine_project_type(path: Path) -> Tuple[ProjectType, List[Path]]:
+        if files := path.glob('*.nuspec'):
+            return ProjectType.NUSPEC, list(files)
         
-        elif files := glob(str(path / "*.*proj")):
-            return ProjectType.PACKAGE_REFERENCE, [Path(f) for f in files]
+        elif files := path.glob('*.*proj'):
+            return ProjectType.PACKAGE_REFERENCE, list(files)
         
-        elif files := glob(str(path / "packages.config")):
-            return ProjectType.PACKAGES_CONFIG, [Path(f) for f in files]
+        elif files := path.glob('packages.config'):
+            return ProjectType.PACKAGES_CONFIG, list(files)
         
-        elif files := glob(str(path / "*.sln")):
-            return ProjectType.SOLUTION, [Path(f) for f in files]
-        
+        elif files := path.glob('*.sln'):
+            return ProjectType.SOLUTION, list(files)
         else:
             raise FileNotFoundError("Could not determine project type")
         
@@ -111,9 +107,8 @@ class NugetScan(DependencyScan):
         projects = projects[1:]
 
         projects = [p.split("=")[-1].strip() for p in projects]
-        names, paths = zip(*[p.split(",")[:2] for p in projects])
+        _, paths = zip(*[p.split(",")[:2] for p in projects])
 
-        names = [n.strip(' "') for n in names]
         paths = [Path(PureWindowsPath(p.strip(' "')).as_posix()) for p in paths]
         paths = [p.parent for p in paths if p.exists()]
 
@@ -125,10 +120,10 @@ class NugetScan(DependencyScan):
         return deps
     
 
-    def _process_with_lock_file(self, path: Path, project_file: Path, depth: int = 0) -> List[Dependency]:
-        subprocess.run(self.__nuget_command + ["restore", str(path / project_file), "-UseLockFile"], stdout=subprocess.PIPE)
+    def _process_with_lock_file(self, project_file: Path, depth: int = 0) -> List[Dependency]:
+        subprocess.run(self.__nuget_command + ["restore", str(project_file), "-UseLockFile"], stdout=subprocess.PIPE)
 
-        lockfile = path / "packages.lock.json"
+        lockfile = project_file.parent / "packages.lock.json"
 
         if not lockfile.exists():
             raise FileNotFoundError("No lockfile was generated, something must have gone wrong")
@@ -146,13 +141,13 @@ class NugetScan(DependencyScan):
             for dep_name, dep_dict in net_target_dict.items():
                 if (dep_type := dep_dict["type"].lower()) in ("direct", "project"):
 
-                    dep = Dependency(
-                        "nuget:" + dep_name, 
-                        dep_name
-                    )
+                    dep = Dependency(key=f"nuget:{dep_name}", name=dep_name, purl_type='nuget')
 
                     dep.meta[".NET target"] = net_target
                     dep.meta["dependency type"] = dep_type
+
+                    dep_id = None
+                    candidates = []
 
                     if dep_type == "direct":
                         dep_version = dep_dict["resolved"].lower()
@@ -165,18 +160,18 @@ class NugetScan(DependencyScan):
 
                     elif dep_type == "project":
                         # dependency folder should be on the same level as project folder (i.e. sibling folder)
-                        candidates = glob(str(lockfile.parent.parent / "*"))
-                        candidates = [d for d in candidates if Path(d.lower()).parts[-1] == dep_name.lower()]
+                        candidates = [d for d in lockfile.parent.parent.glob('*') if d.name.lower() == dep_name.lower()]
                     
                         dep_id = dep.key
-                        
-                    if not dep_id in self.__processed_deps:
+
+
+                    if dep_id and dep_id not in self.__processed_deps:
                         self.__processed_deps.add(dep_id)
 
                         if candidates:
                             dep_dir = candidates[0]
 
-                            dep_files = glob(str(dep_dir) + "/**", recursive=True)
+                            dep_files = dep_dir.rglob('**')
                             dep_files = [p for p in dep_files if Path(p).is_file()]
                             dep.files.extend(dep_files)
                             
@@ -221,17 +216,17 @@ class NugetScan(DependencyScan):
                     if candidates := self._find_in_global_packages(name, version):
                         dep_dir = candidates[0]
                         
-                        dep_files = glob(str(dep_dir) + "\\**", recursive = True)
+                        dep_files = dep_dir.rglob('**')
                         dep_files = [p for p in dep_files if Path(p).is_file()]
                         dep.files.extend(dep_files)
 
-                        dep_nuspec = glob(str(dep_dir / "*.nuspec"))[0]
-                        meta = self._metadata_from_nuspec(dep_nuspec)
+                        if dep_nuspec := list(dep_dir.glob('*.nuspec')):
+                            meta = self._metadata_from_nuspec(dep_nuspec[0])
 
-                        dep.licenses.append(License("", meta["licenseUrl"]))
-                        dep.homepageUrl = meta["projectUrl"]
-                        dep.description = meta["description"]
-                        dep.meta["copyright"] = meta["copyright"]
+                            dep.licenses.append(License("", meta["licenseUrl"]))
+                            dep.homepageUrl = meta["projectUrl"]
+                            dep.description = meta["description"]
+                            dep.meta["copyright"] = meta["copyright"]
 
                         dep.dependencies = self._process_package(dep_dir, depth=depth+1)
 
@@ -247,9 +242,9 @@ class NugetScan(DependencyScan):
         return result
     
     def _find_in_global_packages(self, name: str, version: str) -> List[Path]:
-        """Finds all subfolders of the global-packages directory that match <name>/<version>/ (case insensitive)."""
+        """Finds all subfolders of the global-packages directory that match <name>/<version>/ (case in-sensitive)."""
 
-        candidates = glob(str(self.__global_packages_dir / "*" / "*"))
+        candidates = self.__global_packages_dir.glob('*/*')
         candidates = [Path(d.lower()) for d in candidates]
         candidates = [d for d in candidates if d.parts[-2] == name.lower() and d.parts[-1] == version.lower()]
     
@@ -285,15 +280,14 @@ class NugetScan(DependencyScan):
     
 
 if __name__ == "__main__":
-    #test_scan = NugetScan("/home/soren/eacg/sample_projects/nuget/ts-dotnet/TrustSource/TS-NetCore-Scanner.ConsoleApp")
-    #test_scan = NugetScan("/home/soren/eacg/sample_projects/nuget/ts-dotnet/TrustSource")
-    #test_scan = NugetScan("/home/soren/eacg/sample_projects/nuget/AutoMapper/src/AutoMapper")
-    #test_scan = NugetScan("/home/soren/eacg/sample_projects/nuget/AutoMapper")
-    #test_scan = NugetScan("/home/soren/eacg/sample_projects/nuget/ts-dotnet/TrustSource/TS-NET-Scanner.Common/")
-    #test_scan = NugetScan("/home/soren/eacg/sample_projects/nuget/Castleproject.Core")
-    test_scan = NugetScan("C:\\Users\\Soren\\eacg\\samples\\ts-dotnet\\TrustSource")
-    test_scan.execute()
+    import sys
+    if len(sys.argv) > 1:
+        test_scan = NugetScan(Path(sys.argv[0]))
+        test_scan.execute()
 
-    for dep in test_scan.dependencies:
-        print(dep.name)
-        print(dep.files)
+        for dep in test_scan.dependencies:
+            print(dep.name)
+            print(dep.files)
+
+    else:
+        print('No path provided')

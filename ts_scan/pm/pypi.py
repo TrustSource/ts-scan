@@ -43,9 +43,6 @@ class PypiScan(DependencyScan):
     @property
     def dependencies(self) -> Iterable[Dependency]:
         return self.__dependencies
-    
-    def __len__(self):
-        return self.__dependencies
 
     def execute(self):
         stack = [self.__path]
@@ -88,7 +85,8 @@ class PypiScan(DependencyScan):
         name = metadata.get('Name', '')
         key = 'pip:' + name.lower()
 
-        dep = Dependency(key=key, name=name)
+        dep = Dependency(key=key, name=name, purl_type='pypi')
+
         if version := metadata.get('Version', None):
             dep.versions.append(version)
 
@@ -117,7 +115,7 @@ class PypiScan(DependencyScan):
         return dep
 
 
-_import_statement_regex = re.compile(r'(?:from|import) ([a-zA-Z0-9_]+)(?:.*)')
+_import_statement_regex = re.compile(r'(?:from|import) ([a-zA-Z0-9_]+).*')
 def _extract_imported_pkgs(path: Path) -> List[str]:
     with path.open('r') as fp:
         try:
@@ -127,7 +125,7 @@ def _extract_imported_pkgs(path: Path) -> List[str]:
             return []
 
 
-_require_expr_regex = re.compile(r'([a-zA-Z0-9_\-]+)(?:.*)')
+_require_expr_regex = re.compile(r'([a-zA-Z0-9_\-]+).*')
 def _extract_required_pkgs(reqs: List[str]) -> List[str]:
     for req in reqs:
         for pkg in _require_expr_regex.findall(req):

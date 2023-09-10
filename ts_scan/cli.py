@@ -14,12 +14,14 @@ from typing import Iterable
 
 from alive_progress import alive_bar
 
-from ts_python_client.cli import start, scan, upload, UploadCommand
+from ts_python_client.cli import get_start_cmd, scan, upload, UploadCommand
 from ts_python_client.commands import parse_cmd_opts_from_args
 
 from . import do_scan, process_scan
 from .pm import DependencyScan
 
+
+start = get_start_cmd(package_name='ts-scan')
 
 def main():
     start()
@@ -55,7 +57,7 @@ def upload_data(data, base_url, api_key, xdeepscan: [str]):
 
     if deepscans := [(k, d) for k,d in deepscans.items() if d['stats']['total'] > 0]:
         deepscans_uploaded = {}
-
+        
         ds_args = list(itertools.chain.from_iterable(xd.split(',') for xd in xdeepscan))
         ds_opts = parse_cmd_opts_from_args(ds_cmd, ds_args)
 

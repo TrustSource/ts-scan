@@ -1,17 +1,17 @@
-import os
+import re
 import subprocess
+import typing as t
 
 from pathlib import Path
-from typing import Iterable, Optional, Tuple, List
-from glob import glob
+from tempfile import TemporaryDirectory
 
-from defusedxml import ElementTree
+from .. import DependencyScan, Dependency
 
-from .. import DependencyScan, Dependency, License
+from .pom_utils import Pom
 from .tree_utils import Tree
 
 
-def scan(path: Path) -> Optional[DependencyScan]:
+def scan(path: Path) -> t.Optional[DependencyScan]:
     _scan = MavenScan(path)
     _scan.execute()
 
@@ -27,7 +27,8 @@ class MavenScan(DependencyScan):
         self.__module = None
         self.__module_id = None
         self.__tree = None
-        self.__local_rep = None
+
+        self.__local_repo = None
 
         self.__dependencies = []
 
@@ -42,109 +43,169 @@ class MavenScan(DependencyScan):
         return self.__module_id
     
     @property
-    def dependencies(self) -> Iterable['Dependency']:
+    def dependencies(self) -> t.Iterable['Dependency']:
         return self.__dependencies
-    
 
-    def __len__(self):
-        return len(self.dependencies)
-    
-    
+
     def execute(self):
-        os.chdir(self.__path)
-        os.system("mvn dependency:tree -DoutputType=text -DoutputFile=deps.tree")
+        self.__local_repo = self._find_local_repository()
 
-        self.__local_rep = _find_local_repository()
+        with TemporaryDirectory() as temp_dir:
+            tree_file = Path(temp_dir)/'deps.tree'
 
-        self.__tree = t = Tree.from_maven_file("deps.tree")
+            # Dump dependencies tree
+            subprocess.run(
+                ['mvn', 'dependency:tree', '-DoutputType=text', f'-DoutputFile={tree_file}'],
+                cwd=self.__path,
+                capture_output=True)
 
-        os.remove("deps.tree")
-    
+            # Resolve dependencies sources
+            subprocess.run(
+                ['mvn', 'dependency:sources'],
+                cwd=self.__path,
+                capture_output=True)
 
-        group_id, artifact_id, *_ = t.data
-        self.__module = artifact_id
-        self.__module_id = group_id + ":" + artifact_id
+            if tree := Tree.from_maven_file(tree_file):
+                self.__tree = tree
 
-        self.__dependencies = [self._create_dep_from_node(child) for child in t._children]
-    
+                dep = self._create_dep_from_node(tree)
+
+                self.__module = dep.name
+                self.__module_id = dep.key
+                self.__dependencies = dep.dependencies
+
 
     def _create_dep_from_node(self, node: Tree) -> Dependency:
         # example coordinates: org.tmatesoft.svnkit:svnkit:jar:1.8.7:provided
-        coords = node.data
-        print(coords) 
-        group_id, artifact_id, *_, version, _ = coords.split(":")
 
-        key = group_id + ":" + artifact_id
-        
-        dep = Dependency(key=key, name=artifact_id)
-        dep.versions.append(version)
+        group_id, artifact_id, _, version, *_ = node.data.split(":")
 
-        # try to resolve coordinates to file location and query the artifact's pom for more metadata
-        try:
-            path = _artifact_dir_from_coords(coords, self.__local_rep)
-            pom = glob(str(path / "*.pom"))[0]
-
-            url, description, licenses = _parse_pom(pom)
-
-            dep.homepageUrl = url
-            dep.description = description
-            dep.licenses = licenses
-
-            dep_files = glob(str(path) + "\\**", recursive=True)
-            dep_files = [p for p in dep_files if Path(p).is_file()]
-            dep.files.extend(dep_files)
-
-        except:
-            pass
+        dep = MavenDependency(group_id=group_id, artifact_id=artifact_id, version=version, local_repo=self.__local_repo)
 
         if artifact_id not in self.__processed_deps:
-            self.__processed_deps.add(artifact_id)
+            dep.load()
 
+            if pkg_data := dep.package_data:
+                _, _, checksum = pkg_data
+
+                if checksum:
+                    dep.checksum = checksum[1]
+
+            if src_data := dep.sources_data:
+                repo, pkg, checksum = src_data
+                download_url = f'{repo}/{pkg.relative_to(self.__local_repo)}'
+
+                sources_meta = {
+                    'url': download_url
+                }
+
+                if checksum:
+                    sources_meta['checksum'] = {
+                        checksum[0]: checksum[1]
+                    }
+
+                dep.meta['sources'] = sources_meta
+
+            self.__processed_deps.add(artifact_id)
             dep.dependencies = [self._create_dep_from_node(child) for child in node.children]
 
         return dep
-    
-
-def _find_local_repository() -> Path:
-    result = subprocess.run(["mvn", "help:evaluate", "-Dexpression=settings.localRepository", "-q", "-DforceStdout=true"], 
-        stdout=subprocess.PIPE,
-        shell=True
-    )
-
-    return Path(result.stdout.decode("utf-8"))
 
 
-_N_FAIL = 0
-_N_SUCCESS = 0
+    def _create_effective_pom(self) -> t.Optional[Pom]:
+        with TemporaryDirectory() as temp_dir:
+            pom_file = Path(temp_dir)/'effective-pom.xml'
 
-def _artifact_dir_from_coords(coords: str, local_rep: Path) -> Path:
-    global _N_FAIL, _N_SUCCESS
+            result = subprocess.run(
+                ['mvn', 'help:effective-pom', f'-Doutput={pom_file}'],
+                cwd = self.__path,
+                capture_output=True
+            )
 
-    group_id, artifact_id, *_, version, _ = coords.split(":")
+            if result.returncode == 0:
+                return Pom.from_maven_file(pom_file)
 
-    group_path = Path(*group_id.split("."))
-    artifact_path = Path(*artifact_id.split("."))
+        return  None
 
-    full_path = local_rep / group_path / artifact_path / version
+    def _find_local_repository(self) -> t.Optional[Path]:
+        result = subprocess.run(
+            ['mvn', 'help:evaluate', '-Dexpression=settings.localRepository', '-q', '-DforceStdout=true'],
+            cwd=self.__path,
+            capture_output=True,
+            text=True,
+            encoding='utf-8'
+            )
 
-    if full_path.exists():
-        _N_SUCCESS += 1
-        return full_path
-    else:
-        _N_FAIL += 1
-        raise FileNotFoundError(f"The directory for {coords} is not at the suspected location: {full_path}")
-    
+        return Path(result.stdout) if result.returncode == 0 else None
 
-def _parse_pom(path: Path) -> Tuple[str, str, List["License"]]:
-    tree = ElementTree.parse(path)
-    namespaces = {'xmlns' : 'http://maven.apache.org/POM/4.0.0'}
 
-    url = tree.find("/xmlns:url", namespaces=namespaces).text
-    description = tree.find("/xmlns:description", namespaces=namespaces).text
+class MavenDependency(Dependency):
+    def __init__(self, group_id: str, artifact_id: str, version: str, local_repo: t.Optional[Path] = None, **kwargs):
+        super().__init__(key=f'mvn:{group_id}:{artifact_id}',
+                         name=artifact_id,
+                         versions=[version],
+                         purl_type='maven',
+                         purl_namespace=group_id, **kwargs)
 
-    license_names = tree.findall("/xmlns:licenses/xmlns:license/xmlns:name", namespaces=namespaces)
-    license_urls = tree.findall("/xmlns:licenses/xmlns:license/xmlns:url", namespaces=namespaces)
+        if local_repo:
+            self.__local_repo_path = local_repo / Path(*group_id.split('.')) / Path(*artifact_id.split('.')) / version
 
-    licenses = [License(n.text.strip(), u.text.strip()) for n, u in zip(license_names, license_urls)]
+            if self.__local_repo_path.exists() and (pom := next(self.__local_repo_path.glob('*.pom'), None)):
+                self.__pom: t.Optional[Pom] = Pom.from_maven_file(pom)
+            else:
+                self.__pom: t.Optional[Pom] = None
 
-    return url, description, licenses
+    def load(self):
+        if self.__pom:
+            self.homepageUrl = self.__pom.url
+            self.description = self.__pom.description
+            self.licenses = self.__pom.licenses
+
+        if self.__local_repo_path:
+            self.files.extend(self.__local_repo_path.rglob('**'))
+
+    @property
+    def package_data(self) -> t.Optional[t.Tuple[str, Path, t.Optional[t.Tuple[str, str]]]]:
+        return self._find_artifact_data('.jar')
+
+    @property
+    def sources_data(self)-> t.Optional[t.Tuple[str, Path, t.Optional[t.Tuple[str, str]]]]:
+        return self._find_artifact_data('-sources.jar')
+
+
+    def _find_artifact_data(self, artifact_name_suffix: str) -> t.Optional[t.Tuple[str, Path, t.Optional[t.Tuple[str, str]]]]:
+        """
+        Returns sources repository url, sources jar file and optionally its checksum
+        :return: (sources_repo, sources_jar, (checksum_alg, checksum))
+        """
+
+        if not self.__local_repo_path:
+            return None
+
+        remote_repos = self.__local_repo_path/'_remote.repositories'
+        if not remote_repos.exists():
+            return None
+
+        repos = {'central': 'https://repo.maven.apache.org/maven2'}
+        if self.__pom:
+            repos.update(self.__pom.repositories)
+
+        with remote_repos.open('r') as fp:
+            for line in fp:
+                if m := re.search(f"([\w\d\.\-]*{artifact_name_suffix})>(.*)=", line):
+                    fname = m.group(1)
+
+                    repo = m.group(2) if m.group(2) else 'central'
+                    if repo_url := repos.get(repo, None):
+                        checksum = (f for f in self.__local_repo_path.glob(f'{fname}.*')
+                                        if any(f.suffix.startswith(a) for a in ['.sha', '.md5']))
+
+                        if checksum := next(checksum, None):
+                            alg = checksum.suffix[1:]
+                            with checksum.open('r') as checksum_fp:
+                                checksum = alg, next(checksum_fp, None)
+
+                        return repo_url, self.__local_repo_path/fname, checksum
+
+        return None
+
