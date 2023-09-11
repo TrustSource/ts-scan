@@ -4,9 +4,10 @@ setup(
     name='ts-scan',
     packages=[
         'ts_scan',
-        'ts_scan.pm'
+        'ts_scan.pm',
+        'ts_scan.pm.maven',
     ],
-    version='0.2.0',
+    version='0.2.1',
     description='TrustSource PM scanner',
     author='EACG GmbH',
     license='Apache-2.0',
