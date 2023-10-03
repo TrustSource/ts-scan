@@ -2,13 +2,13 @@ import typing as t
 
 from functools import cached_property
 from pathlib import Path
-from defusedxml import ElementTree
+from defusedxml import ElementTree as ET
 
 from .. import License
 
 class Pom:
     def __init__(self):
-        self.__tree: ElementTree = None
+        self.__tree: ET = None
         self.__namespaces = {'xmlns': 'http://maven.apache.org/POM/4.0.0'}
 
     @cached_property
@@ -37,11 +37,18 @@ class Pom:
         return {n.text.strip(): u.text.strip() for n, u in zip(ids, urls)}
 
     @classmethod
-    def from_maven_file(cls, path: Path) -> t.Optional['Pom']:
+    def from_file(cls, path: Path) -> t.Optional['Pom']:
         if not path.exists():
             return None
 
         pom = Pom()
-        pom.__tree = ElementTree.parse(path)
+        pom.__tree = ET.parse(path)
+
+        return pom
+
+    @classmethod
+    def from_string(cls, data: str) -> t.Optional['Pom']:
+        pom = Pom()
+        pom.__tree = ET.fromstring(data)
 
         return pom

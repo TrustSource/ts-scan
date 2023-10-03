@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import re
-import glob
 import build.util
 
 from pathlib import Path
@@ -59,8 +58,9 @@ class PypiScan(DependencyScan):
 
                     self.__dependencies.append(self._create_dep_from_metadata(metadata))
                 else:
-                    stack.extend([p/f for f in glob.glob('*.py', root_dir=p)])
-                    stack.extend([p/d for d in glob.glob('**/', root_dir=p)])
+                    break
+                    #stack.extend([p/f for f in p.glob('*.py')])
+                    #stack.extend([p/d for d in p.rglob('**/')])
             else:
                 for pkg in _extract_imported_pkgs(p):
                     if dep := self._create_dep(pkg):
