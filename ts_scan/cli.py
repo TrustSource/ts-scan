@@ -6,6 +6,7 @@ import json
 import click
 import requests
 import itertools
+import typing as t
 
 import ts_deepscan
 
@@ -17,47 +18,65 @@ from alive_progress import alive_bar
 from ts_python_client.cli import get_start_cmd, scan, upload, UploadCommand
 from ts_python_client.commands import parse_cmd_opts_from_args
 
-from . import do_scan, process_scan
+from . import do_scan, do_scan_with_syft, process_scan, process_scan_with_ds
 from .pm import DependencyScan
 
-
 start = get_start_cmd(package_name='ts-scan')
+
 
 def main():
     start()
 
 
-
-@click.option('--enable-deepscan',
-              default=False,
-              is_flag=True,
+@click.option('--tag', required=False, type=str,
+              help="Project's tag in the VCS")
+@click.option('--branch', required=False, type=str,
+              help="Project's branch in the VCS")
+@click.option('--use-syft', default=False, is_flag=True,
+              help='Use Syft scanner for the file system scan')
+@click.option('--syft-path', default=None, type=click.Path(path_type=Path),
+              help='Path to the Syft executable')
+@click.option('--Xsyft', default=[], multiple=True,
+              help='Specifies an option with should be passed to the Syft')
+@click.option('--enable-deepscan', default=False, is_flag=True,
               help='Enables scanning of the package\'s sources if available')
-@click.option('--Xdeepscan',
-              default=[],
-              multiple=True,
+@click.option('--Xdeepscan', default=[], multiple=True,
               help='Specifies an option which should be passed to the DeepScan')
 @scan.impl
-def scan_dependencies(paths: [Path], enable_deepscan: bool, xdeepscan: []) -> Iterable[DependencyScan]:
-    for scan in do_scan(paths):
-        yield process_scan(scan, enable_deepscan=enable_deepscan, ds_args=xdeepscan)
+def scan_dependencies(paths: [Path], tag: str, branch: str,
+                      use_syft: bool, syft_path: t.Optional[Path], xsyft: [],
+                      enable_deepscan: bool, xdeepscan: []) -> Iterable[DependencyScan]:
 
+    def _do_scan():
+        if use_syft:
+            yield from do_scan_with_syft(paths, syft_path, syft_opts=xsyft)
+        else:
+            yield from do_scan(paths)
 
+    for s in _do_scan():
+        s.tag = tag
+        s.branch = branch
 
+        if enable_deepscan:
+            yield process_scan_with_ds(s, ds_args=xdeepscan)
+        else:
+            yield process_scan(s)
 
 
 @click.option('--Xdeepscan',
               default=[],
               multiple=True,
-              help='Specifies an option which should be passed to the DeepScan (used when DeepScan results are uploaded)')
+              help='Specifies an option which should be passed to the DeepScan (used when DeepScan results are '
+                   'uploaded)')
 @upload.impl
 def upload_data(data, base_url, api_key, xdeepscan: [str]):
     from ts_deepscan.cli import upload as ds_cmd
 
     deepscans = data.pop('deepscans', {})
 
-    if deepscans := [(k, d) for k,d in deepscans.items() if d['stats']['total'] > 0]:
+    if deepscans := [(k, d) for k, d in deepscans.items() if d['stats']['total'] > 0]:
         deepscans_uploaded = {}
-        
+
         ds_args = list(itertools.chain.from_iterable(xd.split(',') for xd in xdeepscan))
         ds_opts = parse_cmd_opts_from_args(ds_cmd, ds_args)
 
@@ -90,20 +109,19 @@ def upload_data(data, base_url, api_key, xdeepscan: [str]):
     upload.default(data, base_url, api_key)
 
 
-
-
-
 __sbom_formats = {
     'spdx-rdf': 'imports/scan/spdx/rdf',
     'spdx-json': 'imports/scan/spdx/json',
     'cyclonedx': 'imports/scan/cyclonedx',
 }
 
+
 @start.command('import')
-@click.option('-f', '--format', 'sbom_format', type=click.Choice(choices=list(__sbom_formats.keys())), required=True, help='SBOM file format')
+@click.option('-f', '--format', 'sbom_format', type=click.Choice(choices=list(__sbom_formats.keys())), required=True,
+              help='SBOM file format')
 @click.option('-v', '--version', 'version', type=str, required=True, help='SBOM format version')
 @click.option('--project-name', 'project', type=str, required=True, help='Project name')
-@click.option('--module', 'module',type=str, required=True, help='Module name')
+@click.option('--module', 'module', type=str, required=True, help='Module name')
 @click.option('--module-id', 'moduleId', type=str, required=True, help='Module identifier')
 @click.option('--api-key', 'api_key', type=str, required=True, help='TrustSource API Key')
 @click.option('--pkg-type', 'pkgType', type=str, help='Type of pkg to apply for included components')
@@ -129,7 +147,7 @@ def import_sbom(sbom_format: str, **kwargs):
         'X-APIKEY': api_key
     }
 
-    params = {k:v for k, v in kwargs.items() if v}
+    params = {k: v for k, v in kwargs.items() if v}
 
     with path.open('r') as fp:
         if sbom_format == 'cyclonedx':
@@ -141,7 +159,6 @@ def import_sbom(sbom_format: str, **kwargs):
             files = {'file': (path.name, fp, content_type)}
             headers['Content-Type'] = 'multipart/form-data'
             response = requests.post(url, files=files, headers=headers, params=params)
-
 
     if response.status_code == 201:
         print("Transfer success!")

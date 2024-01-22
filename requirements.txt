@@ -4,6 +4,11 @@ build
 importlib-metadata
 alive-progress
 numpy
-requests
-ts-python-client>=2.0.2
-ts-deepscan>=2.0.2
+requests~=2.31.0
+ts-python-client>=2.0.4
+ts-deepscan>=2.1.0
+spdx-tools==0.7.0rc0
+click~=8.1.3
+license-expression
+packageurl-python
+wasabi

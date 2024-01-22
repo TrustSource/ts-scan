@@ -1,16 +1,18 @@
+import tempfile
 import itertools
+import typing as t
+import subprocess
 
-import ts_deepscan
-
+from wasabi import msg
 from pathlib import Path
-from typing import Iterable
+from distutils.spawn import find_executable
 
 from ts_python_client.commands import parse_cmd_opts_from_args
 
-from .pm import DependencyScan
+from .pm import Dependency, DependencyScan
 
 
-def do_scan(paths: [Path]) -> Iterable[DependencyScan]:
+def do_scan(paths: [Path]) -> t.Iterable[DependencyScan]:
     """
     Imports and excutes actual scan routines
     :param paths: List of paths to be scanned
@@ -29,21 +31,58 @@ def do_scan(paths: [Path]) -> Iterable[DependencyScan]:
             yield scan
 
 
-__ds_scanner = None
-__ds_dataset = None
+def do_scan_with_syft(paths: [Path],
+                      syft_path: t.Optional[Path] = None,
+                      syft_opts: t.Optional[t.List[str]] = None) -> t.Iterable[DependencyScan]:
+    from .spdx import scan as spdx_scan
 
-def process_scan(scan: DependencyScan, enable_deepscan: bool, ds_args: []) -> DependencyScan:
-    from ts_deepscan.cli import scan as ds_cmd
+    syft_tool = find_executable('syft', syft_path)
+
+    if not syft_tool:
+        print('Cannot find Syft executable. Please ensure that the Syft tool is installed on your system or specify '
+              'the path using \'--swift-path\' option.')
+        print('For the installation instructions please refer to: https://github.com/anchore/syft#installation')
+        exit(2)
+    else:
+        msg.good('Found Syft: {}'.format(syft_tool))
+
+    for p in paths:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output = Path(f'{tmpdir}/{p.name}.spdx.json')
+            cmd = [syft_tool, str(p), '-o', f'spdx-json={output}']
+            errcode = subprocess.call(cmd)
+
+            if errcode != 0:
+                msg.fail(f'Syft failed to scan with the error code {errcode}')
+                exit(2)
+
+            if scan := spdx_scan(output):
+                scan.module = p.name
+                scan.moduleId = f'image:{scan.module}'
+
+                yield scan
+
+
+def process_scan(scan: DependencyScan) -> DependencyScan:
+    for dep in scan.iterdeps():
+        __process_dep(dep)
+
+    return scan
+
+
+def process_scan_with_ds(scan: DependencyScan, ds_args: t.List[str]) -> DependencyScan:
+    import ts_deepscan
+    import ts_deepscan.cli
+    import ts_deepscan.analyser.textutils
 
     global __ds_scanner
     global __ds_dataset
 
-    if not __ds_scanner and enable_deepscan:
+    if not __ds_scanner:
         ds_args = list(itertools.chain.from_iterable(xd.split(',') for xd in ds_args))
-        ds_opts = parse_cmd_opts_from_args(ds_cmd, ds_args)
+        ds_opts = parse_cmd_opts_from_args(ts_deepscan.cli.scan, ds_args)
 
         __ds_scanner = ts_deepscan.create_scanner(**ds_opts)
-
 
     if not __ds_dataset:
         if __ds_scanner:
@@ -54,10 +93,7 @@ def process_scan(scan: DependencyScan, enable_deepscan: bool, ds_args: []) -> De
             __ds_dataset = ts_deepscan.create_dataset()
 
     for dep in scan.iterdeps():
-        purl_v = '@' + dep.versions[0] if dep.versions else ''
-        purl_ns = '/' + dep.purl_namespace if dep.purl_namespace else ''
-
-        dep.meta['purl'] = f'pkg:{dep.purl_type}{purl_ns}/{dep.name}{purl_v}'
+        __process_dep(dep)
 
         if (sources := dep.files) and __ds_scanner:
             sources = [Path(src) for src in sources]
@@ -70,3 +106,14 @@ def process_scan(scan: DependencyScan, enable_deepscan: bool, ds_args: []) -> De
                     dep.meta['license_file'] = lic_file_res
 
     return scan
+
+
+__ds_scanner = None
+__ds_dataset = None
+
+
+def __process_dep(dep: Dependency):
+    purl_v = '@' + dep.versions[0] if dep.versions else ''
+    purl_ns = '/' + dep.purl_namespace if dep.purl_namespace else ''
+
+    dep.meta['purl'] = f'pkg:{dep.purl_type}{purl_ns}/{dep.name}{purl_v}'

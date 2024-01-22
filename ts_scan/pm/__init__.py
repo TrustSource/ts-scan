@@ -1,7 +1,7 @@
 import abc
+import typing as t
 
 from pathlib import Path
-from typing import Optional, List, Dict, Iterable
 from dataclasses import dataclass, field, asdict
 
 from ts_deepscan.scanner import Scan as DSScan
@@ -10,7 +10,10 @@ from ts_python_client.commands.ScanCommand import Scan
 
 class DependencyScan(Scan, abc.ABC):
     def __init__(self):
-        self.deepscans: Dict[str, DSScan] = {}
+        self.deepscans: t.Dict[str, DSScan] = {}
+
+        self.tag: t.Optional[str] = None
+        self.branch: t.Optional[str] = None
 
     def to_dict(self) -> dict:
         res = {
@@ -19,8 +22,14 @@ class DependencyScan(Scan, abc.ABC):
             'dependencies': [d.to_dict() for d in self.dependencies],
         }
 
+        if self.tag:
+            res['tag'] = self.tag
+
+        if self.branch:
+            res['branch'] = self.branch
+
         if self.deepscans:
-            res['deepscans'] = {k : d.to_dict() for k, d in self.deepscans.items()}
+            res['deepscans'] = {k: d.to_dict() for k, d in self.deepscans.items()}
 
         return res
 
@@ -36,10 +45,10 @@ class DependencyScan(Scan, abc.ABC):
 
     @property
     @abc.abstractmethod
-    def dependencies(self) -> Iterable['Dependency']:
+    def dependencies(self) -> t.Iterable['Dependency']:
         raise NotImplemented()
 
-    def iterdeps(self) -> Iterable['Dependency']:
+    def iterdeps(self) -> t.Iterable['Dependency']:
         deps = list(self.dependencies)
         while deps:
             d = deps.pop()
@@ -62,15 +71,15 @@ class Dependency:
     checksum: str = ''
     private: bool = False
 
-    versions: List[str] = field(default_factory=lambda: [])
-    dependencies: List['Dependency'] = field(default_factory=lambda: [])
-    licenses: List['License'] = field(default_factory=lambda: [])
+    versions: t.List[str] = field(default_factory=lambda: [])
+    dependencies: t.List['Dependency'] = field(default_factory=lambda: [])
+    licenses: t.List['License'] = field(default_factory=lambda: [])
 
-    meta: Dict = field(default_factory=lambda: {})
+    meta: t.Dict = field(default_factory=lambda: {})
 
     # Excluded from serialisation
-    files: List[Path] = field(default_factory=lambda: [])
-    license_file: Optional[Path] = None
+    files: t.List[Path] = field(default_factory=lambda: [])
+    license_file: t.Optional[Path] = None
 
     @staticmethod
     def dict_factory(d):
@@ -85,5 +94,3 @@ class Dependency:
 class License:
     name: str
     url: str = ''
-
-

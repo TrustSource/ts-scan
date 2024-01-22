@@ -8,6 +8,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2024-01-22
+### New Features
+    * Add support for the Syft scanner. The option '--use-syft' enables dependency scanning using Syft
+    * Added options '--tag' and '--branch' to the scan command to attach the VCS's tag/branch to the module   
+
 ## [0.2.2] - 2023-10-04
 ### Fixes
     * Fix Maven issues on Windows
@@ -38,4 +43,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### New Features
     * Scanning of PyPi packages
     * Uploading of TS scans
-    * Importing of SPDX (JSON and RDF) and CycloneDX SBOMs 
+    * Importing of SPDX (JSON and RDF) and CycloneDX SBOMs

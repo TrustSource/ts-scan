@@ -15,7 +15,7 @@ from .tree_utils import Tree
 
 
 def scan(path: Path) -> t.Optional[DependencyScan]:
-    if path.is_dir() and not (path/'pom.xml').exists():
+    if path.is_dir() and not (path / 'pom.xml').exists():
         return None
 
     elif path.is_file() and path.name != 'pom.xml':
@@ -46,12 +46,12 @@ class MavenScan(DependencyScan):
     def module(self) -> str:
         """returns the module name, i.e. maven artifact id"""
         return self.__module
-    
+
     @property
     def moduleId(self) -> str:
         """returns the module id, i.e. maven key group_id:artifact_id"""
         return self.__module_id
-    
+
     @property
     def dependencies(self) -> t.Iterable['Dependency']:
         return self.__dependencies
@@ -68,7 +68,7 @@ class MavenScan(DependencyScan):
         self.__remote_repos.update(self._find_remote_repositories())
 
         with TemporaryDirectory() as temp_dir:
-            tree_file = Path(temp_dir)/'deps.tree'
+            tree_file = Path(temp_dir) / 'deps.tree'
 
             # Dump dependencies tree
             result = self.mvn('dependency:tree', '-DoutputType=text', f'-DoutputFile={tree_file}', capture_output=False)
@@ -88,7 +88,6 @@ class MavenScan(DependencyScan):
                 self.__module = dep.name
                 self.__module_id = dep.key
                 self.__dependencies = dep.dependencies
-
 
     def _create_dep_from_node(self, node: Tree) -> Dependency:
         # example coordinates: org.tmatesoft.svnkit:svnkit:jar:1.8.7:provided
@@ -130,17 +129,16 @@ class MavenScan(DependencyScan):
 
         return dep
 
-
     def _create_effective_pom(self) -> t.Optional[Pom]:
         with TemporaryDirectory() as temp_dir:
-            pom_file = Path(temp_dir)/'effective-pom.xml'
+            pom_file = Path(temp_dir) / 'effective-pom.xml'
 
             result = self.mvn('help:effective-pom', f'-Doutput={pom_file}')
 
             if result.returncode == 0:
                 return Pom.from_file(pom_file)
 
-        return  None
+        return None
 
     def _find_local_repository(self) -> t.Optional[Path]:
         result = self.mvn('help:evaluate', '-Dexpression=settings.localRepository', '-q', '-DforceStdout=true',
@@ -149,7 +147,6 @@ class MavenScan(DependencyScan):
                           encoding='utf-8')
 
         return Path(result.stdout) if result.returncode == 0 else None
-
 
     def _find_remote_repositories(self) -> t.Dict[str, str]:
         result = self.mvn('help:evaluate', '-Dexpression=project.repositories', '-q', '-DforceStdout=true',
@@ -177,6 +174,7 @@ class MavenScan(DependencyScan):
             pass
 
         return {}
+
 
 class MavenDependency(Dependency):
     def __init__(self, group_id: str, artifact_id: str, version: str,
@@ -214,14 +212,14 @@ class MavenDependency(Dependency):
         return self._find_artifact_data('.jar')
 
     @property
-    def sources_data(self)-> t.Optional[t.Tuple[str, Path, t.Optional[t.Tuple[str, str]]]]:
+    def sources_data(self) -> t.Optional[t.Tuple[str, Path, t.Optional[t.Tuple[str, str]]]]:
         if self.name == 'wildfly-controller-client':
             print('Debug')
 
         return self._find_artifact_data('-sources.jar')
 
-
-    def _find_artifact_data(self, artifact_name_suffix: str) -> t.Optional[t.Tuple[str, Path, t.Optional[t.Tuple[str, str]]]]:
+    def _find_artifact_data(self, artifact_name_suffix: str) -> t.Optional[
+        t.Tuple[str, Path, t.Optional[t.Tuple[str, str]]]]:
         """
         Returns sources repository url, sources jar file and optionally its checksum
         :return: (sources_repo, sources_jar, (checksum_alg, checksum))
@@ -230,7 +228,7 @@ class MavenDependency(Dependency):
         if not self.__local_repo_path:
             return None
 
-        remote_repos = self.__local_repo_path/'_remote.repositories'
+        remote_repos = self.__local_repo_path / '_remote.repositories'
         if not remote_repos.exists():
             return None
 
@@ -242,14 +240,13 @@ class MavenDependency(Dependency):
                     repo = m.group(2) if m.group(2) else 'central'
                     if repo_url := self.__remote_repos.get(repo, None):
                         checksum = (f for f in self.__local_repo_path.glob(f'{fname}.*')
-                                        if any(f.suffix.startswith(a) for a in ['.sha', '.md5']))
+                                    if any(f.suffix.startswith(a) for a in ['.sha', '.md5']))
 
                         if checksum := next(checksum, None):
                             alg = checksum.suffix[1:]
                             with checksum.open('r') as checksum_fp:
                                 checksum = alg, next(checksum_fp, None)
 
-                        return repo_url, self.__local_repo_path/fname, checksum
+                        return repo_url, self.__local_repo_path / fname, checksum
 
         return None
-
