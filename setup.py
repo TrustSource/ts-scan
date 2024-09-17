@@ -26,7 +26,7 @@ setup(
         'requests',
         'numpy',
         'wasabi',
-        'ts-python-client==2.0.4',
+        'ts-python-client==2.0.5',
         'ts-deepscan==2.1.1',
         'license-expression',
         'packageurl-python',
