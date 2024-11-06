@@ -1,73 +1,94 @@
 import os
 import json
+import subprocess
 import requests
+import typing as t
+
 from semantic_version import Version, NpmSpec
 
 from pathlib import Path
 from typing import Iterable, Optional
 
-
-from . import DependencyScan, Dependency, License
-
-
-def scan(path: Path) -> Optional[DependencyScan]:
-    _scan = NodeScan(path)
-    _scan.execute()
-
-    return _scan if _scan.dependencies else None
+from . import Scanner, DependencyScan, GenericScan, Dependency, License
 
 
-class NodeScan(DependencyScan):
-    def __init__(self, path: Path):
-        super().__init__()
+class NodeScanner(Scanner):
+    def __init__(self, disableMetadataRetrieval=False, **kwargs):
+        super().__init__(**kwargs)
 
-        self.__path = Path(path)
-        self.__processed_deps = set()
-        self.__module = None
-        self.__module_id = None
-        self.__failed_requests = 0
-        self.__lockfile_content = None
-        self.__abs_module_path = Path(os.path.abspath(path))
+        self.disableMetadataRetrieval = disableMetadataRetrieval
+
+        self.__path = None
+        self.__abs_module_path = None
 
         self.__lookup = {}
-        self.__dependencies = []
+        self.__failed_requests = 0
+        self.__lockfile_content = {}
+        self.__processed_deps = set()
 
-    @property
-    def module(self) -> str:
-        return self.__module
-    
-    @property
-    def moduleId(self) -> str:
-        return self.__module_id
-    
-    @property
-    def dependencies(self) -> Iterable['Dependency']:
-        return self.__dependencies
-    
+    @staticmethod
+    def name() -> str:
+        return "Node"
 
-    def execute(self):
-        os.chdir(self.__path)
-        os.system("npm install")
+    @staticmethod
+    def executable() -> t.Optional[str]:
+        return 'npm'
 
-        with open(self.__path / "package-lock.json") as lockfile:
+    @classmethod
+    def options(cls) -> Scanner.OptionsType:
+        return super().options() | {
+            'disableMetadataRetrieval': {
+                'default': False,
+                'is_flag': True,
+                'help': 'Disable retreiving packages metadata from the NPMJS online registry'
+            }
+        }
+
+    def scan(self, path: Path) -> t.Optional[DependencyScan]:
+        self.__path = path
+        self.__abs_module_path = path.resolve().absolute()
+
+        self._exec('install', cwd=self.__path)
+        lock_file = self.__path / "package-lock.json"
+
+        if not lock_file.exists():
+            return
+
+        with lock_file.open() as lockfile:
             self.__lockfile_content = json.load(lockfile)
 
-
-        #self.__dependencies = self._flat_deps_from_lockfile(self.__path / "package-lock.json")
+        # extract root
+        root = self.__lockfile_content['packages'].pop('', None)
 
         # first build dictionary that is indexable by name
         self.__lookup = self._dict_from_lock(self.__lockfile_content)
 
         # then traverse graph as described in lockfile
-        self.__dependencies = self._dep_from_lock(self.__lockfile_content).dependencies
+        pkgs = self.__lockfile_content['packages'].keys()
 
+        if deps := [self._dep_from_lock(self.__lockfile_content, pkg_path) for pkg_path in pkgs]:
+            module = ''
+            moduleId = ''
+
+            if root and (module := root.get('name')):
+                moduleId = 'npm:' + module
+                if version := root.get('version'):
+                    moduleId += ':' + version
+
+            return GenericScan(module=module, moduleId=moduleId, deps=deps)
+        else:
+            return None
+
+    @staticmethod
+    def _dep_name_from_path(package_path: str) -> str:
+        return package_path.split("node_modules/")[-1]
 
     @staticmethod
     def _dict_from_lock(lock: dict) -> dict:
         deps_dict = {}
 
         for dep_path, dep_dict in lock["packages"].items():
-            name = dep_path.split("/")[-1]
+            name = NodeScanner._dep_name_from_path(dep_path)
             version = dep_dict["version"]
 
             deps_dict.setdefault(name, {})
@@ -75,13 +96,17 @@ class NodeScan(DependencyScan):
             deps_dict[name][version]["_path"] = dep_path
 
         return deps_dict
-    
 
     def _dep_from_lock(self, lock: dict, package_path: str = "") -> Dependency:
-        name = package_path.split("/")[-1]
-        version = lock["packages"][package_path]["version"]
+        pkg = lock["packages"][package_path]
+        name = pkg.get("name")
 
-        dep = Dependency("npm:" + name, name)
+        if not name:
+            name = NodeScanner._dep_name_from_path(package_path)
+
+        version = pkg["version"]
+
+        dep = Dependency("npm:" + name, name, purl_type='npm')
         dep.versions.append(version)
 
         dep_dir = self.__abs_module_path / package_path
@@ -92,20 +117,19 @@ class NodeScan(DependencyScan):
 
         if name + version not in self.__processed_deps:
             self.__processed_deps.add(name + version)
-            print(f"Getting metadata for {name} {version}...", end="", flush=True)
+            # msg.info(f"Getting metadata for {name} {version}...")
 
-            meta = self._metadata_from_registry(name, version)
-
-            if meta:
+            if not self.disableMetadataRetrieval and (meta := self._metadata_from_registry(name, version)):
                 dep.licenses = meta.licenses
                 dep.description = meta.description
                 dep.homepageUrl = meta.homepageUrl
                 dep.repoUrl = meta.repoUrl
-                print(" Success!")
-            else:
-                print(" Failed!")
 
-            for dep_name, dep_version_range in lock["packages"][package_path].get("dependencies", {}).items():
+            # msg.good(" Success!")
+            # else:
+            #   msg.fail(" Failed!")
+
+            for dep_name, dep_version_range in pkg.get("dependencies", {}).items():
                 dep_path = None
 
                 # find appropriate dependency version
@@ -131,7 +155,6 @@ class NodeScan(DependencyScan):
 
         return dep
 
-
     def _metadata_from_registry(self, name: str, version: str) -> Optional[Dependency]:
         template = "https://registry.npmjs.org/{}/{}"
 
@@ -142,11 +165,10 @@ class NodeScan(DependencyScan):
                 raise requests.ConnectionError()
 
             meta = json.loads(result.text)
-            
+
         except requests.ConnectionError:
             self.__failed_requests += 1
             return None
-
 
         dep = Dependency(key=f"npm:{name}", name=name, purl_type='npm')
 
@@ -159,14 +181,3 @@ class NodeScan(DependencyScan):
         dep.licenses.append(License(meta.get("license")))
 
         return dep
-
-if __name__ == "__main__":
-    import sys
-    if len(sys.argv) > 1:
-        test_scan = NodeScan(Path(sys.argv[1]))
-        test_scan.execute()
-
-        for dep in test_scan.dependencies:
-            print(dep.files)
-    else:
-        print('No path provided')

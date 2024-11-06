@@ -6,6 +6,7 @@ from defusedxml import ElementTree as ET
 
 from .. import License
 
+
 class Pom:
     def __init__(self):
         self.__tree: ET = None

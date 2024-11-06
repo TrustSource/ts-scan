@@ -12,13 +12,15 @@ import ts_deepscan
 
 from pathlib import Path
 from typing import Iterable
+from urllib.parse import urlparse
 
 from alive_progress import alive_bar
 
-from ts_python_client.cli import get_start_cmd, scan, upload, UploadCommand
+from ts_python_client.cli import get_start_cmd, scan, upload, ScanCommand, UploadCommand
 from ts_python_client.commands import parse_cmd_opts_from_args
 
-from . import do_scan, do_scan_with_syft, process_scan, process_scan_with_ds
+from . import msg, do_scan, do_scan_with_syft, process_scan, process_scan_with_ds, scanner_options, SyftNotFoundError
+
 from .pm import DependencyScan
 
 start = get_start_cmd(package_name='ts-scan')
@@ -28,6 +30,8 @@ def main():
     start()
 
 
+@click.option('--verbose', default=False, is_flag=True,
+              help="Verbose mode")
 @click.option('--tag', required=False, type=str,
               help="Project's tag in the VCS")
 @click.option('--branch', required=False, type=str,
@@ -42,16 +46,42 @@ def main():
               help='Enables scanning of the package\'s sources if available')
 @click.option('--Xdeepscan', default=[], multiple=True,
               help='Specifies an option which should be passed to the DeepScan')
+@scanner_options
 @scan.impl
-def scan_dependencies(paths: [Path], tag: str, branch: str,
+def scan_dependencies(sources: ScanCommand.Sources, verbose: bool, tag: str, branch: str,
                       use_syft: bool, syft_path: t.Optional[Path], xsyft: [],
-                      enable_deepscan: bool, xdeepscan: []) -> Iterable[DependencyScan]:
+                      enable_deepscan: bool, xdeepscan: [], **kwargs) -> Iterable[DependencyScan]:
 
     def _do_scan():
         if use_syft:
-            yield from do_scan_with_syft(paths, syft_path, syft_opts=xsyft)
+            try:
+                yield from do_scan_with_syft(sources, syft_path, syft_opts=xsyft)
+            except SyftNotFoundError as err:
+                msg.fail(err)
+                exit(2)
         else:
-            yield from do_scan(paths)
+            paths = []
+            urls = []
+            for src in sources:
+                if isinstance(src, Path):
+                    paths.append(src)
+                else:
+                    try:
+                        url = urlparse(src)
+                        if url.scheme == 'file':
+                            paths.append(Path(url.path))
+                        else:
+                            urls.append(src)
+                    except ValueError:
+                        msg.fail(f'Cannot parse source: {src}')
+
+            yield from do_scan(paths, verbose=verbose, **kwargs)
+            if urls:
+                msg.info("Scanning URL sources using Syft...")
+                try:
+                    yield from do_scan_with_syft(urls, syft_path, syft_opts=xsyft)
+                except SyftNotFoundError as err:
+                    msg.fail(err)
 
     for s in _do_scan():
         s.tag = tag
@@ -110,9 +140,9 @@ def upload_data(data, base_url, api_key, xdeepscan: [str]):
 
 
 __sbom_formats = {
-    'spdx-rdf': 'imports/scan/spdx/rdf',
-    'spdx-json': 'imports/scan/spdx/json',
-    'cyclonedx': 'imports/scan/cyclonedx',
+    'spdx-rdf': 'spdx/rdf',
+    'spdx-json': 'spdx/json',
+    'cyclonedx': 'cyclonedx'
 }
 
 
@@ -139,12 +169,12 @@ def import_sbom(sbom_format: str, **kwargs):
         print('Unsupported SBOM format')
         exit(2)
 
-    url = f'{base_url}/api/v1/{__sbom_formats[sbom_format]}'
+    url = f'{base_url}/core/imports/scan/{__sbom_formats[sbom_format]}'
 
     headers = {
         'Accept': 'application/json',
         'User-Agent': 'ts-scan/1.0.0',
-        'X-APIKEY': api_key
+        'x-api-key': api_key
     }
 
     params = {k: v for k, v in kwargs.items() if v}

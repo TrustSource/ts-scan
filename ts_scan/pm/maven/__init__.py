@@ -1,98 +1,119 @@
 import re
-import subprocess
 import typing as t
+import subprocess
 
-from sys import platform
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from xml.etree import ElementTree as ET
 
-from .. import DependencyScan, Dependency
+from .. import Scanner, DependencyScan, GenericScan, Dependency, ExecutableNotFoundError
 
 from .pom_utils import Pom
 from .tree_utils import Tree
 
 
-def scan(path: Path) -> t.Optional[DependencyScan]:
-    if path.is_dir() and not (path / 'pom.xml').exists():
-        return None
+class MavenScanner(Scanner):
+    def __init__(self, excludeDepTypes: t.Optional[str] = None, **kwargs):
+        super().__init__(**kwargs)
 
-    elif path.is_file() and path.name != 'pom.xml':
-        return None
+        self.__excludeDepTypes = excludeDepTypes.split(',') if excludeDepTypes else ['test']
 
-    _scan = MavenScan(path)
-    _scan.execute()
-
-    return _scan if _scan.dependencies else None
-
-
-class MavenScan(DependencyScan):
-    def __init__(self, path: Path):
-        super().__init__()
-
-        self.__path = path
+        self.__path = None
+        self.__nodes = None
         self.__processed_deps = set()
-        self.__module = None
-        self.__module_id = None
-        self.__tree = None
 
         self.__local_repo = None
         self.__remote_repos = {'central': 'https://repo.maven.apache.org/maven2'}
 
-        self.__dependencies = []
+    @staticmethod
+    def name() -> str:
+        return 'Maven'
 
-    @property
-    def module(self) -> str:
-        """returns the module name, i.e. maven artifact id"""
-        return self.__module
+    @staticmethod
+    def executable() -> t.Optional[str]:
+        return 'mvn'
 
-    @property
-    def moduleId(self) -> str:
-        """returns the module id, i.e. maven key group_id:artifact_id"""
-        return self.__module_id
+    @classmethod
+    def options(cls) -> Scanner.OptionsType:
+        return super().options() | {
+            'excludeDepTypes': {
+                'type': str,
+                'required': False,
+                'help': 'A comma separated list of Maven dependency types to be excluded from the scan'
+            }
+        }
 
-    @property
-    def dependencies(self) -> t.Iterable['Dependency']:
-        return self.__dependencies
+    def scan(self, path: Path) -> t.Optional[DependencyScan]:
+        if path.is_dir() and not (path / 'pom.xml').exists():
+            return None
 
-    def mvn(self, *args, **kwargs):
-        return subprocess.run(
-            ['mvn', '-f', self.__path] + list(args),
-            shell=(platform == 'win32'),
-            **kwargs
-        )
+        elif path.is_file() and path.name != 'pom.xml':
+            return None
 
-    def execute(self):
-        self.__local_repo = self._find_local_repository()
-        self.__remote_repos.update(self._find_remote_repositories())
+        return self._execute(path)
+
+    def _execute(self, path: Path) -> t.Optional['DependencyScan']:
+        self.__path = path
 
         with TemporaryDirectory() as temp_dir:
-            tree_file = Path(temp_dir) / 'deps.tree'
+            temp_dir = Path(temp_dir)
+
+            self.__local_repo = self._find_local_repository(temp_dir)
+            self.__remote_repos.update(self._find_remote_repositories(temp_dir))
+
+            tree_file = temp_dir / 'deps.tree'
 
             # Dump dependencies tree
-            result = self.mvn('dependency:tree', '-DoutputType=text', f'-DoutputFile={tree_file}', capture_output=False)
+            result = self._mvn('dependency:tree',
+                               '-DoutputType=text', '-DappendOutput=true', f'-DoutputFile={tree_file}')
 
             if result.returncode != 0:
                 print('Failed to dump dependency tree')
                 exit(1)
 
             # Resolve dependencies sources
-            self.mvn('dependency:sources', capture_output=False)
+            # self.mvn('dependency:sources')
+            scan = None
+            if nodes := Tree.from_maven_file(tree_file):
+                deps = []
+                self.__nodes = nodes
 
-            if tree := Tree.from_maven_file(tree_file):
-                self.__tree = tree
+                for n in nodes:
+                    if dep := self._create_dep_from_node(n):
+                        deps.append(dep)
 
-                dep = self._create_dep_from_node(tree)
+                name = self._evaluate('project.name', temp_dir)
+                groupId = self._evaluate('project.groupId', temp_dir)
+                artifactId = self._evaluate('project.artifactId', temp_dir)
+                version = self._evaluate('project.version', temp_dir)
 
-                self.__module = dep.name
-                self.__module_id = dep.key
-                self.__dependencies = dep.dependencies
+                scan = GenericScan(module=name,
+                                   moduleId=f'mvn:{groupId}:{artifactId}' + f':{version}' if version else '',
+                                   deps=deps)
 
-    def _create_dep_from_node(self, node: Tree) -> Dependency:
+            return scan
+
+    def _mvn(self, *args, **kwargs) -> subprocess.CompletedProcess:
+        return self._exec('-f', self.__path, *args, **kwargs)
+
+    def _evaluate(self, expr: str, output: Path) -> t.Optional[str]:
+        out = None
+        out_file = output / 'eval.out'
+        if self._mvn('help:3.3.0:evaluate', f'-Dexpression={expr}', f'-Doutput={out_file}').returncode == 0:
+            with out_file.open('r') as fp:
+                out = fp.read()
+            out_file.unlink()
+        return out
+
+    def _create_dep_from_node(self, node: Tree) -> t.Optional[Dependency]:
         # example coordinates: org.tmatesoft.svnkit:svnkit:jar:1.8.7:provided
 
-        group_id, artifact_id, _, version, *_ = node.data.split(":")
+        group_id, artifact_id, _, version, *other = node.data.split(":")
+
+        if len(other) > 0:
+            if other[0] in self.__excludeDepTypes:
+                return None
 
         dep = MavenDependency(group_id=group_id,
                               artifact_id=artifact_id,
@@ -125,38 +146,42 @@ class MavenScan(DependencyScan):
                 dep.meta['sources'] = sources_meta
 
             self.__processed_deps.add(artifact_id)
-            dep.dependencies = [self._create_dep_from_node(child) for child in node.children]
+
+            for child in node.children:
+                if child_dep := self._create_dep_from_node(child):
+                    dep.dependencies.append(child_dep)
 
         return dep
 
-    def _create_effective_pom(self) -> t.Optional[Pom]:
-        with TemporaryDirectory() as temp_dir:
-            pom_file = Path(temp_dir) / 'effective-pom.xml'
+    def _get_project_modules(self, workdir: Path) -> t.List[str]:
+        if res := self._evaluate('project.modules', workdir):
+            try:
+                return [node.text for node in ET.fromstring(res)]
+            except:
+                pass
 
-            result = self.mvn('help:effective-pom', f'-Doutput={pom_file}')
+        return []
 
-            if result.returncode == 0:
-                return Pom.from_file(pom_file)
+    def _create_effective_pom(self, workdir: Path) -> t.Optional[Pom]:
+        pom_file = workdir / 'effective-pom.xml'
+        result = self._mvn('help:effective-pom', f'-Doutput={pom_file}')
+
+        if result.returncode == 0:
+            return Pom.from_file(pom_file)
 
         return None
 
-    def _find_local_repository(self) -> t.Optional[Path]:
-        result = self.mvn('help:evaluate', '-Dexpression=settings.localRepository', '-q', '-DforceStdout=true',
-                          capture_output=True,
-                          text=True,
-                          encoding='utf-8')
+    def _find_local_repository(self, workdir: Path) -> t.Optional[Path]:
+        if res := self._evaluate('settings.localRepository', workdir):
+            return Path(res)
+        else:
+            return None
 
-        return Path(result.stdout) if result.returncode == 0 else None
-
-    def _find_remote_repositories(self) -> t.Dict[str, str]:
-        result = self.mvn('help:evaluate', '-Dexpression=project.repositories', '-q', '-DforceStdout=true',
-                          capture_output=True,
-                          text=True,
-                          encoding='utf-8')
-        try:
-            if result.returncode == 0:
+    def _find_remote_repositories(self, workdir: Path) -> t.Dict[str, str]:
+        if res := self._evaluate('project.repositories', workdir):
+            try:
                 repos = {}
-                for repo in ET.fromstring(result.stdout):
+                for repo in ET.fromstring(res):
                     _id, _url = None, None
                     for prop in repo:
                         if prop.tag == 'id':
@@ -170,8 +195,9 @@ class MavenScan(DependencyScan):
                             break
 
                 return repos
-        except:
-            pass
+
+            except:
+                pass
 
         return {}
 
@@ -213,13 +239,11 @@ class MavenDependency(Dependency):
 
     @property
     def sources_data(self) -> t.Optional[t.Tuple[str, Path, t.Optional[t.Tuple[str, str]]]]:
-        if self.name == 'wildfly-controller-client':
-            print('Debug')
-
         return self._find_artifact_data('-sources.jar')
 
     def _find_artifact_data(self, artifact_name_suffix: str) -> t.Optional[
-        t.Tuple[str, Path, t.Optional[t.Tuple[str, str]]]]:
+        t.Tuple[str, Path, t.Optional[
+            t.Tuple[str, str]]]]:
         """
         Returns sources repository url, sources jar file and optionally its checksum
         :return: (sources_repo, sources_jar, (checksum_alg, checksum))
@@ -232,9 +256,11 @@ class MavenDependency(Dependency):
         if not remote_repos.exists():
             return None
 
+        artifact_data_re = re.compile(rf"([\w.\-]*{artifact_name_suffix})>(.*)=")
+
         with remote_repos.open('r') as fp:
             for line in fp:
-                if m := re.search(f"([\w\d\.\-]*{artifact_name_suffix})>(.*)=", line):
+                if m := artifact_data_re.search(line):
                     fname = m.group(1)
 
                     repo = m.group(2) if m.group(2) else 'central'

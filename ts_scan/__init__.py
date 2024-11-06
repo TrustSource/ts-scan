@@ -1,64 +1,137 @@
+import click
 import tempfile
 import itertools
 import typing as t
 import subprocess
 
-from wasabi import msg
+from wasabi import Printer
 from pathlib import Path
 from distutils.spawn import find_executable
+from urllib.parse import urlparse
 
+from ts_python_client.cli import ScanCommand
 from ts_python_client.commands import parse_cmd_opts_from_args
 
-from .pm import Dependency, DependencyScan
+from .pm import Scanner, Dependency, DependencyScan
+
+msg = Printer()
 
 
-def do_scan(paths: [Path]) -> t.Iterable[DependencyScan]:
+def __get_scanner_classes():
+    from .pm.pypi import PypiScanner
+    from .pm.maven import MavenScanner
+    from .pm.node import NodeScanner
+    from .pm.nuget import NugetScanner
+
+    return [
+        PypiScanner,
+        MavenScanner,
+        NodeScanner,
+        NugetScanner
+    ]
+
+
+def scanner_options(f):
+    for cls in __get_scanner_classes():
+        for opt, opt_params in cls.options().items():
+            opt_prefix = cls.name().lower()
+            f = click.option(f'--{opt_prefix}:{opt}', f'{opt_prefix}_{opt}', **opt_params)(f)
+
+    return f
+
+
+def create_scanners(**kwargs) -> [Scanner]:
+    scanner_classes = __get_scanner_classes()
+
+    scanner_args = {cls.name().lower(): {} for cls in scanner_classes}
+    other_args = {}
+
+    for arg, val in kwargs.items():
+        scanner_prefix_pos = arg.find('_')
+        if scanner_prefix_pos >= 0:
+            scanner_prefix = arg[:scanner_prefix_pos]
+            scanner_arg = arg[scanner_prefix_pos + 1:]
+            scanner_args[scanner_prefix][scanner_arg] = val
+        else:
+            other_args[arg] = val
+
+    return [cls(**other_args, **scanner_args[cls.name().lower()]) for cls in scanner_classes]
+
+
+def do_scan(paths: [Path], **kwargs) -> t.Iterable[DependencyScan]:
     """
-    Imports and excutes actual scan routines
+    Excutes actual scan routines
     :param paths: List of paths to be scanned
     :return: An iterable over scan results
     """
-    from .pm.pypi import scan as pypi_scan
-    from .pm.maven import scan as maven_scan
-
+    scanners = create_scanners(**kwargs)
     for p in paths:
         p = p.resolve()
 
-        if scan := pypi_scan(p):
-            yield scan
+        for scanner in scanners:
+            if scanner.ignore:
+                continue
 
-        if scan := maven_scan(p):
-            yield scan
+            # with msg.loading(f'Scanning for {name} dependencies...'):
+            msg.info(f'Scanning for {scanner.name()} dependencies...')
+
+            try:
+                if scan := scanner.scan(p):
+                    yield scan
+
+                msg.good(f'{scanner.name()} scan is done!')
+
+            except Exception as err:
+                msg.fail(f'An error occured while scanning {scanner.name()} dependencies...')
+
+                if len(err.args) > 1:
+                    msg.fail(err.args[1])
+                else:
+                    msg.fail(err)
+
+                pass
 
 
-def do_scan_with_syft(paths: [Path],
+class SyftNotFoundError(Exception):
+    pass
+
+
+def do_scan_with_syft(sources: ScanCommand.Sources,
                       syft_path: t.Optional[Path] = None,
                       syft_opts: t.Optional[t.List[str]] = None) -> t.Iterable[DependencyScan]:
-    from .spdx import scan as spdx_scan
+    from .syft import import_scan
 
     syft_tool = find_executable('syft', syft_path)
 
     if not syft_tool:
-        print('Cannot find Syft executable. Please ensure that the Syft tool is installed on your system or specify '
-              'the path using \'--swift-path\' option.')
-        print('For the installation instructions please refer to: https://github.com/anchore/syft#installation')
-        exit(2)
+        raise SyftNotFoundError(
+            """
+'Cannot find Syft executable. Please ensure that the Syft tool is installed on your system 
+or specify the path using \'--swift-path\' option.
+For the installation instructions please refer to: https://github.com/anchore/syft#installation                     
+            """)
     else:
         msg.good('Found Syft: {}'.format(syft_tool))
 
-    for p in paths:
+    for src in sources:
         with tempfile.TemporaryDirectory() as tmpdir:
-            output = Path(f'{tmpdir}/{p.name}.spdx.json')
-            cmd = [syft_tool, str(p), '-o', f'spdx-json={output}']
+            output = Path(f'{tmpdir}/scan.json')
+            cmd = [syft_tool, str(src), '-o', f'syft-json={output}']
             errcode = subprocess.call(cmd)
 
             if errcode != 0:
-                msg.fail(f'Syft failed to scan with the error code {errcode}')
-                exit(2)
+                msg.fail(f'Syft failed to scan {str(src)}. Error code: {errcode}')
+                continue
 
-            if scan := spdx_scan(output):
-                scan.module = p.name
-                scan.moduleId = f'image:{scan.module}'
+            if scan := import_scan(output):
+                if isinstance(src, Path):
+                    scan.moduleId = f'{src.name}:{scan.module}'
+                else:
+                    try:
+                        url = urlparse(src)
+                        scan.moduleId = f'{url.scheme}:{scan.module}'
+                    except ValueError:
+                        pass
 
                 yield scan
 

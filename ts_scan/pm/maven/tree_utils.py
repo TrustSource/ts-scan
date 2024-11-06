@@ -3,6 +3,7 @@ import typing as t
 
 from pathlib import Path
 
+
 class Tree:
     def __init__(self):
         self.__children = []
@@ -12,24 +13,23 @@ class Tree:
     @property
     def data(self) -> t.Optional[str]:
         return self.__data
-    
+
     @property
     def parent(self) -> t.Optional['Tree']:
         return self.__parent
-    
+
     @property
     def children(self) -> t.List['Tree']:
         return self.__children
 
-
     @classmethod
-    def from_maven_file(cls, path: Path) -> 'Tree':
+    def from_maven_file(cls, path: Path) -> t.List['Tree']:
         """Parses a maven-generated dependency tree file, in the format 'text'."""
 
         with open(path, "r") as f:
+            root_nodes = []
             prev_indent = 0
             prev_vertex = Tree()
-            root = None
 
             for line in f:
                 # compute indent, i.e. tree depth, by counting non-alphanumeric characters
@@ -47,7 +47,8 @@ class Tree:
                 if new_indent == 0:
                     # case 0, line has indent 0 (only happend at the start):
                     # new vertex has no parent, but is saved as a reference to the root
-                    root = new_vertex
+                    # and added to the list of root nodes
+                    root_nodes.append(new_vertex)
 
                 elif new_indent > prev_indent:
                     # case 1, line is more indentet than last line:
@@ -77,4 +78,12 @@ class Tree:
                 prev_vertex = new_vertex
                 prev_indent = new_indent
 
-        return root
+        return root_nodes
+
+
+if __name__ == "__main__":
+    deps = Path("/Users/markin/Projects/eacg/thirdparty/wildfly/deps.tree")
+    nodes = Tree.from_maven_file(deps)
+
+    for n in nodes:
+        print(n.data)

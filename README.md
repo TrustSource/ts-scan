@@ -43,6 +43,30 @@ ts-scan --help
 ts-scan scan -o <path to the output file> <path to the project directory>
 ```
 
+#### Options
+
+In order to ignore scanning of dependencies of a particular type, add a parameter --<type>:ignore. 
+For example, to ignore scanning of maven dependencies
+
+```shell
+ts-scan scan --maven:ignore ./
+```
+
+While scanning for  Maven, Node and NuGet dependencies, **ts-scan** calls corresponding package manager executables. 
+There are options to specify executable paths as well as to forward parameters to the package manager tools.
+
+For example, in order to specify a path to the Maven excutable
+
+```shell
+ts-scan scan --maven:executable /opt/local/bin/mvn  ./
+```
+
+To pass a settings file to Maven
+
+```shell
+ts-scan scan --maven:foward --settings,customSettings.xml  ./
+```
+
 More info
 
 ```shell

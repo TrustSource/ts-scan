@@ -4,19 +4,27 @@
 
 import re
 import build.util
+import typing as t
 
 from pathlib import Path
 from typing import List, Optional, Iterable
 from importlib.metadata import distribution, PackageNotFoundError
 
-from . import DependencyScan, Dependency, License
+from . import Scanner, DependencyScan, Dependency, License
 
 
-def scan(path: Path) -> Optional[DependencyScan]:
-    _scan = PypiScan(path)
-    _scan.execute()
+class PypiScanner(Scanner):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
-    return _scan if _scan.dependencies else None
+    @staticmethod
+    def name() -> str:
+        return "PyPI"
+
+    def scan(self, path: Path) -> t.Optional[DependencyScan]:
+        _scan = PypiScan(path)
+        _scan.execute()
+        return _scan if _scan.dependencies else None
 
 
 class PypiScan(DependencyScan):
@@ -59,22 +67,20 @@ class PypiScan(DependencyScan):
                     self.__dependencies.append(self._create_dep_from_metadata(metadata))
                 else:
                     break
-                    #stack.extend([p/f for f in p.glob('*.py')])
-                    #stack.extend([p/d for d in p.rglob('**/')])
+            #                    stack.extend([p/f for f in p.glob('*.py')])
+            #                    stack.extend([p/d for d in p.rglob('**/')])
             else:
                 for pkg in _extract_imported_pkgs(p):
                     if dep := self._create_dep(pkg):
                         self.__dependencies.append(dep)
 
-
     def _create_dep(self, pkg: str) -> Optional[Dependency]:
         try:
             pkg_info = distribution(pkg)
-        except  PackageNotFoundError:
+        except PackageNotFoundError:
             return None
 
         return self._create_dep_from_metadata(pkg_info.metadata)
-
 
     def _create_dep_from_metadata(self, metadata) -> Dependency:
         """
@@ -102,7 +108,7 @@ class PypiScan(DependencyScan):
 
             dist = distribution(name)
 
-            #reqs = metadata.get_all('Requires-Dist', [])
+            # reqs = metadata.get_all('Requires-Dist', [])
             if reqs := dist.requires:
                 dep.dependencies = [d for pkg in _extract_required_pkgs(reqs) if (d := self._create_dep(pkg))]
 
@@ -116,6 +122,8 @@ class PypiScan(DependencyScan):
 
 
 _import_statement_regex = re.compile(r'(?:from|import) ([a-zA-Z0-9_]+).*')
+
+
 def _extract_imported_pkgs(path: Path) -> List[str]:
     with path.open('r') as fp:
         try:
@@ -126,8 +134,9 @@ def _extract_imported_pkgs(path: Path) -> List[str]:
 
 
 _require_expr_regex = re.compile(r'([a-zA-Z0-9_\-]+).*')
+
+
 def _extract_required_pkgs(reqs: List[str]) -> List[str]:
     for req in reqs:
         for pkg in _require_expr_regex.findall(req):
             yield pkg
-

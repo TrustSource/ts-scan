@@ -8,7 +8,7 @@ setup(
         'ts_scan.pm.maven',
         'ts_scan.spdx'
     ],
-    version='0.3.0',
+    version='1.0.0',
     description='TrustSource PM scanner',
     author='EACG GmbH',
     license='Apache-2.0',
@@ -23,14 +23,14 @@ setup(
         'build',
         'importlib-metadata',
         'alive-progress',
-        'requests',
+        "requests==2.32.0",
         'numpy',
         'wasabi',
-        'ts-python-client==2.0.5',
+        'ts-python-client==2.0.6',
         'ts-deepscan==2.1.1',
         'license-expression',
         'packageurl-python',
-        'spdx-tools @ git+https://github.com/TrustSource/tools-python.git@trustsource/v0.7.0-rc0#egg=spdx-tools'
+        'spdx-tools==0.7.0rc0'
     ],
     scripts=['ts-scan'],
     entry_points={

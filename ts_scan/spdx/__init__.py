@@ -14,7 +14,7 @@ from ..pm import Dependency, DependencyScan, License
 licensing = get_spdx_licensing()
 
 
-def scan(path: Path) -> t.Optional[DependencyScan]:
+def import_scan(path: Path) -> t.Optional[DependencyScan]:
     if doc := parse(path):
         return SpdxScan(doc)
     else:
