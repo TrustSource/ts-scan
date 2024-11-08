@@ -9,7 +9,6 @@ The **ts-scan** scans your project for all package depedencies. It supports foll
 
 The collected information is stored locally as JSON structure and can be posted to the TrustSource service for the analysis.  
 
-
 ## Installation
 
 #### Requirements
@@ -45,32 +44,69 @@ ts-scan scan -o <path to the output file> <path to the project directory>
 
 #### Options
 
-In order to ignore scanning of dependencies of a particular type, add a parameter --<type>:ignore. 
+##### Ignore scanners
+
+In order to ignore scanning of dependencies of a particular type, add a parameter
+
+`--<name of the scanner type>:ignore`
 For example, to ignore scanning of maven dependencies
 
 ```shell
-ts-scan scan --maven:ignore ./
+ts-scan scan --maven:ignore <PATH>
 ```
 
-While scanning for  Maven, Node and NuGet dependencies, **ts-scan** calls corresponding package manager executables. 
-There are options to specify executable paths as well as to forward parameters to the package manager tools.
+##### Scanner executable path
 
-For example, in order to specify a path to the Maven excutable
+While scanning for  Maven, Node and NuGet dependencies, ***ts-scan*** calls corresponding package manager executables. For example, in order to specify a path to the Maven excutable use the following option
 
 ```shell
-ts-scan scan --maven:executable /opt/local/bin/mvn  ./
+ts-scan scan --maven:executable /opt/local/bin/mvn <PATH>
 ```
 
-To pass a settings file to Maven
+##### Forward custom parameters to a scanner executable
+
+There are also options to forward parameters to a package manager executable. For example, in order to pass a settings file to Maven, one can use the following combination:
 
 ```shell
-ts-scan scan --maven:foward --settings,customSettings.xml  ./
+ts-scan scan --maven:foward --settings,customSettings.xml <PATH>
 ```
 
-More info
+##### More info
 
 ```shell
 ts-scan scan --help
+```
+
+### Scan with Syft
+
+**ts-scan** can use [Syft]([GitHub - anchore/syft: CLI tool and library for generating a Software Bill of Materials from container images and filesystems](https://github.com/anchore/syft)) scanner as a backend for dependencies scanning. To enable the Syft scanner, use the following option
+
+```shell
+ts-scan scan --use-syft <SOURCE>
+```
+
+A <SOURCE> can be any filesystem path or a "source" supported by Syft
+
+Before calling Syft, **ts-scan** tries to find the Syft executable in default locations, in order to specify a custom location use the following option
+
+```shell
+ts-scan scan --use-syft --syft-path <syft executable> <SOURCE>
+```
+
+In order to pass custom parameters directly to Syft
+
+```
+ts-scan scan --use-syft --Xsyft <option>,<value> <SOURCE>
+```
+
+#### Scan Docker images with Syft
+
+Syft supports many different input types, and one of them is Docker images. For more details on supported sources types, please, refer to the Syft's official documentation or use the Syft's help command. 
+
+In order to scan a local docker image, use the following command
+
+```shell
+./ts-scan scan --use-syft -o <OUTPUT> docker:<DOCKER IMAGE>
 ```
 
 ### Upload
