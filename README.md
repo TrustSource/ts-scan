@@ -79,7 +79,7 @@ ts-scan scan --help
 
 ### Scan with Syft
 
-**ts-scan** can use [Syft]([GitHub - anchore/syft: CLI tool and library for generating a Software Bill of Materials from container images and filesystems](https://github.com/anchore/syft)) scanner as a backend for dependencies scanning. To enable the Syft scanner, use the following option
+**ts-scan** can use [Syft](https://github.com/anchore/syft) scanner as a backend for dependencies scanning. To enable the Syft scanner, use the following option
 
 ```shell
 ts-scan scan --use-syft <SOURCE>
