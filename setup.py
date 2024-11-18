@@ -8,7 +8,7 @@ setup(
         'ts_scan.pm.maven',
         'ts_scan.spdx'
     ],
-    version='1.0.0',
+    version='1.0.3',
     description='TrustSource PM scanner',
     author='EACG GmbH',
     license='Apache-2.0',
@@ -19,15 +19,15 @@ setup(
     install_requires=[
         'wheel',
         'defusedxml',
-        'semanticversion',
+        'semantic_version',
         'build',
         'importlib-metadata',
         'alive-progress',
-        "requests==2.32.0",
+        "requests==2.32.3",
         'numpy',
         'wasabi',
         'ts-python-client==2.0.6',
-        'ts-deepscan==2.1.1',
+        'ts-deepscan==2.2.2',
         'license-expression',
         'packageurl-python',
         'spdx-tools==0.7.0rc0'
