@@ -17,42 +17,15 @@ class PypiScanner(Scanner):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+        self.__processed_deps = set()
+
     @staticmethod
     def name() -> str:
         return "PyPI"
 
     def scan(self, path: Path) -> t.Optional[DependencyScan]:
-        _scan = PypiScan(path)
-        _scan.execute()
-        return _scan if _scan.dependencies else None
-
-
-class PypiScan(DependencyScan):
-    def __init__(self, path: Path):
-        super().__init__()
-
-        self.__path = path
-        self.__processed_deps = set()
-
-        self.__dependencies = []
-
-    @property
-    def module(self) -> str:
-        if len(self.__dependencies) == 1:
-            return self.__dependencies[0].name
-        else:
-            return self.__path.name
-
-    @property
-    def moduleId(self) -> str:
-        return f'pip:{self.module}'
-
-    @property
-    def dependencies(self) -> Iterable[Dependency]:
-        return self.__dependencies
-
-    def execute(self):
-        stack = [self.__path]
+        deps = []
+        stack = [path]
         while len(stack) > 0:
             p = stack.pop()
             if p.is_dir():
@@ -64,7 +37,7 @@ class PypiScan(DependencyScan):
                         print(f'An error occured while building packages metadata')
                         exit(2)
 
-                    self.__dependencies.append(self._create_dep_from_metadata(metadata))
+                    deps.append(self._create_dep_from_metadata(metadata))
                 else:
                     break
             #                    stack.extend([p/f for f in p.glob('*.py')])
@@ -72,7 +45,14 @@ class PypiScan(DependencyScan):
             else:
                 for pkg in _extract_imported_pkgs(p):
                     if dep := self._create_dep(pkg):
-                        self.__dependencies.append(dep)
+                        deps.append(dep)
+
+        if deps:
+            module = deps[0].name if len(deps) == 1 else path.name
+            return DependencyScan(module=module, moduleId=f'pip:{module}', dependencies=deps)
+
+        else:
+            return None
 
     def _create_dep(self, pkg: str) -> Optional[Dependency]:
         try:

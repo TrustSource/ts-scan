@@ -7,7 +7,7 @@ from tempfile import TemporaryDirectory
 
 from xml.etree import ElementTree as ET
 
-from .. import Scanner, DependencyScan, GenericScan, Dependency, ExecutableNotFoundError
+from .. import Scanner, DependencyScan, Dependency
 
 from .pom_utils import Pom
 from .tree_utils import Tree
@@ -88,9 +88,9 @@ class MavenScanner(Scanner):
                 artifactId = self._evaluate('project.artifactId', temp_dir)
                 version = self._evaluate('project.version', temp_dir)
 
-                scan = GenericScan(module=name,
-                                   moduleId=f'mvn:{groupId}:{artifactId}' + f':{version}' if version else '',
-                                   deps=deps)
+                scan = DependencyScan(module=name,
+                                      moduleId=f'mvn:{groupId}:{artifactId}' + f':{version}' if version else '',
+                                      dependencies=deps)
 
             return scan
 

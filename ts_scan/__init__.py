@@ -9,8 +9,6 @@ from pathlib import Path
 from distutils.spawn import find_executable
 from urllib.parse import urlparse
 
-from ts_python_client.cli import ScanCommand
-from ts_python_client.commands import parse_cmd_opts_from_args
 
 from .pm import Scanner, Dependency, DependencyScan
 
@@ -96,7 +94,7 @@ class SyftNotFoundError(Exception):
     pass
 
 
-def do_scan_with_syft(sources: ScanCommand.Sources,
+def do_scan_with_syft(sources: t.List[t.Union[Path, str]],
                       syft_path: t.Optional[Path] = None,
                       syft_opts: t.Optional[t.List[str]] = None) -> t.Iterable[DependencyScan]:
     from .syft import import_scan
@@ -179,6 +177,16 @@ def process_scan_with_ds(scan: DependencyScan, ds_args: t.List[str]) -> Dependen
                     dep.meta['license_file'] = lic_file_res
 
     return scan
+
+
+def parse_cmd_opts_from_args(cmd: click.Command, args: [str]):
+    ctx = cmd.context_class(cmd)
+    with ctx:
+        parser = cmd.make_parser(ctx)
+        values, _, order = parser.parse_args(args)
+
+    opts = {k: d for (k, d), ty in zip(values.items(), order) if isinstance(ty, click.Option)}
+    return opts
 
 
 __ds_scanner = None

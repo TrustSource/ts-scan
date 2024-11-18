@@ -7,7 +7,7 @@ from enum import Enum
 
 from defusedxml import ElementTree
 
-from . import Scanner, Dependency, DependencyScan, License, GenericScan
+from . import Scanner, Dependency, DependencyScan, License
 
 
 class ProjectType(Enum):
@@ -41,7 +41,7 @@ class NugetScanner(Scanner):
         self.__global_packages_dir = self._find_global_packages_dir()
 
         if deps := self._process_package(self.__path):
-            return GenericScan(module='', moduleId='', deps=deps)
+            return DependencyScan(module='', moduleId='', dependencies=deps)
         else:
             return None
 
