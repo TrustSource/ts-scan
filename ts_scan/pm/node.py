@@ -7,9 +7,9 @@ import typing as t
 from semantic_version import Version, NpmSpec
 
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Optional
 
-from . import Scanner, DependencyScan, GenericScan, Dependency, License
+from . import Scanner, DependencyScan, Dependency, License
 
 
 class NodeScanner(Scanner):
@@ -75,7 +75,7 @@ class NodeScanner(Scanner):
                 if version := root.get('version'):
                     moduleId += ':' + version
 
-            return GenericScan(module=module, moduleId=moduleId, deps=deps)
+            return DependencyScan(module=module, moduleId=moduleId, dependencies=deps)
         else:
             return None
 

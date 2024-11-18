@@ -6,10 +6,9 @@ setup(
         'ts_scan',
         'ts_scan.pm',
         'ts_scan.pm.maven',
-        'ts_scan.spdx',
-        'ts_scan.syft'
+        'ts_scan.spdx'
     ],
-    version='1.0.4',
+    version='1.1.0',
     description='TrustSource PM scanner',
     author='EACG GmbH',
     license='Apache-2.0',
@@ -27,14 +26,15 @@ setup(
         "requests==2.32.3",
         'numpy',
         'wasabi',
-        'ts-python-client==2.0.6',
-        'ts-deepscan==2.2.2',
+        'ts-deepscan>=2.3.0',
         'license-expression',
         'packageurl-python',
-        'spdx-tools==0.7.0rc0'
+        'spdx-tools>=0.8.2',
+        'click==8.1.3',
+        'click-params'
     ],
     scripts=['ts-scan'],
     entry_points={
-        'console_scripts': ['ts-scan=ts_scan.cli:main'],
+        'console_scripts': ['ts-scan=ts_scan.cli:start'],
     }
 )
