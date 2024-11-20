@@ -4,7 +4,7 @@ build
 importlib-metadata
 alive-progress
 numpy
-requests~=2.31.0
+requests~=2.32.3
 ts-python-client>=2.0.5
 ts-deepscan>=2.1.0
 spdx-tools==0.7.0rc0

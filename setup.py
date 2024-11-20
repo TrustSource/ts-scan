@@ -6,9 +6,10 @@ setup(
         'ts_scan',
         'ts_scan.pm',
         'ts_scan.pm.maven',
-        'ts_scan.spdx'
+        'ts_scan.spdx',
+        'ts_scan.syft'
     ],
-    version='1.0.3',
+    version='1.0.4',
     description='TrustSource PM scanner',
     author='EACG GmbH',
     license='Apache-2.0',
