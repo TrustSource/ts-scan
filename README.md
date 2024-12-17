@@ -24,8 +24,25 @@ pip install ts-scan
 #### Installation from a local folder
 
 ```shell
-cd <path to the ts-pip-plugin>
+cd <path to the ts-scan>
 pip install ./ --process-dependency-links
+```
+
+#### Docker build
+
+**NOTE**: scanning of Docker images using Syft from within the *ts-scan* Docker image is not supported   
+
+##### Build a Docker image containing ts-scan
+
+```shell
+cd <path to the ts-scan>
+docker build -t ts-scan .
+```
+
+##### Use ts-scan from the Docker image
+
+```shell
+docker run ts-scan <COMMANDS>
 ```
 
 ## Usage
