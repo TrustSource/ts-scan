@@ -1,4 +1,5 @@
 import abc
+import json
 import click
 import typing as t
 import shutil
@@ -6,11 +7,13 @@ import subprocess
 
 from sys import platform
 from pathlib import Path
-from dataclasses import dataclass, field, asdict, InitVar
 from packageurl import PackageURL
 
+from dataclasses import dataclass, field
+from dataclasses_json import dataclass_json
+
 from ts_deepscan.scanner import Scan as DSScan
-from ts_python_client.commands.ScanCommand import Scan
+from typing_extensions import TextIO
 
 
 class ExecutableNotFoundError(Exception):
@@ -82,8 +85,9 @@ class Scanner(abc.ABC):
             raise ExecutableNotFoundError(f'An executable {exec_path} could not be found')
 
 
+@dataclass_json
 @dataclass
-class DependencyScan(Scan):
+class DependencyScan:
     module: str
     moduleId: str
     dependencies: t.List['Dependency'] = field(default_factory=lambda: [])
@@ -93,14 +97,6 @@ class DependencyScan(Scan):
 
     deepscans: t.Dict[str, DSScan] = field(default_factory=lambda: {})
 
-    @staticmethod
-    def from_dict(d) -> 'DependencyScan':
-        from dacite import from_dict
-        return from_dict(data_class=DependencyScan, data=d)
-
-    def to_dict(self) -> dict:
-        return asdict(self, dict_factory=_dataclass_dict_factory)
-
     def iterdeps(self) -> t.Iterable['Dependency']:
         deps = list(self.dependencies)
         while deps:
@@ -109,13 +105,14 @@ class DependencyScan(Scan):
             yield d
 
 
+@dataclass_json
 @dataclass
 class Dependency:
     key: str
     name: str
+    type: str
 
-    purl_type: InitVar[str]
-    purl_namespace: InitVar[t.Optional[str]] = None
+    namespace: str = ''
 
     repoUrl: str = ''
     homepageUrl: str = ''
@@ -129,30 +126,43 @@ class Dependency:
 
     meta: t.Dict = field(default_factory=lambda: {})
 
-    # Excluded from serialisation
-    files: InitVar[t.List[Path]] = None
-    license_file: InitVar[t.Optional[Path]] = None
-
-    def __post_init__(self, purl_type, purl_namespace, files, license_file):
-        self.purl_type = purl_type
-        self.purl_namespace = purl_namespace
-
-        self.files = files if files else []
-        self.license_file = license_file
+    package_files: t.List[str] = field(default_factory=lambda: [])
+    license_file: t.Optional[str] = None
 
     @property
     def purl(self):
-        return PackageURL(type=self.purl_type, namespace=self.purl_namespace, name=self.name)
+        return PackageURL(type=self.type,
+                          namespace=self.namespace,
+                          name=self.name,
+                          version=self.versions[0] if self.versions else None)
 
-    def to_dict(self):
-        return asdict(self, dict_factory=_dataclass_dict_factory)
 
-
+@dataclass_json
 @dataclass
 class License:
     name: str
     url: str = ''
 
 
-def _dataclass_dict_factory(d):
-    return {k: v for (k, v) in d if v is not None}
+def dump_scans(scans: t.List[DependencyScan], fp: TextIO, fmt: str):
+    # noinspection PyProtectedMember
+    from dataclasses_json.core import _ExtendedEncoder
+    if fmt == 'ts':
+        scans = [s.to_dict() for s in scans]
+        # noinspection PyTypeChecker
+        json.dump(scans, fp, cls=_ExtendedEncoder, indent=2)
+    else:
+        raise NotImplemented(f'No dump/load for the "{fmt}" format')
+
+
+def load_scans(fp: TextIO, fmt: str) -> t.List[DependencyScan]:
+    if fmt == 'ts':
+        data = json.load(fp)
+        if type(data) is list:
+            # noinspection PyUnresolvedReferences
+            return [DependencyScan.from_dict(d) for d in data]
+        else:
+            # noinspection PyUnresolvedReferences
+            return [DependencyScan.from_dict(data)]
+    else:
+        raise NotImplemented(f'No dump/load for the "{fmt}" format')

@@ -5,6 +5,7 @@
 import re
 import build.util
 import typing as t
+import importlib
 
 from pathlib import Path
 from typing import List, Optional, Iterable
@@ -71,7 +72,7 @@ class PypiScanner(Scanner):
         name = metadata.get('Name', '')
         key = 'pip:' + name.lower()
 
-        dep = Dependency(key=key, name=name, purl_type='pypi')
+        dep = Dependency(key=key, name=name, type='pypi')
 
         if version := metadata.get('Version', None):
             dep.versions.append(version)
@@ -88,15 +89,18 @@ class PypiScanner(Scanner):
 
             dist = distribution(name)
 
+            if lic_file := metadata.get('License-File', None):
+                # noinspection PyTypeChecker
+                dep.license_file = str(Path(dist.locate_file(lic_file)).resolve())
+
+            if top_level := dist.read_text('top_level.txt'):
+                # noinspection PyTypeChecker
+                files = (str(Path(dist.locate_file(f)).resolve()) for f in top_level.split('\n') if f)
+                dep.package_files.extend(files)
+
             # reqs = metadata.get_all('Requires-Dist', [])
             if reqs := dist.requires:
                 dep.dependencies = [d for pkg in _extract_required_pkgs(reqs) if (d := self._create_dep(pkg))]
-
-            if srcs := [Path(dist.locate_file(f)) for f in dist.files]:
-                dep.files.extend(srcs)
-
-            if lic_file := metadata.get('License-File', None):
-                dep.license_file = next((f for f in dep.files if f.name == lic_file), None)
 
         return dep
 

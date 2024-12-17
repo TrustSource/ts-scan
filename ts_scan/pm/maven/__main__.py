@@ -6,6 +6,6 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         s = scan(Path(sys.argv[1]))
 
-        print([dep.files for dep in s.dependencies])
+        print([dep.package_files for dep in s.dependencies])
     else:
         print('No path provided')

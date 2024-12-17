@@ -126,7 +126,7 @@ class NugetScanner(Scanner):
             for dep_name, dep_dict in net_target_dict.items():
                 if (dep_type := dep_dict["type"].lower()) in ("direct", "project"):
 
-                    dep = Dependency(key=f"nuget:{dep_name}", name=dep_name, purl_type='nuget')
+                    dep = Dependency(key=f"nuget:{dep_name}", name=dep_name, type='nuget')
 
                     dep.meta[".NET target"] = net_target
                     dep.meta["dependency type"] = dep_type
@@ -154,13 +154,10 @@ class NugetScanner(Scanner):
 
                         if candidates:
                             dep_dir = candidates[0]
-
-                            dep_files = dep_dir.rglob('**')
-                            dep_files = [p for p in dep_files if Path(p).is_file()]
-                            dep.files.extend(dep_files)
+                            dep.package_files.append(str(dep_dir))
 
                             # recursively create dependencies of dependency
-                            dep.dependencies = self._process_package(Path(dep_dir), depth=depth + 1)
+                            dep.dependencies = self._process_package(dep_dir, depth=depth + 1)
 
                         else:
                             self.__n_fail += 1
@@ -187,10 +184,10 @@ class NugetScanner(Scanner):
                 dep_key = "nuget:" + name
                 dep_id = dep_key + ":" + version
 
-                dep = Dependency(dep_key, name, purl_type='nuget')
+                dep = Dependency(dep_key, name, type='nuget')
                 dep.versions.append(version)
 
-                if not dep_id in self.__processed_deps:
+                if dep_id not in self.__processed_deps:
                     self.__processed_deps.add(dep_id)
 
                     dep.meta[".NET Target"] = target
@@ -201,7 +198,7 @@ class NugetScanner(Scanner):
 
                         dep_files = dep_dir.rglob('**')
                         dep_files = [p for p in dep_files if Path(p).is_file()]
-                        dep.files.extend(dep_files)
+                        dep.package_files.extend(dep_files)
 
                         if dep_nuspec := list(dep_dir.glob('*.nuspec')):
                             meta = self._metadata_from_nuspec(dep_nuspec[0])
