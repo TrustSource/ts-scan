@@ -211,8 +211,9 @@ class MavenDependency(Dependency):
         super().__init__(key=f'mvn:{group_id}:{artifact_id}',
                          name=artifact_id,
                          versions=[version],
-                         purl_type='maven',
-                         purl_namespace=group_id, **kwargs)
+                         type='maven',
+                         namespace=group_id,
+                         **kwargs)
 
         self.__remote_repos = remote_repos
 
@@ -229,9 +230,6 @@ class MavenDependency(Dependency):
             self.homepageUrl = self.__pom.url
             self.description = self.__pom.description
             self.licenses = self.__pom.licenses
-
-        if self.__local_repo_path:
-            self.files.extend(self.__local_repo_path.rglob('**'))
 
     @property
     def package_data(self) -> t.Optional[t.Tuple[str, Path, t.Optional[t.Tuple[str, str]]]]:

@@ -106,14 +106,10 @@ class NodeScanner(Scanner):
 
         version = pkg["version"]
 
-        dep = Dependency("npm:" + name, name, purl_type='npm')
+        dep = Dependency("npm:" + name, name, type='npm')
+
         dep.versions.append(version)
-
-        dep_dir = self.__abs_module_path / package_path
-        dep_files = dep_dir.rglob("**")
-        dep_files = [p for p in dep_files if p.is_file()]
-
-        dep.files.extend(dep_files)
+        dep.package_files.append(self.__abs_module_path / package_path)
 
         if name + version not in self.__processed_deps:
             self.__processed_deps.add(name + version)
@@ -170,7 +166,7 @@ class NodeScanner(Scanner):
             self.__failed_requests += 1
             return None
 
-        dep = Dependency(key=f"npm:{name}", name=name, purl_type='npm')
+        dep = Dependency(key=f"npm:{name}", name=name, type='npm')
 
         dep.versions.append(meta.get("version", ""))
 

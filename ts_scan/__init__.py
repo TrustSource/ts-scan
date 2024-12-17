@@ -9,8 +9,8 @@ from pathlib import Path
 from distutils.spawn import find_executable
 from urllib.parse import urlparse
 
-
 from .pm import Scanner, Dependency, DependencyScan
+from .cli import cli, parse_cmd_opts_from_args
 
 msg = Printer()
 
@@ -36,6 +36,9 @@ def scanner_options(f):
             f = click.option(f'--{opt_prefix}:{opt}', f'{opt_prefix}_{opt}', **opt_params)(f)
 
     return f
+
+
+cli.scanner_options = scanner_options
 
 
 def create_scanners(**kwargs) -> [Scanner]:
@@ -136,13 +139,12 @@ For the installation instructions please refer to: https://github.com/anchore/sy
 
 def process_scan(scan: DependencyScan) -> DependencyScan:
     for dep in scan.iterdeps():
-        __process_dep(dep)
+        dep.meta['purl'] = dep.purl.to_string()
 
     return scan
 
 
-def process_scan_with_ds(scan: DependencyScan, ds_args: t.List[str]) -> DependencyScan:
-    import ts_deepscan
+def analyse_with_ds(scan: DependencyScan, ds_args: t.List[str]) -> DependencyScan:
     import ts_deepscan.cli
     import ts_deepscan.analyser.textutils
 
@@ -164,37 +166,20 @@ def process_scan_with_ds(scan: DependencyScan, ds_args: t.List[str]) -> Dependen
             __ds_dataset = ts_deepscan.create_dataset()
 
     for dep in scan.iterdeps():
-        __process_dep(dep)
-
-        if (sources := dep.files) and __ds_scanner:
-            sources = [Path(src) for src in sources]
+        if dep.package_files and __ds_scanner:
+            sources = [Path(src) for src in dep.package_files]
             ds_res = ts_deepscan.execute_scan(sources, __ds_scanner, title=dep.key)
             scan.deepscans[dep.key] = ds_res
 
-        if (lic_file := dep.license_file) and lic_file.exists() and __ds_dataset:
-            with lic_file.open(errors="surrogateescape") as fp:
-                if lic_file_res := ts_deepscan.analyser.textutils.analyse_license_text(fp.read(), __ds_dataset):
-                    dep.meta['license_file'] = lic_file_res
+        if (lic_file := dep.license_file) and __ds_dataset:
+            lic_file_path = Path(lic_file)
+            if lic_file_path.exists():
+                with lic_file_path.open(errors="surrogateescape") as fp:
+                    if lic_file_res := ts_deepscan.analyser.textutils.analyse_license_text(fp.read(), __ds_dataset):
+                        dep.meta['license_file'] = lic_file_res
 
     return scan
 
 
-def parse_cmd_opts_from_args(cmd: click.Command, args: [str]):
-    ctx = cmd.context_class(cmd)
-    with ctx:
-        parser = cmd.make_parser(ctx)
-        values, _, order = parser.parse_args(args)
-
-    opts = {k: d for (k, d), ty in zip(values.items(), order) if isinstance(ty, click.Option)}
-    return opts
-
-
 __ds_scanner = None
 __ds_dataset = None
-
-
-def __process_dep(dep: Dependency):
-    purl_v = '@' + dep.versions[0] if dep.versions else ''
-    purl_ns = '/' + dep.purl_namespace if dep.purl_namespace else ''
-
-    dep.meta['purl'] = f'pkg:{dep.purl_type}{purl_ns}/{dep.name}{purl_v}'

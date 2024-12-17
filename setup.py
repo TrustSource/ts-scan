@@ -31,7 +31,8 @@ setup(
         'packageurl-python',
         'spdx-tools>=0.8.2',
         'click==8.1.3',
-        'click-params'
+        'click-params',
+        'dataclasses-json'
     ],
     scripts=['ts-scan'],
     entry_points={
