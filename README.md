@@ -32,17 +32,24 @@ pip install ./ --process-dependency-links
 
 **NOTE**: scanning of Docker images using Syft from within the *ts-scan* Docker image is not supported   
 
-##### Build a Docker image containing ts-scan
+##### Build a Docker image containing ts-scan (AMD, intel, etc.)
 
 ```shell
 cd <path to the ts-scan>
 docker build -t ts-scan .
 ```
+##### Build a Docker image containing ts-scan (ARM)
+
+```shell
+cd <path to the ts-scan>
+docker buildx build --platform linux/amd64 -t ts-scan .
+```
+Reason for this is, that pyminr might fail to install on ARM chips.  
 
 ##### Use ts-scan from the Docker image
 
 ```shell
-docker run ts-scan <COMMANDS>
+docker run ts-scan <COMMAND>
 ```
 
 ## Usage
@@ -89,9 +96,9 @@ ts-scan scan --maven:foward --settings,customSettings.xml <PATH>
 ```
 
 ##### More info
-
+To display additional information for each command use:
 ```shell
-ts-scan scan --help
+ts-scan scan <COMMAND> --help
 ```
 
 ### Scan with Syft
