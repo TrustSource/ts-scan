@@ -1,0 +1,94 @@
+
+# Project
+site_name: TrustSource ts-scan
+site_url: https://trustsource.github.io/ts-scan
+site_description: >-
+  Provides a static site that introduces the TrustSource guide to operating ts-scan
+
+# Repository
+repo_url: https://github.com/trustsource/ts-scan
+edit_uri: ""    # prevents the edit button to link into URL
+
+# Copyright
+copyright: Copyright &copy; 2024 <a href="https://www.eacg.de/editorial">EACG GmbH</a>
+
+
+theme:
+  name: material
+  palette:
+    # Palette toggle for light mode
+    - scheme: default
+      primary: white
+      accent: teal
+      toggle:
+        icon: material/brightness-4
+        name: Switch to dark mode
+    # Palette toggle for dark mode
+    - scheme: slate
+      primary: black
+      accent: teal
+      toggle:
+        icon: material/brightness-7
+        name: Switch to light mode
+  font: false # set false, to comply with data privacy (google fonts)
+  #  text: Open Sans
+  #  code: Courier
+  logo: assets/TS_logo_lang.png
+  favicon: assets/favicon.png
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.expand 
+    - navigatin.top
+    - content.tooltips
+    # - header.autohide
+    - search.highlight
+    - search.share
+    - toc.follow
+
+extra:
+  homepage: https://www.trustsource.io
+  consent:
+    title: Cookie consent
+    description: >-
+      We use cookies to recognize your repeated visits and preferences, as well as to measure the effectiveness of our documentation and whether users find what they're searching for. With your consent, you're helping us to make our documentation better. 
+    cookies:
+      analytics: 
+        name: Google Analytics
+        checked: false
+    actions:
+      - accept
+      - manage
+      - reject
+  #version:
+  #  provider: mike
+  #  default: stable
+  analytics:
+    provider: google
+    property: G-xxx
+    feedback:
+      title: Was this page helpful?
+      ratings:
+        - icon: material/emoticon-happy-outline
+          name: This page was helpful
+          data: 1
+          note: >-
+           Thanks for your feedback!
+        - icon: material/emoticon-sad-outline
+          name: This page could be improved
+          data: 0
+          note: >-
+           Thanks for your feedback! Help us improve this page by
+           using our <a href="..." target="_blank" rel="noopener">feedback form</a>.
+  social:
+    - icon: fontawesome/brands/linkedin
+      link: https://linkedin.com/company/trustsource
+      name: TrustSource @ Linkedin
+    - icon: fontawesome/solid/paper-plane
+      link: mailto:support@trustsource.io
+
+extra_javascript:
+  - assets/feedback.js
