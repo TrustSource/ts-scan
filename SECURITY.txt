@@ -15,7 +15,7 @@ Acknowledgments: https://www.trustsource.io/hall-of-fame
 Preferred-Languages: en, de
 
 #self reference
-Canonical: https://raw.github.com/trustsource/ts-scan/security.txt
+Canonical: https://raw.githubusercontent.com/TrustSource/ts-scan/refs/heads/main/SECURITY.txt
 
 #our security policy
 Policy: https://www.trustsource.io/security-policy
