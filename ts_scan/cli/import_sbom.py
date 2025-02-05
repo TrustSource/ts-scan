@@ -7,7 +7,7 @@ from pathlib import Path
 from . import cli, api_default_options, sbom_formats
 
 
-@cli.command('import')
+@cli.command('import', help='Imports SBOM documents directly to TrustSource API')
 @click.option('-f', '--format', 'sbom_format', type=click.Choice(choices=list(sbom_formats.keys())), required=True,
               help='SBOM file format')
 @click.option('-v', '--version', 'version', type=str, required=True, help='SBOM format version')

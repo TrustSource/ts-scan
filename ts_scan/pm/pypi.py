@@ -5,11 +5,11 @@
 import re
 import build.util
 import typing as t
-import importlib
 
 from pathlib import Path
-from typing import List, Optional, Iterable
 from importlib.metadata import distribution, PackageNotFoundError
+from importlib.metadata._meta import PackageMetadata
+from shippinglabel.requirements import parse_requirements
 
 from . import Scanner, DependencyScan, Dependency, License
 
@@ -24,46 +24,22 @@ class PypiScanner(Scanner):
     def name() -> str:
         return "PyPI"
 
+    def accepts(self, path: Path) -> bool:
+        return path.is_dir() and (path / 'setup.py').exists()
+
     def scan(self, path: Path) -> t.Optional[DependencyScan]:
-        deps = []
-        stack = [path]
-        while len(stack) > 0:
-            p = stack.pop()
-            if p.is_dir():
-                pkg_setup = p / "setup.py"
-                if pkg_setup.exists():
-                    try:
-                        metadata = build.util.project_wheel_metadata(p, isolated=False)
-                    except Exception as err:
-                        print(f'An error occured while building packages metadata')
-                        exit(2)
+        try:
+            metadata = build.util.project_wheel_metadata(path, isolated=False)
+        except:
+            print(f'An error occured while building packages metadata')
+            return None
 
-                    deps.append(self._create_dep_from_metadata(metadata))
-                else:
-                    break
-            #                    stack.extend([p/f for f in p.glob('*.py')])
-            #                    stack.extend([p/d for d in p.rglob('**/')])
-            else:
-                for pkg in _extract_imported_pkgs(p):
-                    if dep := self._create_dep(pkg):
-                        deps.append(dep)
-
-        if deps:
-            module = deps[0].name if len(deps) == 1 else path.name
-            return DependencyScan(module=module, moduleId=f'pip:{module}', dependencies=deps)
-
+        if dep := self._create_dep_from_metadata(metadata):
+            return DependencyScan(module=dep.name, moduleId=f'pip:{dep.name}', dependencies=[dep])
         else:
             return None
 
-    def _create_dep(self, pkg: str) -> Optional[Dependency]:
-        try:
-            pkg_info = distribution(pkg)
-        except PackageNotFoundError:
-            return None
-
-        return self._create_dep_from_metadata(pkg_info.metadata)
-
-    def _create_dep_from_metadata(self, metadata) -> Dependency:
+    def _create_dep_from_metadata(self, metadata: PackageMetadata) -> Dependency:
         """
         Creates a dependency from the dist package metadate
         :param metadata: PackageMetadata
@@ -100,27 +76,32 @@ class PypiScanner(Scanner):
 
             # reqs = metadata.get_all('Requires-Dist', [])
             if reqs := dist.requires:
-                dep.dependencies = [d for pkg in _extract_required_pkgs(reqs) if (d := self._create_dep(pkg))]
+                req_pkgs = list(_extract_required_pkgs(reqs))
+                dep.dependencies = [d for pkg in req_pkgs if (d := self._create_dep(pkg))]
 
         return dep
 
+    def _create_dep(self, pkg: str) -> t.Optional[Dependency]:
+        try:
+            pkg_info = distribution(pkg)
+        except PackageNotFoundError:
+            return None
 
-_import_statement_regex = re.compile(r'(?:from|import) ([a-zA-Z0-9_]+).*')
+        return self._create_dep_from_metadata(pkg_info.metadata)
 
 
-def _extract_imported_pkgs(path: Path) -> List[str]:
+_import_statement_regex = re.compile(r'(?:from|import) ([A-Z0-9_]+).*', flags=re.IGNORECASE)
+
+
+def _extract_imported_pkgs(path: Path) -> t.List[str]:
     with path.open('r') as fp:
         try:
             data = fp.read()
             return _import_statement_regex.findall(data)
-        except Exception:
+        except:
             return []
 
 
-_require_expr_regex = re.compile(r'([a-zA-Z0-9_\-]+).*')
-
-
-def _extract_required_pkgs(reqs: List[str]) -> List[str]:
-    for req in reqs:
-        for pkg in _require_expr_regex.findall(req):
-            yield pkg
+def _extract_required_pkgs(reqs: t.List[str]) -> t.Iterable[str]:
+    reqs, _ = parse_requirements(reqs)
+    return {req.name for req in reqs}

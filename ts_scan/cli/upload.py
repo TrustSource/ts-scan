@@ -1,7 +1,6 @@
 import json
 import click
 import itertools
-import requests
 
 import ts_deepscan
 
@@ -9,13 +8,14 @@ from pathlib import Path
 from alive_progress import alive_bar
 
 from . import cli
-from .. import parse_cmd_opts_from_args
 from ..pm import load_scans
+from ..cli import parse_cmd_opts_from_args
+from ..api import TrustSourceAPI
 
 
-@cli.command('upload')
+@cli.command('upload', help='Transfers scan and analyse results to TrustSource API')
 @cli.inout_default_options(_in=True, _out=False, _fmt=True)
-@cli.api_default_options
+@cli.api_default_options()
 @click.option('--Xdeepscan',
               default=[],
               multiple=True,
@@ -29,14 +29,16 @@ def upload_scan(path: Path,
                 xdeepscan: [str]):
     from ts_deepscan.cli import upload as ds_cmd
 
+    api = TrustSourceAPI(base_url, api_key)
+
     def _do_upload(data: dict):
         deepscans = data.pop('deepscans', {})
 
-        if deepscans := [(k, d) for k, d in deepscans.items() if d['stats']['total'] > 0]:
+        if deepscans := [(k, ds) for k, ds in deepscans.items() if ds['stats']['total'] > 0]:
             deepscans_uploaded = {}
 
             ds_args = list(itertools.chain.from_iterable(xd.split(',') for xd in xdeepscan))
-            ds_opts = parse_cmd_opts_from_args(ds_cmd, ds_args)
+            ds_opts = parse_cmd_opts_from_args(ds_cmd, ds_args) # noqa
 
             with alive_bar(len(deepscans), title='Uploading deepscans') as progress:
                 for k, d in deepscans:
@@ -65,28 +67,21 @@ def upload_scan(path: Path,
 
         print('Uploading dependencies scan...')
 
-        headers = {
-            'Content-Type': 'application/json',
-            'user-agent': f'ts-scan/1.1.0',
-            'x-api-key': api_key
-        }
-
-        response = requests.post(base_url + '/core/scans', json=data, headers=headers)
-
-        if response.status_code == 201:
+        try:
+            resp = api.upload_scan(data)
             print("Transfer success!")
-            return
-        else:
-            print(json.dumps(response.text, indent=2))
-            exit(2)
+            print(json.dumps(resp, indent=2))
+        except TrustSourceAPI.Error as err:
+            print("Transfer failed")
+            print(err)
 
     ######
 
-    with path.open('r') as fp:
-        scans = load_scans(fp, scan_format)
+    scans = load_scans(path, scan_format)
 
     for s in scans:
-        d = s.todict()
+        # noinspection PyUnresolvedReferences
+        d = s.to_dict()
         d['project'] = project_name
 
         _do_upload(d)

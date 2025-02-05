@@ -1,6 +1,5 @@
 import click
 import tempfile
-import itertools
 import typing as t
 import subprocess
 
@@ -10,7 +9,7 @@ from distutils.spawn import find_executable
 from urllib.parse import urlparse
 
 from .pm import Scanner, Dependency, DependencyScan
-from .cli import cli, parse_cmd_opts_from_args
+from .cli import cli
 
 msg = Printer()
 
@@ -65,12 +64,13 @@ def do_scan(paths: [Path], **kwargs) -> t.Iterable[DependencyScan]:
     :param paths: List of paths to be scanned
     :return: An iterable over scan results
     """
-    scanners = create_scanners(**kwargs)
+    scanners = [s for s in create_scanners(**kwargs) if not s.ignore]
+
     for p in paths:
         p = p.resolve()
 
         for scanner in scanners:
-            if scanner.ignore:
+            if not scanner.accepts(p):
                 continue
 
             # with msg.loading(f'Scanning for {name} dependencies...'):
@@ -143,43 +143,3 @@ def process_scan(scan: DependencyScan) -> DependencyScan:
 
     return scan
 
-
-def analyse_with_ds(scan: DependencyScan, ds_args: t.List[str]) -> DependencyScan:
-    import ts_deepscan.cli
-    import ts_deepscan.analyser.textutils
-
-    global __ds_scanner
-    global __ds_dataset
-
-    if not __ds_scanner:
-        ds_args = list(itertools.chain.from_iterable(xd.split(',') for xd in ds_args))
-        ds_opts = parse_cmd_opts_from_args(ts_deepscan.cli.scan, ds_args)
-
-        __ds_scanner = ts_deepscan.create_scanner(**ds_opts)
-
-    if not __ds_dataset:
-        if __ds_scanner:
-            for analyser in __ds_scanner.analysers:
-                if __ds_dataset := getattr(analyser, 'dataset', None):
-                    break
-        else:
-            __ds_dataset = ts_deepscan.create_dataset()
-
-    for dep in scan.iterdeps():
-        if dep.package_files and __ds_scanner:
-            sources = [Path(src) for src in dep.package_files]
-            ds_res = ts_deepscan.execute_scan(sources, __ds_scanner, title=dep.key)
-            scan.deepscans[dep.key] = ds_res
-
-        if (lic_file := dep.license_file) and __ds_dataset:
-            lic_file_path = Path(lic_file)
-            if lic_file_path.exists():
-                with lic_file_path.open(errors="surrogateescape") as fp:
-                    if lic_file_res := ts_deepscan.analyser.textutils.analyse_license_text(fp.read(), __ds_dataset):
-                        dep.meta['license_file'] = lic_file_res
-
-    return scan
-
-
-__ds_scanner = None
-__ds_dataset = None

@@ -17,7 +17,7 @@ from .. import (msg,
 from ..pm import dump_scans
 
 
-@cli.command('scan')
+@cli.command('scan', help='Scans a target and determines its composition')
 @cli.inout_default_options(_in=False, _out=True, _fmt=True)
 @cli.scanner_options
 @click.option('--verbose', default=False, is_flag=True,
