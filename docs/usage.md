@@ -1,4 +1,4 @@
-# Overview
+# Using ts-scan
 
 ***ts-scan*** is the ultimate scanner resulting from several years of experience with scanning code for license information, vulnerabilities or malware across a plethora of sources, be it plain text files, packages, docker images or even binaries across as many environments as possible.
 
@@ -17,7 +17,6 @@ To get a quick intro, jump to any of the following use cases:
   * [Scanning for encryption](/ts-scan/encryption)
   * [Scan for Known Vulnerabilities](/ts-scan/vulns)
   * [Scan for malware](/ts-scan/malware)
-  * [Scan for known software snippets](/ts-scan/snippets)
 
 * Operations
 
@@ -29,7 +28,7 @@ To get a quick intro, jump to any of the following use cases:
 
 ## Installing
 
-See the [setup](/ts-scan/setup) section
+TBC
 
 ## Getting Support
 
