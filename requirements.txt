@@ -13,3 +13,6 @@ license-expression
 packageurl-python
 wasabi
 dataclasses-json
+cyclonedx-python-lib~=8.5.0
+shippinglabel~=2.1.0
+tqdm

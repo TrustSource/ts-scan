@@ -36,6 +36,9 @@ class NugetScanner(Scanner):
     def executable() -> t.Optional[str]:
         return 'nuget'
 
+    def accepts(self, path: Path) -> bool:
+        return self._determine_project_type(path) is not None
+
     def scan(self, path: Path) -> t.Optional[DependencyScan]:
         self.__path = path
         self.__global_packages_dir = self._find_global_packages_dir()

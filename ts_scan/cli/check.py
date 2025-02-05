@@ -9,7 +9,7 @@ from .. import msg
 from ..pm import DependencyScan
 
 
-@cli.command('check')
+@cli.command('check', help='Checks the scan result against project specific requirements using TrustSource API')
 @cli.inout_default_options(_in=True, _out=False, _fmt=True)
 @cli.api_default_options
 @click.option('--breakOnLegalIssues', default=True, is_flag=True,

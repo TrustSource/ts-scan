@@ -12,6 +12,7 @@ def start():
     import ts_scan.cli.upload
     import ts_scan.cli.analyse
     import ts_scan.cli.check
+    import ts_scan.cli.evaluate
     import ts_scan.cli.import_sbom
 
     cli()
@@ -23,14 +24,19 @@ def cli():
     pass
 
 
-def api_default_options(f):
-    f = click.option('--project-name', 'project_name',
-                     type=str, required=True, help='Project name')(f)
-    f = click.option('--api-key', 'api_key',
-                     type=str, required=True, help='TrustSource API Key')(f)
-    f = click.option('--base-url', 'base_url',
-                     default='https://api.trustsource.io/v2', help='TrustSource API base URL')(f)
-    return f
+def api_default_options(project_name=True):
+    def _apply(f):
+        if project_name:
+            f = click.option('--project-name', 'project_name',
+                             type=str, required=True, help='Project name')(f)
+
+        f = click.option('--api-key', 'api_key',
+                         type=str, required=True, help='TrustSource API Key')(f)
+        f = click.option('--base-url', 'base_url',
+                         default='https://api.trustsource.io', help='TrustSource API base URL')(f)
+        return f
+
+    return _apply
 
 
 def inout_default_options(_in: bool, _out: bool, _fmt: bool):
@@ -68,5 +74,7 @@ sbom_formats = {
 }
 
 scan_formats = [
-    'ts', 'spdx', 'cyclonedx'
+    'ts',
+    'spdx-tag', 'spdx-json', 'spdx-yaml', 'spdx-xml',
+    'cyclonedx-json', 'cyclonedx-xml'
 ]

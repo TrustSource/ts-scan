@@ -1,6 +1,4 @@
-import os
 import json
-import subprocess
 import requests
 import typing as t
 
@@ -43,6 +41,9 @@ class NodeScanner(Scanner):
                 'help': 'Disable retreiving packages metadata from the NPMJS online registry'
             }
         }
+
+    def accepts(self, path: Path) -> bool:
+        return path.is_dir() and (path / 'package.json').exists()
 
     def scan(self, path: Path) -> t.Optional[DependencyScan]:
         self.__path = path
@@ -109,7 +110,7 @@ class NodeScanner(Scanner):
         dep = Dependency("npm:" + name, name, type='npm')
 
         dep.versions.append(version)
-        dep.package_files.append(self.__abs_module_path / package_path)
+        dep.package_files.append(str(self.__abs_module_path / package_path))
 
         if name + version not in self.__processed_deps:
             self.__processed_deps.add(name + version)

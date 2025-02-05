@@ -11,9 +11,9 @@ from packageurl import PackageURL
 
 from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json
+from typing_extensions import TextIO
 
 from ts_deepscan.scanner import Scan as DSScan
-from typing_extensions import TextIO
 
 
 class ExecutableNotFoundError(Exception):
@@ -66,6 +66,10 @@ class Scanner(abc.ABC):
         return opts
 
     @abc.abstractmethod
+    def accepts(self, path: Path) -> bool:
+        raise NotImplemented()
+
+    @abc.abstractmethod
     def scan(self, path: Path) -> t.Optional['DependencyScan']:
         raise NotImplemented()
 
@@ -104,6 +108,13 @@ class DependencyScan:
             deps.extend(d.dependencies)
             yield d
 
+    def iterdeps_once(self) -> t.Iterable['Dependency']:
+        visited = set()
+        for dep in self.iterdeps():
+            if dep.purl not in visited:
+                visited.add(dep.purl)
+                yield dep
+
 
 @dataclass_json
 @dataclass
@@ -120,6 +131,7 @@ class Dependency:
     checksum: str = ''
     private: bool = False
 
+    # TODO: replace versions list by a single version
     versions: t.List[str] = field(default_factory=lambda: [])
     dependencies: t.List['Dependency'] = field(default_factory=lambda: [])
     licenses: t.List['License'] = field(default_factory=lambda: [])
@@ -130,11 +142,15 @@ class Dependency:
     license_file: t.Optional[str] = None
 
     @property
+    def version(self) -> t.Optional[str]:
+        return self.versions[0] if len(self.versions) == 1 else None
+
+    @property
     def purl(self):
         return PackageURL(type=self.type,
                           namespace=self.namespace,
                           name=self.name,
-                          version=self.versions[0] if self.versions else None)
+                          version=self.version)
 
 
 @dataclass_json
@@ -147,22 +163,43 @@ class License:
 def dump_scans(scans: t.List[DependencyScan], fp: TextIO, fmt: str):
     # noinspection PyProtectedMember
     from dataclasses_json.core import _ExtendedEncoder
+
     if fmt == 'ts':
+        # noinspection PyUnresolvedReferences
         scans = [s.to_dict() for s in scans]
         # noinspection PyTypeChecker
         json.dump(scans, fp, cls=_ExtendedEncoder, indent=2)
+
+    elif fmt in ['spdx-tag', 'spdx-json', 'spdx-yaml', 'spdx-xml']:
+        from ..spdx import export_scan
+        export_scan(scans[0], fp, fmt)
+
+    elif fmt in ['cyclonedx-json', 'cyclonedx-xml']:
+        from ..cyclonedx import export_scan
+        export_scan(scans[0], fp, fmt)
+
     else:
-        raise NotImplemented(f'No dump/load for the "{fmt}" format')
+        raise ValueError(f'Unsupported output format: {fmt}')
 
 
-def load_scans(fp: TextIO, fmt: str) -> t.List[DependencyScan]:
+def load_scans(path: Path, fmt: str) -> t.List[DependencyScan]:
     if fmt == 'ts':
-        data = json.load(fp)
-        if type(data) is list:
-            # noinspection PyUnresolvedReferences
-            return [DependencyScan.from_dict(d) for d in data]
-        else:
-            # noinspection PyUnresolvedReferences
-            return [DependencyScan.from_dict(data)]
+        with path.open('r') as fp:
+            data = json.load(fp)
+            if type(data) is list:
+                # noinspection PyUnresolvedReferences
+                return [DependencyScan.from_dict(d) for d in data]
+            else:
+                # noinspection PyUnresolvedReferences
+                return [DependencyScan.from_dict(data)]
+
+    elif fmt in ['spdx-tag', 'spdx-json', 'spdx-yaml', 'spdx-xml']:
+        from ..spdx import import_scan
+        return [import_scan(path, fmt)]
+
+    elif fmt in ['cyclonedx-json', 'cyclonedx-xml']:
+        from ..cyclonedx import import_scan
+        return [import_scan(path, fmt)]
+
     else:
-        raise NotImplemented(f'No dump/load for the "{fmt}" format')
+        raise ValueError(f'Unsupported input format: {fmt}')

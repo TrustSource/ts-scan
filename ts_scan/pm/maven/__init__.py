@@ -44,13 +44,11 @@ class MavenScanner(Scanner):
             }
         }
 
+    def accepts(self, path: Path) -> bool:
+        return ((path.is_dir() and (path / 'pom.xml').exists()) or
+                (path.is_file() and path.name == 'pom.xml'))
+
     def scan(self, path: Path) -> t.Optional[DependencyScan]:
-        if path.is_dir() and not (path / 'pom.xml').exists():
-            return None
-
-        elif path.is_file() and path.name != 'pom.xml':
-            return None
-
         return self._execute(path)
 
     def _execute(self, path: Path) -> t.Optional['DependencyScan']:
