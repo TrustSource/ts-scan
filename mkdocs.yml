@@ -21,7 +21,7 @@ nav:
 
 
 theme:
-  name: material
+  name: readthedocs
   palette:
     # Palette toggle for light mode
     - scheme: default
