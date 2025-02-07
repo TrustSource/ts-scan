@@ -13,12 +13,14 @@ edit_uri: ""    # prevents the edit button to link into URL
 copyright: Copyright &copy; 2024 <a href="https://www.eacg.de/editorial">EACG GmbH</a>
 
 nav:
-  - Overview: 'index.md'
+  - Overview: 
+    - 'index.md'
     - Architecture: 'architecture.md'
-    - Adding features: 'adding.md'
+    - Adding Features: 'adding.md'
     - Coding Guidelines: 'guidelines.md'
   - Installation: 'setup.md'
-  - Usage: 'usage.md'
+  - Usage: 
+    - 'usage.md'
     - Scan for:
       - dependencies: 'dependencies.md'
       - licenses: 'licenses.md'
@@ -36,7 +38,8 @@ nav:
       - Add SBOM 2 Git: 'uc02-SBOM2Git.md'
       - Check 4 Vulns before commit: 'uc03-eval.md'
   - Security: 'security.md'
-  - About: 'about.md'
+  - About: 
+    - 'about.md'
     - Changelog: '../CHANGELOG'
 
 
