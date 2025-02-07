@@ -4,13 +4,20 @@ site_name: TrustSource ts-scan
 site_url: https://trustsource.github.io/ts-scan
 site_description: >-
   Provides a static site that introduces the TrustSource guide to operating ts-scan
-
+site_author: TrustSource Team 
 # Repository
 repo_url: https://github.com/trustsource/ts-scan
 edit_uri: ""    # prevents the edit button to link into URL
 
 # Copyright
 copyright: Copyright &copy; 2024 <a href="https://www.eacg.de/editorial">EACG GmbH</a>
+
+nav:
+  - Overview: 'index.md'
+  - Installation: 'setup.md'
+  - Usage: 'usage.md'
+  - Security: 'security.md'
+  - About: 'about.md'
 
 
 theme:
