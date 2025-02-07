@@ -14,14 +14,24 @@ copyright: Copyright &copy; 2024 <a href="https://www.eacg.de/editorial">EACG Gm
 
 nav:
   - Overview: 'index.md'
+    - Architecture:
+
   - Installation: 'setup.md'
   - Usage: 'usage.md'
+    - Scan targets:
+      - dependencies: 'dependencies.md'
+      - licenses: 'licenses.md'
+      - encryption: 'encryption.md'
+      - vulnerabilities: 'vulns.md'
+      - malware: 'malware.md'
+      - snippets: 'snippets.md'
   - Security: 'security.md'
   - About: 'about.md'
+    - Changelog: '../CHANGELOG'
 
 
 theme:
-  name: readthedocs
+  name: material
   palette:
     # Palette toggle for light mode
     - scheme: default
@@ -45,16 +55,30 @@ theme:
   icon:
     repo: fontawesome/brands/github
   features:
-    - navigation.instant
-    - navigation.tracking
+    # - navigation.expand 
+    - navigation.footer
+    - navigation.indexes
+    # - navigation.instant
+    # - navigation.instant.prefetch
+    # - navigation.instant.progress
+    # - navigation.prune
+    - navigation.sections
     - navigation.tabs
-    - navigation.expand 
-    - navigatin.top
+    # - navigation.tabs.sticky
+    - navigation.top
+    - navigation.tracking
+    - announce.dismiss
+    - content.action.edit
+    - content.action.view
+    - content.code.annotate
+    - content.code.copy
     - content.tooltips
-    # - header.autohide
+    - header.autohide
     - search.highlight
     - search.share
+    - search.suggest
     - toc.follow
+    # - toc.integrate
 
 extra:
   homepage: https://www.trustsource.io
@@ -76,20 +100,20 @@ extra:
   analytics:
     provider: google
     property: G-ZSZXY48Y3G
-    feedback:
-      title: Was this page helpful?
-      ratings:
-        - icon: material/emoticon-happy-outline
-          name: This page was helpful
-          data: 1
-          note: >-
-           Thanks for your feedback!
-        - icon: material/emoticon-sad-outline
-          name: This page could be improved
-          data: 0
-          note: >-
-           Thanks for your feedback! Help us improve this page by
-           using our <a href="https://www.trustsource.io/contact" target="_blank" rel="noopener">feedback form</a>.
+  feedback:
+    title: Was this page helpful?
+    ratings:
+      - icon: material/emoticon-happy-outline
+        name: This page was helpful
+        data: 1
+        note: >-
+         Thanks for your feedback!
+      - icon: material/emoticon-sad-outline
+        name: This page could be improved
+        data: 0
+        note: >-
+         Thanks for your feedback! Help us improve this page by
+         using our <a href="https://www.trustsource.io/contact" target="_blank" rel="noopener">feedback form</a>.
   social:
     - icon: fontawesome/brands/linkedin
       link: https://linkedin.com/company/trustsource
