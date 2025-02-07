@@ -22,13 +22,14 @@ nav:
   - Usage: 
     - 'usage.md'
     - Scan for:
-      - dependencies: 'dependencies.md'
+      - dependencies: 'sbom.md'
       - licenses: 'licenses.md'
       - encryption: 'encryption.md'
       - vulnerabilities: 'vulns.md'
       - malware: 'malware.md'
       - snippets: 'snippets.md'
-    - Convert: 'convert.md'
+    - Convert: 
+      - 'convert.md'
     - Operate:
       - multiple artefacts: 'multiscan.md'
       - exporting results: 'exports.md'
@@ -40,7 +41,7 @@ nav:
   - Security: 'security.md'
   - About: 
     - 'about.md'
-    - Changelog: '../CHANGELOG'
+    - Changelog: 'https://github.com/TrustSource/ts-scan/blob/main/CHANGELOG.md'
 
 
 theme:
@@ -69,7 +70,7 @@ theme:
     repo: fontawesome/brands/github
   features:
     # - navigation.expand 
-    - navigation.footer
+    # - navigation.footer
     - navigation.indexes
     # - navigation.instant
     # - navigation.instant.prefetch
