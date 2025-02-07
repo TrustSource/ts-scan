@@ -14,17 +14,27 @@ copyright: Copyright &copy; 2024 <a href="https://www.eacg.de/editorial">EACG Gm
 
 nav:
   - Overview: 'index.md'
-    - Architecture:
-
+    - Architecture: 'architecture.md'
+    - Adding features: 'adding.md'
+    - Coding Guidelines: 'guidelines.md'
   - Installation: 'setup.md'
   - Usage: 'usage.md'
-    - Scan targets:
+    - Scan for:
       - dependencies: 'dependencies.md'
       - licenses: 'licenses.md'
       - encryption: 'encryption.md'
       - vulnerabilities: 'vulns.md'
       - malware: 'malware.md'
       - snippets: 'snippets.md'
+    - Convert: 'convert.md'
+    - Operate:
+      - multiple artefacts: 'multiscan.md'
+      - exporting results: 'exports.md'
+      - operating inside a container: 'conatiner.md'
+    - Use Cases:
+      - Auto Scan on Commit: 'uc01-autoSoCommit.md'
+      - Add SBOM 2 Git: 'uc02-SBOM2Git.md'
+      - Check 4 Vulns before commit: 'uc03-eval.md'
   - Security: 'security.md'
   - About: 'about.md'
     - Changelog: '../CHANGELOG'
