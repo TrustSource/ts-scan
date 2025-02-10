@@ -41,7 +41,7 @@ nav:
   - Security: 'security.md'
   - About: 
     - 'about.md'
-    - Changelog: 'https://github.com/TrustSource/ts-scan/blob/main/CHANGELOG.md'
+    - Changelog: 'CHANGELOG.md'
 
 
 theme:
