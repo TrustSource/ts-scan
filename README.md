@@ -94,10 +94,10 @@ The **scan** command searches for package dependencies in your project. By provi
 To execute a scan and store results into a file, use:
 
 ```shell
-ts-scan scan -o <path to the output file> [-f <format>] <path to the project directory>
+ts-scan scan -o <path to the output file> [-f <output format>] <path to the project directory>
 ```
 
-The ```-f <format>``` option controls the output format and can be:
+The ```-f <output format>``` option controls the output format and can be:
 
 * ```ts``` - the TrustSource internal format (default)
 * ```spdx-[tag|json|yaml|xml]``` - One of the SPDX formtas, e.g. ```spdx-json```
@@ -167,17 +167,98 @@ ts-scan scan --use-syft --Xsyft <option>,<value> <SOURCE>
 Syft supports many different input types, and one of them is Docker images. To scan a local docker image, use the following command:
 
 ```shell
-./ts-scan scan --use-syft -o <OUTPUT> docker:<DOCKER IMAGE>
+ts-scan scan --use-syft -o <OUTPUT> docker:<DOCKER IMAGE>
 ```
 
 ## Analyse
 
 The in-depth dependency analysis is performed using the **analyse** command, which takes a scan file as input in one of the supported formats: the internal TS format, SPDX, or CycloneDX. Depending on the dependency package, the tool locates its files and scans each one using [ts-deepscan](https://github.com/TrustSource/ts-deepscan). Additionally, it uses [SCANOSS](https://www.scanoss.com) to improve and enrich the collected in-depth scanning results. 
 
+To analyse a scan and store results into a file, use:
+
+```shell
+ts-scan analyse [-f <input format>] [-o <output>] <path to the scan file>
+```
+
+The ```-f <input format>``` option specifies the input format of the scan to be checked and accepts the same values as the ```<output format>``` of the [scan](#scan) command.
+
+By default, the **analyse**, command applies [ts-deepscan](https://github.com/TrustSource/ts-deepscan) using its default configuration and extends the analysis results with data from SCANOSS API.
+
+To disable or fine-tune specific analysis steps, you can use additional options.
+
+### Options
+
+* ```--disable-deepscan``` - Disables analysis using DeepScan.
+* ```--disable-scanoss``` - Disables extending DeepScan results with SCANOSS data.
+* ```--Xdeepscan <OPTION>,<VALUE>``` - Forwards <OPTION> <VALUE> to the DeepScan **scan** command.
+
+The ```--Xdeepscan```can be used to configure the DeepScan analysers. For example, to analyse a scan while setting a timeout (in seconds) per file, use:  
+
+```shell
+ts-scan analyse --Xdeepscan timeout,30 <path to the scan file>
+```
+
+For more details on available options for DeepScan, please refer to [ts-deepscan] documentation(https://github.com/TrustSource/ts-deepscan).
+
 ## Check
+
+The **ts-scan check** command verifies project dependencies for legal issues and known vulnerabilities. It performs these checks using the TrustSource API and supports two modes:
+
+1. A full check based on the corresponding TrustSource project settings (a TrustSource project is required; refer to [TrustSource](https://www.trustsource.io) for more details).
+ 
+2. A single component check against the TrustSource vulnerability database.
+
+By default, the **check** command performs a full check. To check only for vulnerabilities, use the ```--vulns-only``` option.
+
+In addition to vulnerability checks, the full mode also detects potential legal issues, such as license incompatibilities between dependencies or conflicts with the planned distribution model.
+
+Both modes support exiting with a non-zero error code (1) if vulnerabilities or legal issues are found, making it highly useful for integration into CI/CD workflows.
+
+
+### Full scan check
+
+To execute a full check, use the following command:
+
+```shell
+ts-scan check --project-name <TrustSource project name> --api-key <TrustSource API key> [-f <input format>] [-o <output>] <path to the scan file>
+```
+
+The options ```--project-name <TrustSource project name>```and ```--api-key <TrustSource API key>```are required for the full scan.
+
+> [!NOTE]
+>
+> PLEASE NOTE: Before executing a full check, you need to create a project in the TrustSource application and [upload](#upload) the scan into the application. For more details, please refer to [TrustSource User Guide](https://www.trustsource.io) 
+
+The ```-f <input format>``` option specifies the input format of the scan to be checked and accepts the same values as the ```<output format>``` of the [scan](#scan) command.
+
+Optionally, using the ```-o <output>``` option, you can store the check results into a JSON file.
+
+### Vulnerabilities-Only check
+
+A vulnerabilities check can be performed by adding a ```--vulns-only``` option to the **check** command:
+
+```shell
+ts-scan check --vulns-only --api-key <TrustSource API key> [-f <input format>] [-o <output>] [--vulns-confidence low|medium|high] <path to the scan file>
+```
+
+A vulnerabilities-only check does not require creation of the project and uploading the scan before running the check.
+
+The ```--vulns-confidence <level>``` option allows you to control the confidence level for matching components with affected products listed in security bulletins, such as product/vendor tuples in CVEs. The default value is ```high```, minimizing false positives as much as possible.
+  
+  
+### Options
+
+There are several useful options available for both modes, making it easier to integrate the **check** command into CI/CD pipelines:
+
+* ```--exit-on-legal``` - Exit with a non-zero (1) exit code if legal violations are found (default: ```on```)
+* ```--exit-on-vulns``` - Exit with a non-zero (1) exit code if vulnerabilities are found (default: ```on```)
+* ```--Werror``` - Treat vulnerability/legal warnings as errors
 
 
 ## Upload
+
+The **upload** command is used to upload scans to the [TrustSource App](https://www.trustsource.io) for the .... TBD:
+
 
 ```shell
 ts-scan upload --project-name <TrustSource project name> --api-key <TrustSource API key> <path to the scan JSON file>
@@ -191,7 +272,9 @@ ts-scan upload --help
 
 ### Import SBOMs
 
-Supported formats
+The **import** command is used to import SBOMs to the [TrustSource App](https://www.trustsource.io) for the .... TBD:
+
+Supported import formats:
 
 - SPDX RDF (spdx-rdf)
 - SPDX JSON (spdx-json)

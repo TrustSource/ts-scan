@@ -12,7 +12,7 @@ def start():
     import ts_scan.cli.upload
     import ts_scan.cli.analyse
     import ts_scan.cli.check
-    import ts_scan.cli.evaluate
+#    import ts_scan.cli.evaluate
     import ts_scan.cli.import_sbom
 
     cli()
@@ -24,11 +24,14 @@ def cli():
     pass
 
 
-def api_default_options(project_name=True):
+def api_default_options(project_name=True, is_project_name_required=True, project_name_help_hint=''):
     def _apply(f):
         if project_name:
+            help_msg = 'Project name'
+            if project_name_help_hint:
+                help_msg += f' [{project_name_help_hint}]'
             f = click.option('--project-name', 'project_name',
-                             type=str, required=True, help='Project name')(f)
+                             type=str, required=is_project_name_required, help=help_msg)(f)
 
         f = click.option('--api-key', 'api_key',
                          type=str, required=True, help='TrustSource API Key')(f)
