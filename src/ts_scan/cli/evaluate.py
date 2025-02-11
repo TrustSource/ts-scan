@@ -83,12 +83,3 @@ def eval_vulns(scan: DependencyScan, confidence: int, api: TrustSourceAPI) -> t.
     futures.wait(tasks, return_when=futures.ALL_COMPLETED)
     return vulns
 
-
-def check_vulns(purls: t.List[str], api: TrustSourceAPI) -> list:
-    try:
-        return api.find_cves(purls)
-
-    except TrustSourceAPI.Error as err:
-        print(f"An error occured while requesting vulnerabilities information for the scan")
-        print(err)
-        return []

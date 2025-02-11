@@ -31,3 +31,10 @@ class TrustSourceAPI:
         return self._post('vulnerabilities/cveFindByKey', {
             'comps': [{'key': comp} for comp in comps]
         }).get('comps', [])
+
+    def check_components(self, proj_name: str, mod_name: str, comps: t.List[dict]) -> dict:
+        return self._post('v2/compliance/check/component', {
+            'projectName': proj_name,
+            'moduleName': mod_name,
+            'components': comps
+        })
