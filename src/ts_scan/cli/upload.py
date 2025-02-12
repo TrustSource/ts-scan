@@ -4,8 +4,8 @@ import itertools
 
 import ts_deepscan
 
+from tqdm import tqdm
 from pathlib import Path
-from alive_progress import alive_bar
 
 from . import cli
 from ..pm import load_scans
@@ -40,30 +40,28 @@ def upload_scan(path: Path,
             ds_args = list(itertools.chain.from_iterable(xd.split(',') for xd in xdeepscan))
             ds_opts = parse_cmd_opts_from_args(ds_cmd, ds_args) # noqa
 
-            with alive_bar(len(deepscans), title='Uploading deepscans') as progress:
-                for k, d in deepscans:
-                    if res := ts_deepscan.upload_data(data=d, module_name=k, api_key=api_key, **ds_opts):
-                        deepscans_uploaded[k] = res
-                    progress()
+            for k, ds in tqdm(deepscans, desc='Uploading deepscans'):
+                if res := ts_deepscan.upload_data(data=ds, module_name=k, api_key=api_key, **ds_opts):
+                    deepscans_uploaded[k] = res
 
             deps = data.get('dependencies', []).copy()
             while deps:
-                d = deps.pop()
-                if ds := deepscans_uploaded.get(d['key']):
-                    if versions := d.get('versions', []):
+                dep = deps.pop()
+                if ds := deepscans_uploaded.get(dep['key']):
+                    if versions := dep.get('versions', []):
                         ver = versions[0]
                     else:
                         ver = 'unknown'
 
-                    meta = d.get('meta', {})
+                    meta = dep.get('meta', {})
                     meta['versions'] = [{
                         'version': ver,
                         'deepScanId': ds[0],
                         'deepScanUrl': ds[1]
                     }]
-                    d['meta'] = meta
+                    dep['meta'] = meta
 
-                deps.extend(d.get('dependencies', []))
+                deps.extend(dep.get('dependencies', []))
 
         print('Uploading dependencies scan...')
 
