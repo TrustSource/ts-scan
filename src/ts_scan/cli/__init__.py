@@ -3,8 +3,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import click
+import typing as t
 
+from wasabi import Printer
 from pathlib import Path
+
+from ..pm import DependencyScan, load_scans
+
+msg = Printer(line_max=240)
 
 
 def start():
@@ -12,7 +18,7 @@ def start():
     import ts_scan.cli.upload
     import ts_scan.cli.analyse
     import ts_scan.cli.check
-#    import ts_scan.cli.evaluate
+    #    import ts_scan.cli.evaluate
     import ts_scan.cli.import_sbom
 
     cli()
@@ -65,6 +71,14 @@ def parse_cmd_opts_from_args(cmd: click.Command, args: [str]):
 
     opts = {k: d for (k, d), ty in zip(values.items(), order) if isinstance(ty, click.Option)}
     return opts
+
+
+def load_scans_from_file(path: Path, scan_format: str) -> t.List[DependencyScan]:
+    try:
+        return load_scans(path, scan_format)
+    except:
+        msg.fail(f"Failed to load scan in the '{scan_format}' format. Please ensure the format is correct.")
+        exit(2)
 
 
 cli.api_default_options = api_default_options

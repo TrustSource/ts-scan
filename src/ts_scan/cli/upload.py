@@ -7,8 +7,8 @@ import ts_deepscan
 from tqdm import tqdm
 from pathlib import Path
 
-from . import cli
-from ..pm import load_scans
+from . import cli, load_scans_from_file
+
 from ..cli import parse_cmd_opts_from_args
 from ..api import TrustSourceAPI
 
@@ -75,7 +75,7 @@ def upload_scan(path: Path,
 
     ######
 
-    scans = load_scans(path, scan_format)
+    scans = load_scans_from_file(path, scan_format)
 
     for s in scans:
         # noinspection PyUnresolvedReferences

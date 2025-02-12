@@ -164,6 +164,9 @@ def dump_scans(scans: t.List[DependencyScan], fp: TextIO, fmt: str):
     # noinspection PyProtectedMember
     from dataclasses_json.core import _ExtendedEncoder
 
+    if not scans:
+        return
+
     if fmt == 'ts':
         # noinspection PyUnresolvedReferences
         scans = [s.to_dict() for s in scans]

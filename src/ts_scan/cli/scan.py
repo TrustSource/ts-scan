@@ -82,7 +82,10 @@ def scan_dependencies(sources: t.List[t.Union[Path, str]],
 
         scans.append(process_scan(s))
 
-    output_scans(scans, output_path, scan_format)
+    if scans:
+        output_scans(scans, output_path, scan_format)
+    else:
+        msg.info('No supported packages were detected')
 
 
 def output_scans(scans: list, path: t.Optional[Path], fmt: str = 'ts'):

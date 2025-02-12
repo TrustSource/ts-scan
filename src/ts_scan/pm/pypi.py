@@ -13,6 +13,11 @@ from shippinglabel.requirements import parse_requirements
 
 from . import Scanner, DependencyScan, Dependency, License
 
+_supported_pkg_files = [
+    'setup.py',
+    'pyproject.toml'
+]
+
 
 class PypiScanner(Scanner):
     def __init__(self, **kwargs):
@@ -25,7 +30,7 @@ class PypiScanner(Scanner):
         return "PyPI"
 
     def accepts(self, path: Path) -> bool:
-        return path.is_dir() and (path / 'setup.py').exists()
+        return path.is_dir() and any((path / pkg_file).exists() for pkg_file in _supported_pkg_files)
 
     def scan(self, path: Path) -> t.Optional[DependencyScan]:
         try:

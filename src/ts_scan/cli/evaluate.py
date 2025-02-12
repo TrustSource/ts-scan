@@ -6,10 +6,9 @@ from tqdm import tqdm
 from pathlib import Path
 from concurrent import futures
 
-from . import cli
+from . import cli, load_scans_from_file
 from .. import DependencyScan
 
-from ..pm import load_scans
 from ..api import TrustSourceAPI
 
 
@@ -37,7 +36,7 @@ def eval_scan(path: Path,
 
     ts_api = TrustSourceAPI(base_url, api_key)
 
-    scans = load_scans(path, scan_format)
+    scans = load_scans_from_file(path, scan_format)
     vulns = {}
 
     for scan in scans:
