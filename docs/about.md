@@ -20,6 +20,8 @@ While the platform is provided as a managed service, the scanners as well as the
 
 Based on the experiences how fast a wrong license may enter the repository automated SBOM creation has been invented before even the SBOM became a dominating slogan. Vulnerbaility management has been added 2018 as a logical consequence, the service started to become interesting to others... 
 
+
+
 ## About EACG Operations Services
 
 EACG decided to hand the operations of the platform to its AWS operations subsidiary. Thus EACG OS is taking care to run and manage the platform as well as the provisioning of support services while EACG is taking care for the individual consulting services. You may find further information on the [EACG website](https://www.eacg.de). Find here links to further information:
@@ -31,5 +33,5 @@ EACG decided to hand the operations of the platform to its AWS operations subsid
 * our [knowledge base](https://support.trustsource.io) 
 * the [service status information](https://trustsource.statuspage.io) 
 
-## 
+
 

@@ -1,32 +1,28 @@
-# ts-scan
-TS-Scan
-
-# Changelog
-
+# ts-scan Changelog
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [1.0.0] - 2025-01-16
 
 ### New Features 
 
 ```
-* Added Docs pages
+* Added documentation as git pages
 ```
 
 ## [1.0.0] - 2024-11-06
-### Fixes
-    * Fixed scanning of NPM and NuGet packages
-    * Fixed scanning of Maven projects with submodules
-
 ### New Features 
+
     * Forwarding parameters to PM tools
     * Specifying executable paths
     * Ignoring package managers while scanning
     * Improved import of results produced by the Syft scanner
     * Scan target can be now an URI that can be scanned by Syft enabling docker image scanning
+
+### Fixes
+    * Fixed scanning of NPM and NuGet packages
+    * Fixed scanning of Maven projects with submodules
 
 ## [0.3.0] - 2024-01-22
 ### New Features
