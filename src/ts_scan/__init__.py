@@ -3,15 +3,12 @@ import tempfile
 import typing as t
 import subprocess
 
-from wasabi import Printer
 from pathlib import Path
 from distutils.spawn import find_executable
 from urllib.parse import urlparse
 
 from .pm import Scanner, Dependency, DependencyScan
-from .cli import cli
-
-msg = Printer()
+from .cli import cli, msg
 
 
 def __get_scanner_classes():

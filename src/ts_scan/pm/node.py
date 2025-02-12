@@ -11,10 +11,10 @@ from . import Scanner, DependencyScan, Dependency, License
 
 
 class NodeScanner(Scanner):
-    def __init__(self, disableMetadataRetrieval=False, **kwargs):
+    def __init__(self, enableMetadataRetrieval=False, **kwargs):
         super().__init__(**kwargs)
 
-        self.disableMetadataRetrieval = disableMetadataRetrieval
+        self.enableMetadataRetrieval = enableMetadataRetrieval
 
         self.__path = None
         self.__abs_module_path = None
@@ -35,10 +35,10 @@ class NodeScanner(Scanner):
     @classmethod
     def options(cls) -> Scanner.OptionsType:
         return super().options() | {
-            'disableMetadataRetrieval': {
+            'enableMetadataRetrieval': {
                 'default': False,
                 'is_flag': True,
-                'help': 'Disable retreiving packages metadata from the NPMJS online registry'
+                'help': 'Enable retrieving package metadata from the NPMJS online registry'
             }
         }
 
@@ -116,7 +116,7 @@ class NodeScanner(Scanner):
             self.__processed_deps.add(name + version)
             # msg.info(f"Getting metadata for {name} {version}...")
 
-            if not self.disableMetadataRetrieval and (meta := self._metadata_from_registry(name, version)):
+            if self.enableMetadataRetrieval and (meta := self._metadata_from_registry(name, version)):
                 dep.licenses = meta.licenses
                 dep.description = meta.description
                 dep.homepageUrl = meta.homepageUrl

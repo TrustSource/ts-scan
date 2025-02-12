@@ -6,10 +6,9 @@ from tqdm import tqdm
 from pathlib import Path
 from concurrent import futures
 
-from . import cli
+from . import cli, load_scans_from_file
 from .. import msg, DependencyScan
 
-from ..pm import load_scans
 from ..api import TrustSourceAPI
 
 
@@ -34,7 +33,7 @@ def check_scan(path: Path, output_path: t.Optional[Path], scan_format: str,
                werror: bool,
                vulns_confidence: str):
     ts_api = TrustSourceAPI(base_url, api_key)
-    scans = load_scans(path, scan_format)
+    scans = load_scans_from_file(path, scan_format)
 
     if vulns_only:
         check_vulns(ts_api, scans, vulns_confidence, output_path, exit_on_vulns)

@@ -3,10 +3,9 @@ import typing as t
 
 from pathlib import Path
 
-from . import cli
+from . import cli, load_scans_from_file
 from .scan import output_scans
 
-from ..pm import load_scans
 from ..analyse import analyse_with_ds, analyse_with_scanoss
 
 
@@ -25,7 +24,7 @@ def analyse_scan(path: Path,
                  disable_scanoss: bool,
                  xdeepscan: []):
 
-    scans = load_scans(path, scan_format)
+    scans = load_scans_from_file(path, scan_format)
 
     analysed_scans = []
     for s in scans:
