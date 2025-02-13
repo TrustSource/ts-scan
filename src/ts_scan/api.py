@@ -28,7 +28,7 @@ class TrustSourceAPI:
         return self._post('v2/core/scans', data)
 
     def find_cves(self, comps: t.List[str]) -> t.List[dict]:
-        return self._post('vulnerabilities/cveFindByKey', {
+        return self._post('v2/vulnerabilities/cveFindByKey', {
             'comps': [{'key': comp} for comp in comps]
         }).get('comps', [])
 

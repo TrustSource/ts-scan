@@ -107,49 +107,54 @@ class MavenScanner(Scanner):
     def _create_dep_from_node(self, node: Tree) -> t.Optional[Dependency]:
         # example coordinates: org.tmatesoft.svnkit:svnkit:jar:1.8.7:provided
 
-        group_id, artifact_id, _, version, *other = node.data.split(":")
+        try:
+            group_id, artifact_id, _, version, *other = node.data.split(":")
 
-        if len(other) > 0:
-            if other[0] in self.__excludeDepTypes:
-                return None
+            if len(other) > 0:
+                if other[0] in self.__excludeDepTypes:
+                    return None
 
-        dep = MavenDependency(group_id=group_id,
-                              artifact_id=artifact_id,
-                              version=version,
-                              remote_repos=self.__remote_repos,
-                              local_repo=self.__local_repo)
+            dep = MavenDependency(group_id=group_id,
+                                  artifact_id=artifact_id,
+                                  version=version,
+                                  remote_repos=self.__remote_repos,
+                                  local_repo=self.__local_repo)
 
-        if artifact_id not in self.__processed_deps:
-            dep.load()
+            if artifact_id not in self.__processed_deps:
+                dep.load()
 
-            if pkg_data := dep.package_data:
-                _, _, checksum = pkg_data
+                if pkg_data := dep.package_data:
+                    _, _, checksum = pkg_data
 
-                if checksum:
-                    dep.checksum = checksum[1]
+                    if checksum:
+                        dep.checksum = checksum[1]
 
-            if src_data := dep.sources_data:
-                repo, pkg, checksum = src_data
-                download_url = f'{repo}/{pkg.relative_to(self.__local_repo)}'
+                if src_data := dep.sources_data:
+                    repo, pkg, checksum = src_data
+                    download_url = f'{repo}/{pkg.relative_to(self.__local_repo)}'
 
-                sources_meta = {
-                    'url': download_url
-                }
-
-                if checksum:
-                    sources_meta['checksum'] = {
-                        checksum[0]: checksum[1]
+                    sources_meta = {
+                        'url': download_url
                     }
 
-                dep.meta['sources'] = sources_meta
+                    if checksum:
+                        sources_meta['checksum'] = {
+                            checksum[0]: checksum[1]
+                        }
 
-            self.__processed_deps.add(artifact_id)
+                    dep.meta['sources'] = sources_meta
 
-            for child in node.children:
-                if child_dep := self._create_dep_from_node(child):
-                    dep.dependencies.append(child_dep)
+                self.__processed_deps.add(artifact_id)
 
-        return dep
+                for child in node.children:
+                    if child_dep := self._create_dep_from_node(child):
+                        dep.dependencies.append(child_dep)
+
+            return dep
+
+        except Exception as err:
+            print(err)
+            raise err
 
     def _get_project_modules(self, workdir: Path) -> t.List[str]:
         if res := self._evaluate('project.modules', workdir):
@@ -216,18 +221,22 @@ class MavenDependency(Dependency):
         self.__remote_repos = remote_repos
 
         if local_repo:
-            self.__local_repo_path = local_repo / Path(*group_id.split('.')) / Path(*artifact_id.split('.')) / version
-
-            if self.__local_repo_path.exists() and (pom := next(self.__local_repo_path.glob('*.pom'), None)):
-                self.__pom: t.Optional[Pom] = Pom.from_file(pom)
+            local_repo_path = local_repo / Path(*group_id.split('.')) / Path(*artifact_id.split('.')) / version
+            if local_repo_path.exists():
+                self.__local_repo_path = local_repo_path
             else:
-                self.__pom: t.Optional[Pom] = None
+                self.__local_repo_path = None
+
+        if self.__local_repo_path and (pom_file := next(self.__local_repo_path.glob('*.pom'), None)):
+            self.__pom_file = pom_file
+        else:
+            self.__pom_file = None
 
     def load(self):
-        if self.__pom:
-            self.homepageUrl = self.__pom.url
-            self.description = self.__pom.description
-            self.licenses = self.__pom.licenses
+        if self.__pom_file and (pom := Pom.from_file(self.__pom_file)):
+            self.homepageUrl = pom.url
+            self.description = pom.description
+            self.licenses = pom.licenses
 
     @property
     def package_data(self) -> t.Optional[t.Tuple[str, Path, t.Optional[t.Tuple[str, str]]]]:
