@@ -1,4 +1,4 @@
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/trustsource/ts-scan/badge)](https://scorecard.dev/viewer/?uri=github.com/trustsource/ts-scan)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/TrustSource/ts-scan/badge)](https://scorecard.dev/viewer/?uri=github.com/TrustSource/ts-scan)
 
 # TrustSource scanner
 
