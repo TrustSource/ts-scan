@@ -35,7 +35,9 @@ Please see the Setup for inofrmation on how to install the corresponding ecosyst
 
 #### Is there a precofigured image with all eco-systems setup?
 
-We currently do not provide such an image. It would be quiet large and we do not want to maintain it. However, there are environment specific images available at DockerHub. Alternatively you might want to use the preconfigured image from [OSS Review Toolkit](https://github.com/doubleopen-project/ort) (ORT), which does scanning the same way. ORT has a TrustSource format reporter included and can upload its reults to [TrustSource](https://app.trustsource.io). 
+We currently do not provide such an image. It would be quiet large and we do not want to maintain it. However, we do provide a [docker image](https://github.com/TrustSource/ts-scan/blob/main/Dockerfile) for operating **ts-scan**, but without any added environments. This would be a good starting point, if you plan to  there are environment specific images available at DockerHub. Alternatively you might want to use the preconfigured image from [OSS Review Toolkit](https://github.com/doubleopen-project/ort) (ORT), which does scanning the same way. ORT has a TrustSource format reporter included and can upload its reults to [TrustSource](https://app.trustsource.io). 
+
+
 
 ## Further development
 
