@@ -73,7 +73,7 @@ class SyftScan(DependencyScan):
             else:
                 ver = pkg.purl
 
-            dep = Dependency(key, pkg.name, versions=[ver], purl_type=purl.type, purl_namespace=purl.namespace)
+            dep = Dependency(key, pkg.name, versions=[ver], type=purl.type, namespace=purl.namespace)
             dep.meta['purl'] = pkg.purl
 
             for pkg_lic in pkg.licenses.root:

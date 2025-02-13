@@ -41,15 +41,19 @@ class Pom:
     def from_file(cls, path: Path) -> t.Optional['Pom']:
         if not path.exists():
             return None
-
-        pom = Pom()
-        pom.__tree = ET.parse(path)
-
-        return pom
+        try:
+            pom = Pom()
+            pom.__tree = ET.parse(path)
+            return pom
+        except:
+            return None
 
     @classmethod
     def from_string(cls, data: str) -> t.Optional['Pom']:
-        pom = Pom()
-        pom.__tree = ET.fromstring(data)
+        try:
+            pom = Pom()
+            pom.__tree = ET.fromstring(data)
+            return pom
+        except:
+            return None
 
-        return pom
