@@ -2,9 +2,11 @@
 
 ***ts-scan*** is a commandline utility developed in python to simplify all code compliance related tasks and unify the handling across different environments. For DevOps this means, you may use the same command set across different environments, whether you are building Java, Go or Python.
 
-![ArchitectureOverview](ts-scan/assets/tsScanArchitecture.001.png)
+![ArchitectureOverview](/ts-scan/assets/tsScanArchitecture.001.png)
 
 With ***ts-scan*** you will be able to perform all sorts of scans. Whether you want to compose a Software Bill of Materials (SBOM), check a repository for hidden license information, check for malware or just scan a docker file. All can be done using the same tool. 
+
+## System Components
 
 To achieve this, we assembled a combination of best of breed solutions. This comprises
 
@@ -20,6 +22,20 @@ Besides these cool tools we also provide a few capabilities to the party:
 * **ts-deepscan**: The repo/file scanner, we provided. [ts-deepcan](https://github.com/trustsource/ts-deepscan) combines all the file based scanning capabilities described above. Its origin is license identification. **DeepScan** has the ability to discover known text fragments, allowing to identify licenses, even when they are slightly transformed or changed using similarity search.  
 
 Both [ts-scan a](https://github.com/trustsource/ts-scan)s well as [ts-deepscan](https://github.com/trustsource/ts-deepscan) can write their results either into a local file using the *TrustSource*, *SPDX* or *CycloneDX* formats or transfer the results to the [**TrustSource** platform](https://app.trustsource.io/) for further treatment.
+
+## Package Managers
+
+For the sake of simplicity we do not include all package managers with the delivery. Typically a use case is bound to one or two environments at maximum. Thus, it would be overdosed to always supply all package managers. We designed a plugin architecture allowing to add specific package management systems. **ts-scan** provides the connectivity to the services, but you will have to provide / install them separately. 
+
+#### Why does *ts-scan* require the eco-systems being installed?
+
+Because we are interested to ***derive all transitive dependencies*** as they will end up in the solution you are really delivering. This can only be determined, when you are building the software. To build the software, it is not enough to understand the package list, you will have to look inside the packages. All other  approaches - e.g. file-based scanning only - will not deliver the truth. 
+
+Please see the Setup for inofrmation on how to install the corresponding ecosystems. 
+
+#### Is there a precofigured image with all eco-systems setup?
+
+We currently do not provide such an image. It would be quiet large and we do not want to maintain it. However, there are environment specific images available at DockerHub. Alternatively you might want to use the preconfigured image from [OSS Review Toolkit](https://github.com/doubleopen-project/ort) (ORT), which does scanning the same way. ORT has a TrustSource format reporter included and can upload its reults to [TrustSource](https://app.trustsource.io). 
 
 ## Further development
 
