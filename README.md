@@ -1,19 +1,24 @@
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/trustsource/ts-scan/badge)](https://scorecard.dev/viewer/?uri=github.com/trustsource/ts-scan)
+
 # TrustSource scanner
 
-The **ts-scan** scans your project for all package depedencies. It supports following build systems
+The **ts-scan** scans your project for all transitive package depedencies. It supports following build systems
 
 - Python (wheel)
 - Maven
 - Nuget
 - NPM
 
-The collected information is stored locally as JSON structure and can be posted to the TrustSource service for the analysis.  
+The collected information is stored locally as JSON structure and can be posted to the TrustSource service for the analysis or used as an SBOM in the standard formats (CycloneDX/SPDX). 
+
+
 
 ## Installation
 
 #### Requirements
 
 - **pip** - is often already contained in the Python distribution but in some cases, please, follow the pip's [installation instruction](https://pip.pypa.io/en/stable/installing/) 
+- **build system** - you will require the package manager [maven|npm|pip|nuget] your solution is build with to be available, so that ts-scan can build the project and isolate all dependencies.    
 
 #### Installation from the PyPI repository
 
@@ -51,6 +56,12 @@ Reason for this is, that pyminr might fail to install on ARM chips.
 ```shell
 docker run ts-scan <COMMAND>
 ```
+
+##### Add build systems to the Docker image
+
+For ease of use we did provide a `Dockerfile.pkg` including the installation of the latest package management systems. This might help but is not necessarily consistent with your local setup. There may be additional configurations and settings required, such as biinary repositories etc. For a detailed setup ensure you have your environment sepcific definitions available.
+
+To use the you may 
 
 ## Usage
 
