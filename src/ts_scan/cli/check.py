@@ -188,7 +188,7 @@ def eval_vulns(scan: DependencyScan, confidence: int, api: TrustSourceAPI) -> t.
 
     def _check_vulns(_purls: t.List[str], _api: TrustSourceAPI) -> list:
         try:
-            return _api.find_cves(purls)
+            return _api.find_cves(_purls)
 
         except TrustSourceAPI.Error as err:
             print(f"An error occured while requesting vulnerabilities information for the scan")
