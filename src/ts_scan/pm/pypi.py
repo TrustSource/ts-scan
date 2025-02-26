@@ -11,7 +11,7 @@ from importlib.metadata import distribution, PackageNotFoundError
 from importlib.metadata._meta import PackageMetadata
 from shippinglabel.requirements import parse_requirements
 
-from . import Scanner, DependencyScan, Dependency, License
+from . import PackageManagerScanner, DependencyScan, Dependency, License
 
 _supported_pkg_files = [
     'setup.py',
@@ -19,7 +19,7 @@ _supported_pkg_files = [
 ]
 
 
-class PypiScanner(Scanner):
+class PypiScanner(PackageManagerScanner):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 

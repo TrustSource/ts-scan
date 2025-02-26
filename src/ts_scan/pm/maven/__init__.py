@@ -7,13 +7,13 @@ from tempfile import TemporaryDirectory
 
 from xml.etree import ElementTree as ET
 
-from .. import Scanner, DependencyScan, Dependency
+from .. import PackageManagerScanner, DependencyScan, Dependency
 
 from .pom_utils import Pom
 from .tree_utils import Tree
 
 
-class MavenScanner(Scanner):
+class MavenScanner(PackageManagerScanner):
     def __init__(self, excludeDepTypes: t.Optional[str] = None, **kwargs):
         super().__init__(**kwargs)
 
@@ -35,7 +35,7 @@ class MavenScanner(Scanner):
         return 'mvn'
 
     @classmethod
-    def options(cls) -> Scanner.OptionsType:
+    def options(cls) -> PackageManagerScanner.OptionsType:
         return super().options() | {
             'excludeDepTypes': {
                 'type': str,
@@ -131,8 +131,10 @@ class MavenScanner(Scanner):
 
                 if src_data := dep.sources_data:
                     repo, pkg, checksum = src_data
-                    download_url = f'{repo}/{pkg.relative_to(self.__local_repo)}'
 
+                    dep.package_files.append(str(pkg))
+
+                    download_url = f'{repo}/{pkg.relative_to(self.__local_repo)}'
                     sources_meta = {
                         'url': download_url
                     }

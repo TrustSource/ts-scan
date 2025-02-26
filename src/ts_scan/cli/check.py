@@ -158,14 +158,17 @@ def check_vulns(api: TrustSourceAPI,
     for scan in scans:
         vulns.update(eval_vulns(scan, vulns_confidence, api))
 
-    if output_path:
-        with output_path.resolve().open('w') as fp:
-            json.dump(vulns, fp, indent=2)  # noqa
+    if not vulns:
+        msg.good('No vulnerabilities identified')
     else:
-        print(json.dumps(vulns, indent=2))
+        if output_path:
+            with output_path.resolve().open('w') as fp:
+                json.dump(vulns, fp, indent=2)  # noqa
+        else:
+            print(json.dumps(vulns, indent=2))
 
-    if vulns and exit_on_vulns:
-        exit(1)
+        if exit_on_vulns:
+            exit(1)
 
 
 def eval_vulns(scan: DependencyScan, confidence: int, api: TrustSourceAPI) -> t.Dict[str, dict]:
@@ -197,7 +200,7 @@ def eval_vulns(scan: DependencyScan, confidence: int, api: TrustSourceAPI) -> t.
 
     tasks = []
     pool = futures.ThreadPoolExecutor()
-    chunk_size = min(len(purls) // pool._max_workers, 40)
+    chunk_size = min(len(purls) // pool._max_workers, 20)
 
     for i in range(0, len(purls), chunk_size):
         task = pool.submit(lambda _purls: _check_vulns(_purls, api), purls[i:i + chunk_size])

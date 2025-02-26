@@ -7,10 +7,10 @@ from semantic_version import Version, NpmSpec
 from pathlib import Path
 from typing import Optional
 
-from . import Scanner, DependencyScan, Dependency, License
+from . import PackageManagerScanner, DependencyScan, Dependency, License
 
 
-class NodeScanner(Scanner):
+class NodeScanner(PackageManagerScanner):
     def __init__(self, enableMetadataRetrieval=False, **kwargs):
         super().__init__(**kwargs)
 
@@ -33,7 +33,7 @@ class NodeScanner(Scanner):
         return 'npm'
 
     @classmethod
-    def options(cls) -> Scanner.OptionsType:
+    def options(cls) -> PackageManagerScanner.OptionsType:
         return super().options() | {
             'enableMetadataRetrieval': {
                 'default': False,
@@ -108,14 +108,14 @@ class NodeScanner(Scanner):
         version = pkg["version"]
 
         dep = Dependency("npm:" + name, name, type='npm')
-
         dep.versions.append(version)
-        dep.package_files.append(str(self.__abs_module_path / package_path))
 
         if name + version not in self.__processed_deps:
             self.__processed_deps.add(name + version)
-            # msg.info(f"Getting metadata for {name} {version}...")
 
+            dep.package_files.append(str(self.__abs_module_path / package_path))
+
+            # msg.info(f"Getting metadata for {name} {version}...")
             if self.enableMetadataRetrieval and (meta := self._metadata_from_registry(name, version)):
                 dep.licenses = meta.licenses
                 dep.description = meta.description

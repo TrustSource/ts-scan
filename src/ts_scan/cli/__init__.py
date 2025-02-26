@@ -18,7 +18,6 @@ def start():
     import ts_scan.cli.upload
     import ts_scan.cli.analyse
     import ts_scan.cli.check
-    #    import ts_scan.cli.evaluate
     import ts_scan.cli.import_sbom
 
     cli()
@@ -67,9 +66,14 @@ def parse_cmd_opts_from_args(cmd: click.Command, args: [str]):
     ctx = cmd.context_class(cmd)
     with ctx:
         parser = cmd.make_parser(ctx)
-        values, _, order = parser.parse_args(args)
+        params, _, param_order = parser.parse_args(args=args)
 
-    opts = {k: d for (k, d), ty in zip(values.items(), order) if isinstance(ty, click.Option)}
+        opts = {}
+        for param in param_order:
+            if isinstance(param, click.Option):
+                value, _ = param.handle_parse_result(ctx, params, [])
+                opts[param.name] = value
+
     return opts
 
 

@@ -7,7 +7,7 @@ from enum import Enum
 
 from defusedxml import ElementTree
 
-from . import Scanner, Dependency, DependencyScan, License
+from . import PackageManagerScanner, Dependency, DependencyScan, License
 
 
 class ProjectType(Enum):
@@ -17,7 +17,7 @@ class ProjectType(Enum):
     SOLUTION = 4
 
 
-class NugetScanner(Scanner):
+class NugetScanner(PackageManagerScanner):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 

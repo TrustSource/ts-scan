@@ -1,5 +1,7 @@
 import abc
 import json
+from abc import ABC
+
 import click
 import typing as t
 import shutil
@@ -10,7 +12,7 @@ from pathlib import Path
 from packageurl import PackageURL
 
 from dataclasses import dataclass, field
-from dataclasses_json import dataclass_json
+from dataclasses_json import config, dataclass_json
 from typing_extensions import TextIO
 
 from ts_deepscan.scanner import Scan as DSScan
@@ -42,13 +44,7 @@ class Scanner(abc.ABC):
 
     @classmethod
     def options(cls) -> OptionsType:
-        opts = {
-            'ignore': {
-                'default': False,
-                'is_flag': True,
-                'help': f'Ignores scanning {cls.name()} dependencies'
-            }
-        }
+        opts = {}
 
         if cls.executable():
             opts['executable'] = {
@@ -70,7 +66,7 @@ class Scanner(abc.ABC):
         raise NotImplemented()
 
     @abc.abstractmethod
-    def scan(self, path: Path) -> t.Optional['DependencyScan']:
+    def scan(self, src: t.Union[str, Path]) -> t.Optional['DependencyScan']:
         raise NotImplemented()
 
     def _exec(self, *args, capture_output=False, **kwargs) -> subprocess.CompletedProcess:
@@ -86,7 +82,21 @@ class Scanner(abc.ABC):
             )
 
         else:
-            raise ExecutableNotFoundError(f'An executable {exec_path} could not be found')
+            raise ExecutableNotFoundError(f'Cannot find {exec_path} executable.')
+
+
+class PackageManagerScanner(Scanner, ABC):
+    OptionsType = t.Dict[str, t.Dict[str, t.Any]]
+
+    @classmethod
+    def options(cls) -> OptionsType:
+        return super().options() | {
+            'ignore': {
+                'default': False,
+                'is_flag': True,
+                'help': f'Ignores scanning {cls.name()} dependencies'
+            }
+        }
 
 
 @dataclass_json
@@ -96,8 +106,8 @@ class DependencyScan:
     moduleId: str
     dependencies: t.List['Dependency'] = field(default_factory=lambda: [])
 
-    tag: t.Optional[str] = None
-    branch: t.Optional[str] = None
+    tag: t.Optional[str] = field(default=None, metadata=config(exclude=lambda f: f is None))
+    branch: t.Optional[str] = field(default=None, metadata=config(exclude=lambda f: f is None))
 
     deepscans: t.Dict[str, DSScan] = field(default_factory=lambda: {})
 
