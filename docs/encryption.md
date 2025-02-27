@@ -30,3 +30,38 @@ Next, analyse every depedency from the scan and store the scan together with ana
 ```shell
 ts-scan analyse -o scan.analysed.json scan.json
 ```
+
+## Analysis results
+
+The analysis results can be found in the output file. The output file contains the original dependency scan as well as a ```deepscans``` section containing results for each dependency.  The following example shows a snippet from the scanning results of a Maven projects containing the ```mvn:org.apache.httpcomponents:httpclient``` dependency:
+
+```json
+{
+  ...
+  "deepscans": [
+    ...
+      "mvn:org.apache.httpcomponents:httpclient": {
+        "results": {
+          ...
+          "httpclient-4.5.14-sources/org/apache/http/impl/auth/DigestScheme.java": {
+            "crypto": [
+              {
+                "algorithm": "MD5",
+                "coding": 128
+              }
+              ...
+            ]
+          },
+          ...
+        }
+    ...
+  ]
+}
+
+```
+
+If some usage of an encryption algorithm is found in a source file, it appears in the results dictionary of that file under ```crypto``` category. In this case a possible usage of an ```MD5``` algorithm was found in the ```org/apache/http/impl/auth/DigestScheme.java``` in the ```org.apache.httpcomponents:httpclient``` package.  
+
+*NOTE*: if several analysers found results all results appear in that dictionary but every analyser has its own category.
+  
+
