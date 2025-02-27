@@ -14,7 +14,17 @@ We suggest to use `pre-commit` to initiate the scan automatically. `pre-commit` 
 
 ## Steps to Success
 
+Scan a directory for dependencies first and store results into the ```scan.json``` file.
 
+```shell
+ts-scan scan -o scan.json <DIRECTORY>
+```
+
+Next, check the scan using TrustSource application: 
+
+```shell
+ts-scan check -o result.json scan.json
+```
 
 ## Further Considerations
 

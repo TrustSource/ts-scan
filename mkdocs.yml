@@ -32,12 +32,12 @@ nav:
       - 'convert.md'
     - Operate:
       - multiple artefacts: 'multiscan.md'
-      - exporting results: 'exports.md'
+      - exporting results: 'export.md'
       - operating inside a container: 'conatiner.md'
     - Use Cases:
       - Auto Scan on Commit: 'uc01-autoSoCommit.md'
       - Add SBOM 2 Git: 'uc02-SBOM2Git.md'
-      - Check 4 Vulns before commit: 'uc03-eval.md'
+      - Check 4 Vulns before commit: 'uc03-check.md'
   - Security: 'security.md'
   - About: 
     - 'about.md'
