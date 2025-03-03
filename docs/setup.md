@@ -1,7 +1,6 @@
 # Installation
 
-Installation is fairly simple. We do provide a ts-scan as PIP package. To install, you will require a recent (v3.10+) Python version installed and pip (v22+). Generally **pip**  is already contained in your Python distribution but if not, follow pip's [installation instruction](https://pip.pypa.io/en/stable/installing/).
-
+Installation is fairly simple. We do provide a ts-scan as PIP package. To install, you will require a recent (v3.10, v3.11 or v3.12 are tested) Python version installed and pip (v22+). Generally **pip**  is already contained in your Python distribution but if not, follow pip's [installation instruction](https://pip.pypa.io/en/stable/installing/).
 
 
 ### Installation from the PyPI repository
@@ -13,7 +12,6 @@ pip install ts-scan
 ```
 
 
-
 ### Installation from a local folder
 
 Alternatively you may choose to clone the ts-scan repository and install the code directly in your environment: 
@@ -23,7 +21,6 @@ git clone https://github.com/trustsource/ts-scan.git
 cd <path to the ts-scan repo, typically ts-scan>
 pip install ./ --process-dependency-links
 ```
-
 
 
 ## Provide a Docker build
@@ -42,7 +39,6 @@ For some scenarios you may want to provide ts-scan inside a docker container, e.
 cd <path to the ts-scan>
 docker build -t ts-scan .
 ```
-
 
 
 ### Build a Docker image containing ts-scan (ARM)
