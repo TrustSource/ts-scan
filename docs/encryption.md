@@ -68,5 +68,7 @@ The analysis results can be found in the output file. The output file contains t
 
 If some usage of an encryption algorithm is found in a source file, it appears in the results dictionary of that file under ```crypto``` category. In this case a possible usage of an ```MD5``` algorithm was found in the ```org/apache/http/impl/auth/DigestScheme.java``` in the ```org.apache.httpcomponents:httpclient``` package.  
 
-*NOTE*: if several analysers found results all results appear in that dictionary but every analyser has its own category.
+> [!NOTE]
+>
+> If several analysers found results all results will appear in that dictionary but every analyser will have a separate category.
 
