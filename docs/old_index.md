@@ -12,15 +12,16 @@ To get a quick intro, jump to any of the following use cases:
 
 - [Architecture Overview & supported Ecosystems](/ts-scan/architecture)
 - Capabilities
-	* [Scanning for dependencies](/ts-scan/sbom) (creating SBOMs)
-	* [Scanning for licenses](/ts-scan/licenses)
-	* [Scanning for encryption](/ts-scan/encryption)
-	* [Scan for Known Vulnerabilities](/ts-scan/vulns)
-	* [Scan for malware](/ts-scan/malware)
-	* [Scan for known software snippets](/ts-scan/snippets)
-- Operations (WIP)
-	* Scanning different artefacts
-	* Storing and exporting scan results to different formats
+   + [Scanning for dependencies](/ts-scan/sbom) (creating SBOMs)
+   + [Scanning for licenses](/ts-scan/licenses)
+   + [Scanning for encryption](/ts-scan/encryption)
+   + [Scan for Known Vulnerabilities](/ts-scan/vulns)
+   + [Scan for malware](/ts-scan/malware)
+   + [Scan for known software snippets](/ts-scan/snippets)
+* Operations (WIP)
+   + Scanning different artefacts
+   + Storing and exporting scan results to different formats
+   + Operating ts-scan inside a container
 
 ## General Thoughts
 
@@ -31,26 +32,28 @@ This is why we have split the processing into different steps. To avoid misunder
 1. **SCAN**
 Use this to determine an SBOM for a particular build artefact. It allows to assess a target - may be a folder, a docker image or a supported build file - for dependencies. The result will be a file written to disk. You may select between different output formats (ts, spdx, CycloneDX). See `ts-scan scan --help` for details on the CLI or [creating SBOMs](/ts-scan/sbom). 
 2. **ANALYSE**
-This action allows to assess the identified dependencies in detail. It will take the scan and pull for each identified dependency the sources from either the package management system or your local repository and assess file by file for information. For performance reasons, we split this assessment from the prior step.
+This action allows to assess the identified dependencies in detail. It will take the scan and pull for each identified dependency the sources from either the package management system or your local repository and assess file by file for information. For performance reasons, we split this assessment from the prior step. 
 We support different types of analysis: 
-	1. Copyright,
-	2. License identification,
-	3. Crypto-algorithms,
-	4. SCANOSS fingerprints (and SBOM decoration)
-	5. Yara rules
+   1. Copyright and Copyleft
+   2. License identification, 
+   3. Crypto-algorithms 
+   4. SCANOSS fingerprints (and decoration) 
+   5. Yara rules  
+Except the malware-scanning - which has a different use case - all scans are *enabled* by deafult. Thus, not passing additional parameters will execute them all. To reduce required time and unnecessary computing efforts, you may select  `--disable-deepscan` or `--disable-scanoss-api` options. 
+ANALYSIS delivers the result always in *TrustSource*-format, because not all of the findings have a home in the standard SPDX/CyDX formats. However, you may use CONVERT to transfer - not loss free - the results into one of the standards. 
 3. **CHECK**
-Allows to evaluate the identified findings against the project specific policies. This has been in troduced to allow breaking builds or deployments depending on the findings. You may use CHECK to assess for:
-	1. Vulnerabilities
-	2. Licenses & OSADL compatibility matrix
-	3. Weak encryption
-Today **ts-scan** takes the findings and transfers them to the **TrustSource** platform. There policies and assessments against these policies are organised and a result is returned. Read our [use case #03](/ts-scan/uc03-check) to learn how to drive your CI/CD using **ts-scan**.
-To achieve this, a *[TrustSource API-Key](https://trustsource.github.io/app-docs/keymgmt)* will be required. However, we plan to provide an option, to add a local policy file for local evaulation.
+Allows to evaluate the identified findings against the project specific policies. This has been in troduced to allow breaking builds or deployments depending on the findings. You may use CHECK to assess for: 
+   1. Vulnerabilities
+   2. Licenses & OSADL compatibility matrix
+   3. Weak encryption
+Today **ts-scan** takes the findings and transfers them to the **TrustSource** platform. There policies and assessments against these policies are organised and a result is returned. Read our [use case 03](/ts-scan/uc03-check) to learn how to drive your CI/CD using **ts-scan**.
+To achieve this, a *[TrustSource API-Key](https://trustsource.github.io/app-docs/keymgmt)* will be required. However, we plan to provide an option, to add a local policy file for local evaulation. 
 4. **IMPORT**
-The IMPORT allows to transfer any 3rd party SBOM to the **TrustSource** platform. You may use this, to create new modules in  a project or update an existing module with this data. The IMPORT command will use the IMPORT function of the **TrustSource ** API. Thus, the conversion of the file will take place on the platform.**
+The IMPORT allows to transfer any 3rd party SBOM to the **TrustSource** platform. You may use this, to create new modules in  a project or update an existing module with this data. The IMPORT command will use the IMPORT function of the **TrustSource ** API. Thus, the conversion of the file will take place on the platform.** 
 5. **UPLOAD**
 This verb will become relevant, if you want to upload you scan or analysis results to the **TrustSource** platform. It allows to take any TrustSource result and push it in to the Platform for further management.
 6. **CONVERT**
-Allows to convert SBOM elements from one format to another. You may see the [CONVERT](/ts-scan/convert)-section for more specifics on the different file formats and the obstacles for sound conversions.
+Allows to convert SBOM elements from one format to another. You may see the [CONVERT](/ts-scan/convert)-section for more specifics on the different file formats and the obstacles for sound conversions. 
 
 In our daily work this split has turned out to be very useful. We hope it is not too confusing. So feel free to leave us a note how you like it.
 
@@ -67,4 +70,6 @@ You may also find additional information and learning materials on specific scan
 ## Reporting Vulnerabilities
 
 TrustSource supports a coordinated vulnerability disclosure procedure for its platform. ***ts-scan*** follows that schema and vulnerabilities identified should follow this procedure. Please find all details in our [Security](../security.md) Policy.
+
+
 
