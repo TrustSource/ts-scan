@@ -71,6 +71,8 @@ The analysis results can be found in the output file. The output file contains t
 
 ```
 
-If some copyright or license information is found in comments in a source file, it appears in the results dictionary of that file under ```comments``` category. In this case, references to the  licenses **LGPL-3.0-only** and **Apache-2.0** as well as the copyright notice were found in the ```json-patch-1.13-sources/com/github/fge/jsonpatch/JsonPatchException.java``` file inside the comment between lines 1 and 18 in the ```com.github.java-json-tools:json-patch``` package.  
+If some copyright or license information is found in comments in a source file, it appears in the results dictionary of that file under ```comments``` category. In this case, references to the licenses **LGPL-3.0-only** and **Apache-2.0** as well as the copyright notice were found in the ```json-patch-1.13-sources/com/github/fge/jsonpatch/JsonPatchException.java``` file inside the comment between lines 1 and 18 in the ```com.github.java-json-tools:json-patch``` package.  
 
-*NOTE*: if several analysers found results all results appear in that dictionary but every analyser has its own category.
+> [!INFORMATION]
+>
+> If several analysers found results all results appear in that dictionary but every analyser has its own category.

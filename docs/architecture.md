@@ -21,7 +21,7 @@ Besides these cool tools we also provide a few capabilities to the party:
 * **ts-scan**: Is not only the orchestrator but has the ability to identify the build environment, execute the corresponding package manager and pull all transitive packages, if required. These packages then will assessed using 
 * **ts-deepscan**: The repo/file scanner, we provided. [ts-deepcan](https://github.com/trustsource/ts-deepscan) combines all the file based scanning capabilities described above. Its origin is license identification. **DeepScan** has the ability to discover known text fragments, allowing to identify licenses, even when they are slightly transformed or changed using similarity search.  
 
-Both [ts-scan a](https://github.com/trustsource/ts-scan)s well as [ts-deepscan](https://github.com/trustsource/ts-deepscan) can write their results either into a local file using the *TrustSource*, *SPDX* or *CycloneDX* formats or transfer the results to the [**TrustSource** platform](https://app.trustsource.io/) for further treatment.
+ [ts-scan](https://github.com/trustsource/ts-scan) can write its results either into a local file using the *TrustSource*, *SPDX* or *CycloneDX* formats or transfer the results to the [**TrustSource** platform](https://app.trustsource.io/) for further treatment using the [UPLOAD](/ts-scan/index) verb..
 
 ## Package Managers
 
@@ -35,7 +35,7 @@ Please see the Setup for inofrmation on how to install the corresponding ecosyst
 
 #### Is there a precofigured image with all eco-systems setup?
 
-We currently do not provide such an image. It would be quiet large and we do not want to maintain it. However, we do provide a [docker image](https://github.com/TrustSource/ts-scan/blob/main/Dockerfile) for operating **ts-scan**, but without any added environments. This would be a good starting point, if you plan to  there are environment specific images available at DockerHub. Alternatively you might want to use the preconfigured image from [OSS Review Toolkit](https://github.com/doubleopen-project/ort) (ORT), which does scanning the same way. ORT has a TrustSource format reporter included and can upload its reults to [TrustSource](https://app.trustsource.io). 
+We currently do not provide such an image. It would be quiet large and we do not want to maintain it. However, we do provide a [docker image](https://github.com/TrustSource/ts-scan/blob/main/Dockerfile) for operating **ts-scan**, but without any added environments. This would be a good starting point, if you plan to  there are environment specific images available at DockerHub. Alternatively you might want to use the preconfigured image from [OSS Review Toolkit](https://github.com/doubleopen-project/ort) (ORT), which does scanning the same way. ORT has a TrustSource format reporter included and thus, these findings can be uploaded to [TrustSource](https://app.trustsource.io) as well. 
 
 
 

@@ -10,6 +10,12 @@ Encryption analysis is enabled by default. There are two options for the encrypt
 
 For example, after scanning a Maven project one can look for used encryption algorithms in the sources of every package as long as they are available in the Maven repository (For most OS packages hosten on Maven Central this will be the case).
 
+> [! CAUTION]
+>
+> SCANOSS has extended its decoration capabilities with newer algorithms end of Feb 2025. As far as of today, we did not see the minr solution having received this capability as well. It is not fully clear, which part of the data will be bound to the commercial subscription or whether the data will be available in the public decoration capability soon as well. 
+>
+> However, using the TrustSource-SCANOSS integration, you may make use of all SCANOSS data within TrustSource. 
+
 ## Analysis of a directory content
 
 ```shell
@@ -63,5 +69,4 @@ The analysis results can be found in the output file. The output file contains t
 If some usage of an encryption algorithm is found in a source file, it appears in the results dictionary of that file under ```crypto``` category. In this case a possible usage of an ```MD5``` algorithm was found in the ```org/apache/http/impl/auth/DigestScheme.java``` in the ```org.apache.httpcomponents:httpclient``` package.  
 
 *NOTE*: if several analysers found results all results appear in that dictionary but every analyser has its own category.
-  
 
