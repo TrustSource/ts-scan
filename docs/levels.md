@@ -1,7 +1,7 @@
 Some Text
 
 - list level 1
-	* list level 2
+	* [list level 2](https://somehwere.com)
 		+ list level 3
 		+ list level 3 2nd entry 
 	* list level 2 b
