@@ -34,7 +34,7 @@ Use this to determine an SBOM for a particular build artefact. It allows to asse
 2. **ANALYSE**
 This action allows to assess the identified dependencies in detail. It will take the scan and pull for each identified dependency the sources from either the package management system or your local repository and assess file by file for information. For performance reasons, we split this assessment from the prior step. 
 We support different types of analysis: 
-   1. Copyright
+   1. Copyright and Copyleft
    2. License identification, 
    3. Crypto-algorithms 
    4. SCANOSS fingerprints (and decoration) 
