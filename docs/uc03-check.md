@@ -16,6 +16,38 @@ We suggest to use `pre-commit` to initiate the scan automatically. `pre-commit` 
 
 Scan a directory for dependencies first and store results into the ```scan.json``` file.
 
+
+
+```
+repos:
+  - repo: local
+    hooks:
+      - id: ts-scan
+        name: run ts-scan
+        language: system
+        entry: /bin/sh -c "ts-scan scan -o scan.json ./ && 
+            ts-scan check 
+              --exit-with-failure-on-vulns 
+              --base-url https://api.dev.trustsource.io 
+              --api-key YOUR_API_KEY
+              -o scan.vulns.json ./scan.json || 
+              echo \"Evaluation results can be found in the scan.vulns.json\" && 
+              exit 1
+        pass_filenames: false
+```
+
+This will execute ts-scan from the local installation and run a Check-action on the local code. The `exit-with-failure-on-vulns` option will cause **ts-scan** to check the findings for vulnearbilities and exit with an exit code of "1" in case there are findings. The results can be found in the `scan.vulns.json`.
+
+
+
+
+
+
+
+
+
+
+
 ```shell
 ts-scan scan -o scan.json <DIRECTORY>
 ```

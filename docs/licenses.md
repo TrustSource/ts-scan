@@ -1,14 +1,14 @@
 # Scan for licenses
 
-**ts-scan** allows to assess packages for declared licenses and files (repository structures) for license indications (effective licenses). This section explains how to use **ts-scan** for this task and how to use the results, which can be written in *CycloneDX*, *SPDX* or *TrustSource* formats or uploaded to **TrustSource platform**.
+**ts-scan** allows to assess packages for declared licenses and files (repository structures) for license indications (effective licenses). This section explains how to use **ts-scan** for this task and how to use the results, which can be written in *CycloneDX*, *SPDX* or *TrustSource* formats or directly uploaded to **TrustSource platform** for further processing.
 
-License and copyright analysis is enabled by default. There are two options for the license and copyright analysis:
+License and copyright analysis are enabled by default. There are two options for the license and copyright analysis:
 
 * *Analysis of a directory content.* Can be useful when only the source code from a directory has to be scanned
 
 * *Analysis of the dependencies files.* In this case files of every dependency from a dependecy scan will be analysed as long as they are available. 
 
-For example, after scanning a Maven project one can look for license and copyright information in the sources of every package as long as they are available in the Maven repository (For most OS packages hosten on Maven Central this will be the case).
+For example, after scanning a Maven project you can try to assess it for license and copyright information in the sources of every package as long as they are available in the Maven repository. For most OS packages hosted on Maven Central this will be the case. However, you may also configure **ts-scan** to use a private Repository instead (see below).
 
 ## Analysis of a directory content
 
@@ -76,3 +76,6 @@ If some copyright or license information is found in comments in a source file, 
 > [!NOTE]
 >
 > If several analysers found results all results appear in that dictionary but every analyser has its own category.
+
+
+

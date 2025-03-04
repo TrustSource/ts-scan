@@ -118,7 +118,7 @@ The full list of options including PM specific options can be printed using:
 ```shell
 ts-scan scan --help
 ```
- 
+
 #### Scanner executable path
 
 While scanning for  Maven, Node and NuGet dependencies, ***ts-scan*** calls corresponding package manager executables. For example, in order to specify a path to the Maven excutable use the following option
@@ -200,14 +200,14 @@ The ```--Xdeepscan```can be used to configure the DeepScan analysers. For exampl
 ts-scan analyse --Xdeepscan timeout,30 <path to the scan file or directory>
 ```
 
-For more details on available options for DeepScan, please refer to [ts-deepscan] documentation(https://github.com/TrustSource/ts-deepscan).
+For more details on available options for DeepScan, please refer to [ts-deepscan documentation](https://github.com/TrustSource/ts-deepscan).
 
 ## Check
 
 The **ts-scan check** command verifies project dependencies for legal issues and known vulnerabilities. It performs these checks using the TrustSource API and supports two modes:
 
 1. A full check based on the corresponding TrustSource project settings (a TrustSource project is required; refer to [TrustSource](https://www.trustsource.io) for more details).
- 
+
 2. A single component check against the TrustSource vulnerability database.
 
 By default, the **check** command performs a full check. To check only for vulnerabilities, use the ```--vulns-only``` option.
@@ -246,8 +246,8 @@ ts-scan check --vulns-only --api-key <TrustSource API key> [-f <input format>] [
 A vulnerabilities-only check does not require creation of the project and uploading the scan before running the check.
 
 The ```--vulns-confidence <level>``` option allows you to control the confidence level for matching components with affected products listed in security bulletins, such as product/vendor tuples in CVEs. The default value is ```high```, minimizing false positives as much as possible.
-  
-  
+
+
 ### Options
 
 There are several useful options available for both modes, making it easier to integrate the **check** command into CI/CD pipelines:

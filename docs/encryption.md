@@ -2,7 +2,7 @@
 
 **ts-scan** also supports to scan for crypto algorithms. Using the deepscan extension ***pyminr***, which ia a wrapper around the **minr** implementation by SCANOSS, DeepScan is able to assess files for known encryption implementations.
 
-Encryption analysis is enabled by default. There are two options for the encryption analysis:
+Encryption analysis is enabled by default. There are two options for the crypto analysis:
 
 * *Analysis of a directory content.* Can be useful when only the source code from a directory has to be scanned
 
@@ -10,11 +10,10 @@ Encryption analysis is enabled by default. There are two options for the encrypt
 
 For example, after scanning a Maven project one can look for used encryption algorithms in the sources of every package as long as they are available in the Maven repository (For most OS packages hosten on Maven Central this will be the case).
 
-> [!IMPORTANT]
+> [!NOTE]
 >
-> SCANOSS has extended its decoration capabilities with newer algorithms end of Feb 2025. As far as of today, we did not see the minr solution having received this capability as well. It is not fully clear, which part of the data will be bound to the commercial subscription or whether the data will be available in the public decoration capability soon as well. 
+> Our SCANOSS integration provides two sorts of usage. The first is the default option, using the public knowledge base. The second is to use your private API key and access either a private endpoint or the commercial subscription. SCANOSS does not provide different datasets. The public will be updated in different timelines than the pcomemrcial one. But the major difference are the API limits. The burst rate is much higher in the subscriptions than in the public API. [Reach out](https://www.trustsource.io/contact) to learn more, in case you are interested.  
 >
-> However, using the TrustSource-SCANOSS integration, you may make use of all SCANOSS data within TrustSource. 
 
 ## Analysis of a directory content
 

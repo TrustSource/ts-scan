@@ -91,3 +91,8 @@ ts-scan scan --use-syft -o <OUTPUT> docker:<DOCKER IMAGE>
 > [!NOTE] 
 >
 > Syft will be installed a part of ts-scan. You do not need to install it separately.
+
+
+
+
+
