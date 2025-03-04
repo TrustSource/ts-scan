@@ -15,10 +15,11 @@ msg = Printer(line_max=240)
 
 def start():
     import ts_scan.cli.scan
-    import ts_scan.cli.upload
     import ts_scan.cli.analyse
     import ts_scan.cli.check
+    import ts_scan.cli.upload
     import ts_scan.cli.import_sbom
+    import ts_scan.cli.convert
 
     cli()
 

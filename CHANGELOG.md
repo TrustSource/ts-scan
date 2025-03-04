@@ -3,16 +3,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0] - 2025-01-16
+## [1.1.0] - 2025-03-04
 
-### New Features 
-
-```
-* Added documentation as git pages
-```
+### New Features
+    * Added "analyse" and "convert" commands
+    * Enhanced results enrichment using the SCANOSS API
+    * Implemented vulnerability checks for scans using the TrustSource API
+    * Added support for SPDX and CycloneDX as input/output formats
+    * Published documentation as GitHub Pages
+    
 
 ## [1.0.0] - 2024-11-06
-### New Features 
+### New Features
 
     * Forwarding parameters to PM tools
     * Specifying executable paths
