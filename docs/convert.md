@@ -6,17 +6,17 @@ Unfortunately, not all of the formats have the same power in all details. This m
 
 On the other hand, CyDX is much more capable to transport vulnerability or file specific information. Here the conversion into SPDX most likely will not be possible without information loss. However, we ensure, that a valid file stands at the end of the convesion. 
 
-Currently the follwooing specificatios are supported:
+Currently the following specificatios are supported:
 
 * Cyclone DX v1.6, v1.4
 * SPDX v2.3, v2.2
 * TrustSource v1.0
 
-The follwoing sections will address specific details to reminded, when converting. 
+By default, exports will always provide the latest specification version. Currently you may not use CONVERT to write to an older version of the specification. However, you may import an older version and convert it into a valid newer version.
 
-> [! NOTE]
+> [!NOTE]
 >
-> The conversion always will pass through the TrustSource format, which is our internal representation. Since TrustSource is not a standard, we can be more felxible. But it may be, that there are requirements we did not yet cover. So please, feel free to raise [issues](https://github.com/trustsource/ts-scan/issues), if you require additional features.
+> The conversion always will pass through the TrustSource format, which is our internal representation. Since TrustSource is not a standard, we can be more felxible. But it may be, that there are requirements we did not yet cover. So please, feel free to raise [issues](https://github.com/trustsource/ts-scan/issues), if you require additional features or are missing / loosing unexpectedly data.
 
 
 
@@ -32,7 +32,7 @@ You may switch the output formats accordingly. ts-scan supports `[ts|spdx-tag|sp
 
 >  [!CAUTION]
 >
-> When transforming CycloneDX into SPDX CBOM information will always be skipped! SPDX does not have an approoriate means to store this information appropriately.  
+> When transforming CycloneDX into SPDX, CBOM and information in other extensions will always be skipped! SPDX does not have an approoriate means to store this information in v2.3.  
 
 
 

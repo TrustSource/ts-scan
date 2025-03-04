@@ -64,4 +64,4 @@ for further details see the use case from the [Overview](/ts-scan/index)
 
 ## Trouble Shooting
 
-this section will contain hints on solving issues during the installation as soon as we get aware of issues. Feel free to report your questions and experiences in the [issues](https://github.com/trustsource/ts-scan/issues) section of this repo. 
+This section will contain hints on solving issues during the installation as soon as we get aware of issues. Feel free to report your questions and experiences in the [issues](https://github.com/trustsource/ts-scan/issues) section of this repo. 

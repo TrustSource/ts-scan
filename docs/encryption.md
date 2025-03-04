@@ -1,6 +1,6 @@
-# Scanning for encryption
+# Scanning for crypto algorithms
 
-**ts-scan** also supports to scan for encryption algorithms. Using the deepscan extension ***pyminr***, which ia a wrapper around the **minr** implementation by SCANOSS, DeepScan is able to assess files for known encryption implementations.
+**ts-scan** also supports to scan for crypto algorithms. Using the deepscan extension ***pyminr***, which ia a wrapper around the **minr** implementation by SCANOSS, DeepScan is able to assess files for known encryption implementations.
 
 Encryption analysis is enabled by default. There are two options for the encryption analysis:
 
@@ -10,7 +10,7 @@ Encryption analysis is enabled by default. There are two options for the encrypt
 
 For example, after scanning a Maven project one can look for used encryption algorithms in the sources of every package as long as they are available in the Maven repository (For most OS packages hosten on Maven Central this will be the case).
 
-> [! CAUTION]
+> [!IMPORTANT]
 >
 > SCANOSS has extended its decoration capabilities with newer algorithms end of Feb 2025. As far as of today, we did not see the minr solution having received this capability as well. It is not fully clear, which part of the data will be bound to the commercial subscription or whether the data will be available in the public decoration capability soon as well. 
 >

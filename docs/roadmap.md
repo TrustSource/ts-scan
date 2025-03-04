@@ -4,7 +4,7 @@ In our current planning, we prioritise the extension with additional development
 
 The next priorities are :
 
-1. C via Cmake (Q2/25)
+1. C/C++ via Cmake (Q2/25)
 2. Rust via Cargo (Q2/25)
 3. Go  (Q3/25)
 4. php via Composer (Q4/25)
