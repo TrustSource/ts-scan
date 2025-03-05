@@ -29,7 +29,7 @@ For some scenarios you may want to provide ts-scan inside a docker container, e.
 
 > [!CAUTION]
 >
-> PLEASE NOTE: Scanning of Docker images using Syft from within the *ts-scan* Docker image is **not** supported for security reasons. 
+> Scanning of Docker images using Syft from within the *ts-scan* Docker image is **not** supported for security reasons. 
 
 
 
