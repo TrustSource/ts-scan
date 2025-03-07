@@ -41,7 +41,7 @@ We currently do not provide such an image. It would be quiet large and we do not
 
 ## Further development
 
-It is possible - and highly desired - to extend **ts-scan** with additional package management systems. In the [developer's guide](/ts-scan/guidelines.md) we describe how simple it is, to extend it using the plugin mechanism of Python. 
+It is possible - and highly desired - to extend **ts-scan** with additional package management systems. In the [developer's guide](/ts-scan/guidelines) we describe how simple it is, to extend it using the plugin mechanism of Python.
 
 To add extensions on the file assessment, we recommend to extend ts-deepscan, which is living in a separate [repository](https://github.com/trustsource/ts-deepscan).
 
