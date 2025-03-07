@@ -4,13 +4,13 @@
 
 ![ArchitectureOverview](/ts-scan/assets/tsScanArchitecture.001.png)
 
-With ***ts-scan*** you will be able to perform all sorts of scans. Whether you want to compose a Software Bill of Materials (SBOM), check a repository for hidden license information, check for malware or just scan a docker file. All can be done using the same tool. 
+With ***ts-scan*** you will be able to perform all sorts of scans. Whether you want to compose a Software Bill of Materials (SBOM), check a repository for hidden license information, check for malware or just scan a Docker file. All can be done using the same tool. 
 
 ## System Components
 
 To achieve this, we assembled a combination of best of breed solutions. This comprises
 
-* **Syft**: supporting the **decomposition of docker images** and derivation of SBOMs form an image. What we like about [Syft](https://github.com/anchore/syft) is its ability to assess images as well as Docker files.
+* **Syft**: supporting the **decomposition of Docker images** and derivation of SBOMs form an image. What we like about [Syft](https://github.com/anchore/syft) is its ability to assess images as well as Docker files.
 * **Scancode**: extends deepscan capabilities to assess non-text files in the search for hidden license information and **copright texts**. [NexB](https://github.com/aboutcode-org/scancode-toolkit), the authors of Scancode, maintain a huge library of keys, patterns and license information. 
 * **SCANOSS**: The fingerprinting mechanism by [SCANOSS](https://scanoss.com) is unique as well as their data archive. Sitting on a huge database of internets history, it is possible to identify already seen **code snippets** and derive potential 3rd party copyrights. Especially in the era of AI-driven development code ownership becomes a topic of growing concern. 
 * **PyMinr**: Is our [Python wrapper](https://github.com/trustsource/pyminr) around the *[minr](https://github.com/scanoss/minr)* implementation, a search algorithm to identify **encryption algorithms** within the code. This is important for import and export controls but also to fortify your solutions against hte upcoming Quatum computing era.
@@ -35,7 +35,7 @@ Please see the Setup for inofrmation on how to install the corresponding ecosyst
 
 #### Is there a preconfigured image with all eco-systems setup?
 
-We currently do not provide such an image. It would be quiet large and we do not want to maintain it. However, we do provide a [docker image](https://github.com/TrustSource/ts-scan/blob/main/Dockerfile) for operating **ts-scan**, but without any added environments. This would be a good starting point, if you plan to  there are environment specific images available at DockerHub. Alternatively you might want to use the preconfigured image from [OSS Review Toolkit](https://github.com/doubleopen-project/ort) (ORT), which does scanning the same way. ORT has a TrustSource format reporter included and thus, these findings can be uploaded to [TrustSource](https://app.trustsource.io) as well. 
+We currently do not provide such an image. It would be quiet large and we do not want to maintain it. However, we do provide a [Docker image](https://github.com/TrustSource/ts-scan/blob/main/Dockerfile) for operating **ts-scan**, but without any added environments. This would be a good starting point, if you plan to  there are environment specific images available at DockerHub. Alternatively you might want to use the preconfigured image from [OSS Review Toolkit](https://github.com/doubleopen-project/ort) (ORT), which does scanning the same way. ORT has a TrustSource format reporter included and thus, these findings can be uploaded to [TrustSource](https://app.trustsource.io) as well. 
 
 
 
