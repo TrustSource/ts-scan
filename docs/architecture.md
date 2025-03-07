@@ -33,7 +33,7 @@ Because we are interested to ***derive all transitive dependencies*** as they wi
 
 Please see the Setup for inofrmation on how to install the corresponding ecosystems. 
 
-#### Is there a precofigured image with all eco-systems setup?
+#### Is there a preconfigured image with all eco-systems setup?
 
 We currently do not provide such an image. It would be quiet large and we do not want to maintain it. However, we do provide a [docker image](https://github.com/TrustSource/ts-scan/blob/main/Dockerfile) for operating **ts-scan**, but without any added environments. This would be a good starting point, if you plan to  there are environment specific images available at DockerHub. Alternatively you might want to use the preconfigured image from [OSS Review Toolkit](https://github.com/doubleopen-project/ort) (ORT), which does scanning the same way. ORT has a TrustSource format reporter included and thus, these findings can be uploaded to [TrustSource](https://app.trustsource.io) as well. 
 
