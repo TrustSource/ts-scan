@@ -4,8 +4,8 @@ MAINTAINER Grigory Markin "gmn@eacg.de"
 RUN mkdir -p /tmp/ts-scan
 WORKDIR /tmp/ts-scan
 
-COPY ./ts_scan ./ts_scan
-COPY ./ts-scan ./_config.yml ./setup.py ./setup.cfg ./LICENSE ./MANIFEST.in ./
+COPY ./src ./src
+COPY ./pyproject.toml ./LICENSE ./
 
 RUN pip install ./
 
