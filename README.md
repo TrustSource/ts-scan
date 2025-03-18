@@ -75,6 +75,7 @@ The **ts-scan** functionality is divided into a set of commands based on the int
 | [check](#check)		| Check packages for legal issues and vulnerabilities |
 | [upload](#upload)		| Upload scan and analysis results to the TrustSource application |
 | [import](#import)		| Import SPDX and CycloneDX files directly into the TrustSource application |
+| [convert](#convert)   | Convert SBOM between supported formats (TS, SPDX, CycloneDX)
 
 To display a list of all available commands, use:
 
@@ -192,6 +193,7 @@ To disable or fine-tune specific analysis steps, you can use additional options.
 
 * ```--disable-deepscan``` - Disables analysis using DeepScan.
 * ```--disable-scanoss``` - Disables extending DeepScan results with SCANOSS data.
+* ```--scanoss-api-key <SCANOSS API key>``` - A SCANOSS API key, required for accessing data provided by SCANOSS over non-public API. For more details, please refer to [SCANOSS](https://www.scanoss.com)   
 * ```--Xdeepscan <OPTION>,<VALUE>``` - Forwards <OPTION> <VALUE> to the DeepScan **scan** command.
 
 The ```--Xdeepscan```can be used to configure the DeepScan analysers. For example, to analyse a scan while setting a timeout (in seconds) per file, use:  
@@ -272,7 +274,7 @@ ts-scan upload --project-name <TrustSource project name> --api-key <TrustSource 
 ts-scan upload --help
 ```
 
-### Import SBOMs
+## Import SBOMs
 
 The **import** command is used to import SBOMs to the [TrustSource App](https://www.trustsource.io) for the .... TBD:
 
@@ -291,6 +293,16 @@ ts-scan import -f <SBOM format> -v <SBOM format version> --module <SBOM module n
 ```shell
 ts-scan import --help
 ```
+
+## Convert
+
+To convert a SBOM between supported formats, use:
+
+```shell
+ts-scan convert [-f <input format>] [-of <output format>] [-o <output>] <path to the SBOM file>
+```
+
+The ```-f <input format>``` and the ```-of <output format>``` options specify the input format and the output format respectively and accept the same values as the <output format> of the scan command.
 
 ## License
 

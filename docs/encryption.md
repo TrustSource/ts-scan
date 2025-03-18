@@ -36,6 +36,14 @@ Next, analyse every depedency from the scan and store the scan together with ana
 ts-scan analyse -o scan.analysed.json scan.json
 ```
 
+The analysis of the encryption algorithms is done using the [SCANOSS Mining Tool](https://github.com/scanoss/minr) locally. Optionally, one can use the knowledge base provided directly by the SCANOSS. In order to get data about cryptographic algorithms from the SCANOSS services, a SCANOSS API key is required. In this case use the following command:
+
+      
+```shell
+ts-scan analyse --scanoss-api-key <SCANOSS API key> -o scan.analysed.json scan.json
+```
+
+
 ## Analysis results
 
 The analysis results can be found in the output file. The output file contains the original dependency scan as well as a ```deepscans``` section containing results for each dependency.  The following example shows a snippet from the scanning results of a Maven projects containing the ```mvn:org.apache.httpcomponents:httpclient``` dependency:
