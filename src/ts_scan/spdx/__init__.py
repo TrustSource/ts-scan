@@ -142,10 +142,8 @@ def _create_deps(doc: Document) -> t.List[Dependency]:
     return list(deps.values())
 
 
-def _create_dep(pkg: Package, use_purl_as_version=False) -> t.Optional[Dependency]:
+def _create_dep(pkg: Package) -> t.Optional[Dependency]:
     dep = None
-    meta = {}
-
     pkg_mngr_info = None
 
     for ref in pkg.external_references:
@@ -158,27 +156,13 @@ def _create_dep(pkg: Package, use_purl_as_version=False) -> t.Optional[Dependenc
         except ValueError:
             purl = None
 
-        if purl:
-            key = purl.type
-            if purl.namespace:
-                key += ':' + purl.namespace
-            key += ':' + purl.name
-
-            if not use_purl_as_version:
-                ver = pkg.version
-                meta['purl'] = pkg_mngr_info.locator
-            else:
-                ver = pkg_mngr_info.locator
-
-            dep = Dependency(key, pkg.name, type=purl.type, versions=[ver])
+        if purl and (dep := Dependency.create_from_purl(purl)):
+            dep.versions.append(pkg.version)
 
     if dep and pkg.license_declared:
         if lic_expr := pkg.license_declared:
             if isinstance(lic_expr, LicenseExpression):
                 dep.licenses = [License(name=str(s)) for s in lic_expr.symbols]
-
-    if dep and meta:
-        dep.meta = meta
 
     return dep
 

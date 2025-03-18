@@ -134,18 +134,8 @@ def _create_scan(bom: Bom) -> DependencyScan:
 
 
 def _create_dependency(comp: Component) -> t.Optional[Dependency]:
-    dep = None
-
-    if purl := comp.purl:
-        key = purl.type
-        if purl.namespace:
-            key += ':' + purl.namespace
-        key += ':' + purl.name
-
-        ver = comp.version if comp.version else purl.version
-
-        dep = Dependency(key, comp.name, type=purl.type, versions=[ver])
-        dep.meta['purl'] = purl.to_string()
+    if (purl := comp.purl) and (dep := Dependency.create_from_purl(purl)):
+        dep.versions.append(comp.version if comp.version else purl.version)
 
         lics = []
         for lic in comp.licenses:
@@ -156,4 +146,6 @@ def _create_dependency(comp: Component) -> t.Optional[Dependency]:
 
         dep.licenses = lics
 
-    return dep
+        return dep
+
+    return None

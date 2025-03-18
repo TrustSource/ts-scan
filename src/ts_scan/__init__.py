@@ -7,6 +7,9 @@ from .pm import Scanner, Dependency, DependencyScan
 from .cli import cli, msg
 
 
+__version__ = '1.1.0'
+
+
 def __get_pm_scanner_classes() -> t.List[t.Type[Scanner]]:
     from .pm.pypi import PypiScanner
     from .pm.maven import MavenScanner

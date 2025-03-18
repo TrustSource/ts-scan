@@ -1,12 +1,12 @@
 import abc
 import json
-from abc import ABC
-
 import click
 import typing as t
 import shutil
 import subprocess
 
+from abc import ABC
+from enum import Enum
 from sys import platform
 from pathlib import Path
 from packageurl import PackageURL
@@ -125,6 +125,9 @@ class DependencyScan:
                 visited.add(dep.purl)
                 yield dep
 
+    def as_purls_dict(self) -> t.Dict[str, 'Dependency']:
+        return {dep.purl.to_string(): dep for dep in self.iterdeps_once()}
+
 
 @dataclass_json
 @dataclass
@@ -141,7 +144,6 @@ class Dependency:
     checksum: str = ''
     private: bool = False
 
-    # TODO: replace versions list by a single version
     versions: t.List[str] = field(default_factory=lambda: [])
     dependencies: t.List['Dependency'] = field(default_factory=lambda: [])
     licenses: t.List['License'] = field(default_factory=lambda: [])
@@ -150,6 +152,8 @@ class Dependency:
 
     package_files: t.List[str] = field(default_factory=lambda: [])
     license_file: t.Optional[str] = None
+
+    crypto_algorithms: t.List['CryptoAlgorithm'] = field(default_factory=lambda: [])
 
     @property
     def version(self) -> t.Optional[str]:
@@ -162,12 +166,49 @@ class Dependency:
                           name=self.name,
                           version=self.version)
 
+    @staticmethod
+    def create_from_purl(purl: t.Union[str, PackageURL]) -> t.Optional['Dependency']:
+        if type(purl) is str:
+            try:
+                purl = PackageURL.from_string(purl)
+            except ValueError:
+                return None
+
+        key = purl.type
+        if purl.namespace:
+            key += ':' + purl.namespace
+        key += ':' + purl.name
+
+        return Dependency(key=key,
+                          name=purl.name,
+                          type=purl.type,
+                          namespace=purl.namespace,
+                          meta={'purl': purl.to_string()})
+
+    def add_crypto_algorithm(self, algorithm: str, strength: str):
+        if next((a for a in self.crypto_algorithms if
+                 a.algorithm == algorithm and a.strength == strength), None) is None:
+            self.crypto_algorithms.append(CryptoAlgorithm(algorithm=algorithm, strength=strength))
+
+
+class LicenseKind(str, Enum):
+    DECLARED = 'declared'
+    EFFECTIVE = 'effective'
+
 
 @dataclass_json
 @dataclass
 class License:
     name: str
     url: str = ''
+    kind: LicenseKind = LicenseKind.DECLARED
+
+
+@dataclass_json
+@dataclass
+class CryptoAlgorithm:
+    algorithm: str
+    strength: str
 
 
 def dump_scans(scans: t.List[DependencyScan], fp: TextIO, fmt: str):

@@ -7,13 +7,12 @@ import ts_deepscan.cli
 import ts_deepscan.analyser.textutils
 
 from ts_deepscan import Scan as DSScan
-from ts_deepscan.analyser.ScanossAnalyser import ScanossAnalyser
 
 from tqdm import tqdm
 from pathlib import Path
 from threading import Lock
 
-from ..pm import DependencyScan
+from ..pm import DependencyScan, Dependency
 from ..cli import parse_cmd_opts_from_args
 
 __ds_dataset = None
@@ -69,6 +68,7 @@ def _analyse_dep_with_ds_completed(dep, scan, pbar, completion_lock):
         with completion_lock:
             if ds_res:
                 scan.deepscans[dep.key] = ds_res
+                extend_dep_from_ds(dep, ds_res)
 
             if lic_file_res:
                 dep.meta['license_file'] = lic_file_res
@@ -79,7 +79,7 @@ def _analyse_dep_with_ds_completed(dep, scan, pbar, completion_lock):
     return complete
 
 
-def analyse_scan_with_ds(scan: DependencyScan, ds_args: t.List[str]) -> DependencyScan:
+def analyse_scan_with_ds(scan: DependencyScan, ds_args: t.List[str]):
     if scan.deepscans:
         return scan
 
@@ -101,25 +101,6 @@ def analyse_scan_with_ds(scan: DependencyScan, ds_args: t.List[str]) -> Dependen
     futures.wait(tasks, return_when=futures.ALL_COMPLETED)
 
     pbar.close()
-    return scan
-
-
-def analyse_scan_with_scanoss(scan: DependencyScan) -> DependencyScan:
-    for _, ds in tqdm(scan.deepscans.items(), desc="Analysing results using SCANOSS"):
-        analyse_deepscan_with_scanoss(ds)
-
-    return scan
-
-
-def analyse_deepscan_with_scanoss(ds: DSScan):
-    wfps = []
-    for path, res in ds.result.items():
-        if (scanoss := res.get('scanoss')) and (wfp := scanoss.get('wfp')):
-            wfps.append(wfp)
-
-    if wfps and (wfps_results := ScanossAnalyser.scan(wfps)):
-        for p, res in wfps_results.items():
-            ds.result[p]['scanoss']['wfp_result'] = res
 
 
 def analyse_path_with_ds(path: Path, ds_args: t.List[str]) -> DSScan:
@@ -129,3 +110,15 @@ def analyse_path_with_ds(path: Path, ds_args: t.List[str]) -> DSScan:
     scanner = ts_deepscan.create_scanner(**ds_opts, dataset=dataset)  # noqa
 
     return ts_deepscan.execute_scan([path], scanner, title=f"'{path.name}'")
+
+
+def extend_dep_from_ds(dep: Dependency, ds: DSScan):
+    from ..pm import License, LicenseKind
+
+    for ds_lic in ds.summary.get('licenses', []):
+        if next((lic for lic in dep.licenses
+                 if lic.kind == LicenseKind.EFFECTIVE and lic.name == ds_lic), None) is None:
+            dep.licenses.append(License(name=ds_lic, kind=LicenseKind.EFFECTIVE))
+
+    for name, coding in ds.summary.get('crypto_algorithms', {}).items():
+        dep.add_crypto_algorithm(algorithm=name, strength=coding)

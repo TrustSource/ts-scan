@@ -14,3 +14,4 @@ dataclasses-json~=0.6.7
 cyclonedx-python-lib~=8.5.0
 shippinglabel~=2.1.0
 tqdm~=4.67.0
+scanoss~=1.20.4
