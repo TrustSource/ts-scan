@@ -13,17 +13,47 @@ Creating SBOMs meanwhile got sort of "***good development practise***". Thus, yo
 
 ## Prerequisites
 
-there are many ways to achieve the goal. One of them is to use [pre-commit](https://pre-commit.com). We configure a 
+There are many options to achieve the goal. One of them is to add the SBOM creation as part of a [pre-commit](https://pre-commit.com) action. This requires to have pre-commit installed.    
 
+## Steps to Success
 
+To achieve the automated SBOM geenration upon each commit, follow these steps: 
 
+### 1.Create SBOM action script
 
+Go to `.git/hooks`in your repository and add a `create-sbom.sh` with `touch create-sbom.sh` with the following commands:
 
+```#!/bin/sh
+# Create a new SBOM file
+ts-scan scan -o SBOM.cydx -f cyclonedx-json .
+# Add the new file to the commit
+git add SBOM.cydx
+# Exit with a success status
+exit 0
+```
 
+### 2.Make the scrip executable
 
+Now allow to execute the script: `chmod +x create-sbom.sh` and change back to the root folder of your repository.
 
+### 3.Add to pre-commit
 
-Given you host your repository at GitHub, there is not much to do. You may add the folder `.github` into your repository root and add there an additional folder `workflows`. In this folder you put the following YAML file:
+Create the pre-commit action using `touch .pre-commit-config.yaml` with the following commands:
+
+```repos:
+  - repo: local
+    hooks:
+      - id: create-sbom
+        name: Create SBOM file
+        entry: .git/hooks/create-sbom.sh
+        language: script
+```
+
+This will execute the script upon any push and ensure the SBOM provided in the repository stays always accurate. 
+
+## Alternative 
+
+An alternative would be to create the SBOM in a later step through a github action. Therefor add the folder `.github` into your repository root and add there an addition folder `workflows`. In this folder you put the following YAML file:
 
 ```yaml
 repos:
@@ -32,24 +62,8 @@ repos:
       - id: ts-scan
         name: run ts-scan
         language: system
-        entry: /bin/sh -c "ts-scan scan -o SBOM.cydx -of cyclonedx-json .""
+        entry: /bin/sh -c "ts-scan scan -o SBOM.cydx -f cyclonedx-json ."
 
 ```
 
- 
 
-## Steps to Success
-
-### 1.Do this
-
-### 2.Do that
-
-### 3.See the result
-
-
-
-
-
-## Further Considerations
-
-It might not be a good idea to add extensive scanning in this step....
