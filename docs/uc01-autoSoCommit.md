@@ -1,6 +1,6 @@
-# Use Case #01 - Auto Scan on Commit
+# Use Case #01 - Auto Scan and Publish upon Commit
 
-One of the most relevant cases for **ts-scan** is to be executed whenever new code is about to be commited. 
+One of the most relevant cases for **ts-scan** is to be executed whenever new code is to be commited. We pre
 
 ## Why you would want to do this?
 

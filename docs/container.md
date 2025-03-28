@@ -25,6 +25,8 @@ docker build -t ts-scan .
 
 #### Build a Docker image containing ts-scan (ARM)
 
+Due to some restrictions ARM processors will require som, modified build. 
+
 ```shell
 cd <path to the ts-scan>
 docker buildx build --platform linux/amd64 -t ts-scan .
@@ -33,8 +35,6 @@ docker buildx build --platform linux/amd64 -t ts-scan .
 Reason for this difference is, that `pyminr` - the crypto scanner - might fail to install on ARM chips. 
 
 Also Scancode is using some libs in the default installation, which are not available to the ARM platform. There we provide only the mini-variant. However, this is covered by **ts-scan** setup routine and does not require your attention. 
-
-
 
 ### Use ts-scan from the Docker image
 
@@ -49,6 +49,8 @@ Replace `<COMMAND>` with whatever action you want to perform. See our [use cases
 > Scanning of Docker images using Syft from within the *ts-scan* Docker image is **not** supported for security reasons! 
 
 
+
+# Use ts-scan to scan a docker image
 
 
 

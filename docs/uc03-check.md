@@ -12,8 +12,6 @@ The earlier known vulnerabilities are identified, the lower the price to switch 
 
 We suggest to use `pre-commit` to initiate the scan automatically. `pre-commit` is a Python based implementation that hooks in the git flow and allows to execute tests before a commit is completed. Only when the tests are successful, the commit is accepted. You may learn more about the tooling [here](https://pre-commit.com).
 
- 
-
 ## Steps to Success
 
 Scan a directory for dependencies first and store results into the ```scan.json``` file. Then execute the CHECK command to evaluate the SBOM against the project / module specific requirements and receive all known violations. This can be legal issues, vulnerabilities or crypto security. It is open to you, which restrictions you define.
@@ -38,13 +36,19 @@ repos:
 
 This will execute ts-scan from the local installation and run a Check-action on the local code. The `exit-with-failure-on-vulns` option will cause **ts-scan** to check the findings for vulnearbilities and exit with an exit code of "1" in case there are findings. The results can be found in the `scan.vulns.json`.
 
-The procedure equals the following two commands:
+[!WARNING]
+
+We recommend not to add your API-KEY as plaintext. You should use 
+
+
+
+The script above equals the following two commands. In the first step an SBOM is created.
 
 ```shell
 ts-scan scan -o scan.json <DIRECTORY>
 ```
 
-Then check the scan using TrustSource application: 
+Then the CHECK command is used to verify tge SBOM and store the findings in the `scan.vulns.json` file. using TrustSource: 
 
 ```shell
 ts-scan check -o scan.vulns.json scan.json
@@ -53,3 +57,5 @@ ts-scan check -o scan.vulns.json scan.json
 ## Further Considerations
 
 We highly recommend not to add execessive file based analysis to your `pre-commit` scans. Scanning for encryption, malware or licenses may take more time than a developer might want to wait for a pre-commit check. 
+
+Please note: Given you are using TrustSource as a standalone version, you may need to modify ts-scan to use another than the public endpoint. 

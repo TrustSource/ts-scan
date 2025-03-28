@@ -6,5 +6,5 @@ Feel free to reach out and discuss or suggest additional good practise, or maybe
 
 ## Standards
 
-Since last years, we decided to follow the [PEP 8 standard](https://peps.python.org/pep-0008/). Would be great, if you would also.
+A few years ago we decided to follow the [PEP 8 standard](https://peps.python.org/pep-0008/). Would be great, if you would comply.
 
