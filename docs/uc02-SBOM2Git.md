@@ -13,7 +13,17 @@ Creating SBOMs meanwhile got sort of "***good development practise***". Thus, yo
 
 ## Prerequisites
 
-Given you host your repository at GitHub, there is not much to do. You may add the folder `.github` into your repository root and add there an addition folder `workflows`. In this folder you put the following YAML file:
+there are many ways to achieve the goal. One of them is to use [pre-commit](https://pre-commit.com). We configure a 
+
+
+
+
+
+
+
+
+
+Given you host your repository at GitHub, there is not much to do. You may add the folder `.github` into your repository root and add there an additional folder `workflows`. In this folder you put the following YAML file:
 
 ```yaml
 repos:
