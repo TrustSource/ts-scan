@@ -1,10 +1,12 @@
 # Use Case #03 - Check for Known Vulnerabilities 
 
-Noone wnats to work for the bin
+You may not want to allow your developers to add code containing known vulnerabilities. It is a managment decision whether you want this. In a first emotional reaction this may seem top be a brilliant idea. Thinking a bt deeper, it will not turn out to be such a good option. The same idea preventing the entry of new, vulnerable code will also prevent developers to provide workarounds or protections from known vulnerabilities in underlying components.
+
+However, you must not necessarily block the push or pull request, you also might just want your developers to be informaed about the risks. 
 
 ## Why you would want to do this?
 
-​	Benefits 
+The earlier known vulnerabilities are identified, the lower the price to switch to other components.  
 
 ## Prerequisites
 
@@ -14,9 +16,7 @@ We suggest to use `pre-commit` to initiate the scan automatically. `pre-commit` 
 
 ## Steps to Success
 
-Scan a directory for dependencies first and store results into the ```scan.json``` file.
-
-
+Scan a directory for dependencies first and store results into the ```scan.json``` file. Then execute the CHECK command to evaluate the SBOM against the project / module specific requirements and receive all known violations. This can be legal issues, vulnerabilities or crypto security. It is open to you, which restrictions you define.
 
 ```
 repos:
@@ -38,24 +38,16 @@ repos:
 
 This will execute ts-scan from the local installation and run a Check-action on the local code. The `exit-with-failure-on-vulns` option will cause **ts-scan** to check the findings for vulnearbilities and exit with an exit code of "1" in case there are findings. The results can be found in the `scan.vulns.json`.
 
-
-
-
-
-
-
-
-
-
+The procedure equals the following two commands:
 
 ```shell
 ts-scan scan -o scan.json <DIRECTORY>
 ```
 
-Next, check the scan using TrustSource application: 
+Then check the scan using TrustSource application: 
 
 ```shell
-ts-scan check -o result.json scan.json
+ts-scan check -o scan.vulns.json scan.json
 ```
 
 ## Further Considerations
