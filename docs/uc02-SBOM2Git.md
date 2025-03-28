@@ -16,7 +16,13 @@ Creating SBOMs meanwhile got sort of "***good development practise***". Thus, yo
 Given you host your repository at GitHub, there is not much to do. You may add the folder `.github` into your repository root and add there an addition folder `workflows`. In this folder you put the following YAML file:
 
 ```yaml
-
+repos:
+  - repo: local
+    hooks:
+      - id: ts-scan
+        name: run ts-scan
+        language: system
+        entry: /bin/sh -c "ts-scan scan -o SBOM.cydx -of cyclonedx-json .""
 
 ```
 

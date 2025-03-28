@@ -17,6 +17,8 @@ For example, after scanning a Maven project one can look for used encryption alg
 
 ## Analysis of a directory content
 
+To scan and assess the contents of a directory and collecting the output into a file called `scan.json`, use the following command:
+
 ```shell
 ts-scan analyse -o scan.json <DIRECTORY>
 ```
@@ -24,7 +26,7 @@ ts-scan analyse -o scan.json <DIRECTORY>
 
 ## Analysis of the dependencies files
 
-Scan a directory for dependencies first and store results into the ```scan.json``` file.
+Itis possible to split the actions into scanning and assessing. Scan a directory for dependencies first and store results into the ```scan.json``` file.
 
 ```shell
 ts-scan scan -o scan.json <DIRECTORY>
@@ -36,9 +38,9 @@ Next, analyse every depedency from the scan and store the scan together with ana
 ts-scan analyse -o scan.analysed.json scan.json
 ```
 
-The analysis of the encryption algorithms is done using the [SCANOSS Mining Tool](https://github.com/scanoss/minr) locally. Optionally, one can use the knowledge base provided directly by the SCANOSS. In order to get data about cryptographic algorithms from the SCANOSS services, a SCANOSS API key is required. In this case use the following command:
+The analysis of the encryption algorithms uses the [SCANOSS Mining Tool](https://github.com/scanoss/minr) locally. Optionally, you may use the knowledge base provided directly by the SCANOSS. In order to get data about cryptographic algorithms from the SCANOSS services, a SCANOSS API key is required. To make use of the database,  apply the following command:
 
-      
+
 ```shell
 ts-scan analyse --scanoss-api-key <SCANOSS API key> -o scan.analysed.json scan.json
 ```
@@ -46,7 +48,7 @@ ts-scan analyse --scanoss-api-key <SCANOSS API key> -o scan.analysed.json scan.j
 
 ## Analysis results
 
-The analysis results can be found in the output file. The output file contains the original dependency scan as well as a ```deepscans``` section containing results for each dependency.  The following example shows a snippet from the scanning results of a Maven projects containing the ```mvn:org.apache.httpcomponents:httpclient``` dependency:
+The analysis results can be found in the output file. The output file contains the original dependency scan as well as a ```deepscans``` section containing the "crypto" results for each dependency.  The following example shows a snippet from the scan results of a Maven project containing the ```mvn:org.apache.httpcomponents:httpclient``` dependency:
 
 ```json
 {
