@@ -1,4 +1,4 @@
-![Supported Versions](https://img.shields.io/badge/Python-%203.10,%203.11,%203.12-blue) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/TrustSource/ts-scan/badge)](https://scorecard.dev/viewer/?uri=github.com/TrustSource/ts-scan) ![License](https://img.shields.io/badge/License-Apache--2.0-green)
+![Supported Versions](https://img.shields.io/badge/Python-%203.10,%203.11,%203.12-blue) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/TrustSource/ts-scan/badge)](https://scorecard.dev/viewer/?uri=github.com/TrustSource/ts-scan) [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/10358/badge)](https://www.bestpractices.dev/projects/10358) ![License](https://img.shields.io/badge/License-Apache--2.0-green)
 
 # Overview
 
