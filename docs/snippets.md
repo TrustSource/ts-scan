@@ -43,7 +43,7 @@ deepscans : {}
 You may now assess the files of this component for known information. At the end of the file you will find a key **deepscans** with an empty document. 
 
 ```shell
-ts-scan analyse -o myclient-analysed-SBOM.ts myclient-SBOM.tsq
+ts-scan analyse -o myclient-analysed-SBOM.ts myclient-SBOM.ts
 ```
 
 After executing the former command you will find the new document being extended in this section with detailed data per file, like in the following example.
