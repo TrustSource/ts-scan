@@ -36,11 +36,9 @@ repos:
 
 This will execute ts-scan from the local installation and run a Check-action on the local code. The `exit-with-failure-on-vulns` option will cause **ts-scan** to check the findings for vulnearbilities and exit with an exit code of "1" in case there are findings. The results can be found in the `scan.vulns.json`.
 
-[!WARNING]
-
-We recommend not to add your API-KEY as plaintext. You should use 
-
-
+>  [!NOTE]
+>
+> Pleae note the ```YOUR API KEY``` variable. This will require a TrustSource API key. See the [online help](https://support.trustsource.io/hc/en-us/articles/8624792507922-How-to-manage-API-keys) to learn how to create one. We recommend not to store the API key in the config. You may use [github secrets](https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions) or a [local vault](https://github.com/mylofi/local-vault) to keep the key secret.  
 
 The script above equals the following two commands. In the first step an SBOM is created.
 

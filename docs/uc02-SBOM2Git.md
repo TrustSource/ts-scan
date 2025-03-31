@@ -19,28 +19,28 @@ There are many options to achieve the goal. One of them is to add the SBOM creat
 
 To achieve the automated SBOM geenration upon each commit, follow these steps: 
 
-### 1.Create SBOM action script
+### 1. Create SBOM action script
 
-Go to `.git/hooks`in your repository and add a `create-sbom.sh` with `touch create-sbom.sh` with the following commands:
+Go to `.git/hooks`in your repository and add a `create-sbom.sh` with `touch create-sbom.sh` and add the following commands:
 
 ```#!/bin/sh
 # Create a new SBOM file
-ts-scan scan -o SBOM.cydx -f cyclonedx-json .
+ts-scan scan -o SBOM-cydx.json -f cyclonedx-json .
 # Add the new file to the commit
-git add SBOM.cydx
+git add SBOM-cydx.json
 # Exit with a success status
 exit 0
 ```
 
-### 2.Make the scrip executable
+### 2. Make the scrip executable
 
 Now allow to execute the script: `chmod +x create-sbom.sh` and change back to the root folder of your repository.
 
-### 3.Add to pre-commit
+### 3. Add to pre-commit
 
 Create the pre-commit action using `touch .pre-commit-config.yaml` with the following commands:
 
-```repos:
+```yaml
   - repo: local
     hooks:
       - id: create-sbom
@@ -53,7 +53,7 @@ This will execute the script upon any push and ensure the SBOM provided in the r
 
 ## Alternative 
 
-An alternative would be to create the SBOM in a later step through a github action. Therefor add the folder `.github` into your repository root and add there an addition folder `workflows`. In this folder you put the following YAML file:
+An alternative would be to create the SBOM in a later step using a github action. Therefor add the folder `.github` into your repository root and add there the folder `workflows`. In this folder you put the following YAML file:
 
 ```yaml
 repos:
@@ -65,5 +65,4 @@ repos:
         entry: /bin/sh -c "ts-scan scan -o SBOM.cydx -f cyclonedx-json ."
 
 ```
-
 

@@ -13,6 +13,6 @@ Supported output formats:
 
 * *SPDX*: ```spdx-json```, ```spdx-xml```, ```spdx-yaml```, ```spdx-xml```
 * *CycloneDX*: ```cyclonedx-json```, ```cyclonedx-xml```
-* *TrustSource*: ts-json, deafult
+* *TrustSource*: ts-json, default
 
-You may use **ts-scan** to convert between different formats, see the [CONVERT](/ts-scan/convert) section on more details.
+You may use **ts-scan** to convert between different formats, see the [CONVERT](/ts-scan/convert) section for more details.

@@ -33,7 +33,7 @@ nav:
     - Operate:
       - multiple artefacts: 'multiscan.md'
       - exporting results: 'export.md'
-      - operating inside a container: 'conatiner.md'
+      - operating inside a container: 'container.md'
     - Use Cases:
       - Auto Scan on Commit: 'uc01-autoSoCommit.md'
       - Add SBOM 2 Git: 'uc02-SBOM2Git.md'

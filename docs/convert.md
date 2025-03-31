@@ -16,7 +16,7 @@ By default, exports will always provide the latest specification version. Curren
 
 > [!NOTE]
 >
-> The conversion always will pass through the TrustSource format, which is our internal representation. Since TrustSource is not a standard, we can be more felxible. But it may be, that there are requirements we did not yet cover. So please, feel free to raise [issues](https://github.com/trustsource/ts-scan/issues), if you require additional features or are missing / loosing unexpectedly data.
+> The conversion always will pass through the TrustSource format, which is our internal representation. Since TrustSource is not a standard, we can be more flexible. But it may be, that there are requirements we did not yet cover. So please, feel free to raise [issues](https://github.com/trustsource/ts-scan/issues), if you require additional features or are missing / loosing data.
 
 
 
@@ -24,7 +24,7 @@ By default, exports will always provide the latest specification version. Curren
 
 To convert a CycloneDX file with the name "MyCydx-file.json" in cyclonedx-json format into the SPDX file "MySPDX" in XML structure, use :
 
-```
+```shell
 ts-scan convert -o MyNewSPDX.xml -of spdx-xml -f cyclonedx-json MyCydx-file.json
 ```
 
@@ -32,7 +32,7 @@ You may switch the output formats accordingly. ts-scan supports `[ts|spdx-tag|sp
 
 >  [!CAUTION]
 >
-> When transforming CycloneDX into SPDX, CBOM and information in other extensions will always be skipped! SPDX does not have an approoriate means to store this information in v2.3.  
+> When transforming CycloneDX into SPDX, CBOM and data from other extensions will always be skipped! SPDX does not have an approoriate means to store this information in v2.3.  
 
 
 
@@ -40,7 +40,7 @@ You may switch the output formats accordingly. ts-scan supports `[ts|spdx-tag|sp
 
 To convert a SPDX file with the name "MySpdx-file.json" in spdx-json format into the CycloneDX file "MyNewCydx" in XML structure, use :
 
-```
+```shell
 ts-scan convert -o MyNewCydx.xml --output-format cyclonedx-xml -f spdx-json MySpdx-file.json 
 ```
 
@@ -54,7 +54,7 @@ ts-scan convert -o MyNewCydx.xml --output-format cyclonedx-xml -f spdx-json MySp
 
 To convert a SPDX file with the name "MySpdx-file.json" in spdx-json format into the TrustSource file "MyNewTS-file" in JSON format, use :
 
-```
+```shell
 ts-scan convert -o MyNewTS-file.json -of ts -f spdx-json MySpdx-file.json
 ```
 
@@ -64,7 +64,7 @@ ts-scan convert -o MyNewTS-file.json -of ts -f spdx-json MySpdx-file.json
 
 To convert a CycloneDX file with the name "MyCydx-file.json" in cyclonedx-json format  into the TrustSource file "MyNewTS-file" in JSON format, use :
 
-```
+```shell
 ts-scan convert -o MyNewTS-file.ts --output-format ts -f cyclonedx-json MyCydx-file.json 
 ```
 
@@ -74,7 +74,7 @@ ts-scan convert -o MyNewTS-file.ts --output-format ts -f cyclonedx-json MyCydx-f
 
 By default **ts-scan** will always export into CycloneDX v1.6.. To convert a TrustSource file with the name "MySpdx-file.json" in spdx-json format into the CycloneDX file "MyNewCydx" in XML structure, use :
 
-```
+```shell
 ts-scan convert -o MyNewCydx.xml -of cyclonedx-xml -f ts MyTrustSource-file.ts 
 ```
 
@@ -88,13 +88,13 @@ ts-scan convert -o MyNewCydx.xml -of cyclonedx-xml -f ts MyTrustSource-file.ts
 
 By default, **ts-scan** will export into SPDX v2.3. To convert a SPDX file with the name "MySpdx-file.json" in spdx-json format into  into the SPDX file "MySPDX" in XML structure, use:
 
-```
+```shell
 ts-scan convert -o MySPDX.xml --output-format spdx-xml -f cyclonedx-json MyCydx-file.json
 ```
 
 > [!CAUTION]
 >
-> Deepscan details will not be available in SPDX files.  Especially DeepScan data, such as position of findings within files, quality of license matches, ect., can't be represented in 
+> Deepscan details will not be available in SPDX files.  Especially DeepScan data, such as position of findings within files, quality of license matches, ect., can't be represented in SPDX.
 
 
 
