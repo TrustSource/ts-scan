@@ -34,31 +34,41 @@ def extend_ds(ds: DSScan, api_key: t.Optional[str]):
 
     linked_comps: t.Dict[str, t.Set[str]] = {}
 
-    if wfps and (wfps_results := api.scan('\n'.join(wfps))):
-        for path, wfp_res in wfps_results.items():
-            links = []
-            for wfp_comp in wfp_res:
-                if purl := wfp_comp.get('purl'):
-                    version = wfp_comp.get('version')
+    if wfps:
+        wfps_results = {}
+        wfps_chunk_size = 999
 
-                    link = {'purl': purl}
+        for i in range(0, len(wfps), wfps_chunk_size):
+            try:
+                wfps_results.update(api.scan('\n'.join(wfps[i:i + wfps_chunk_size])))
+            except:
+                continue
 
-                    if version:
-                        link['version'] = version
+        if wfps_results:
+            for path, wfp_res in wfps_results.items():
+                links = []
+                for wfp_comp in wfp_res:
+                    if purl := wfp_comp.get('purl'):
+                        version = wfp_comp.get('version')
 
-                    if lics := wfp_comp.get('licenses'):
-                        link['licenses'] = list(set(lic['name'] for lic in lics))
+                        link = {'purl': purl}
 
-                    for p in purl:
-                        p_vers = linked_comps.get(p, set())
                         if version:
-                            p_vers.add(version)
-                        linked_comps[p] = p_vers
+                            link['version'] = version
 
-                    links.append(link)
+                        if lics := wfp_comp.get('licenses'):
+                            link['licenses'] = list(set(lic['name'] for lic in lics))
 
-            if links:
-                ds.result[path]['links'] = links
+                        for p in purl:
+                            p_vers = linked_comps.get(p, set())
+                            if version:
+                                p_vers.add(version)
+                            linked_comps[p] = p_vers
+
+                        links.append(link)
+
+                if links:
+                    ds.result[path]['links'] = links
 
     ds.summary['links'] = {purl: list(vers) for purl, vers in linked_comps.items()}
 

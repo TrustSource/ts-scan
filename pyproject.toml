@@ -1,5 +1,8 @@
 [build-system]
-requires = ['setuptools>=61.0']
+requires = [
+    'setuptools>=61.0',
+    'setuptools-scm>=8.0'
+]
 build-backend = 'setuptools.build_meta'
 
 [project]
@@ -13,7 +16,7 @@ readme = 'README.md'
 requires-python = '>=3.10'
 classifiers = []
 keywords = ['dependencies', 'modules', 'compliance', 'TrustSource']
-license = { text = 'Apache-2.0'}
+license = 'Apache-2.0'
 
 dependencies = [
     "defusedxml~=0.7.1",
