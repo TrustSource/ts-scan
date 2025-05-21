@@ -7,19 +7,20 @@ from datetime import datetime
 from pathlib import Path
 
 from packageurl import PackageURL
-from license_expression import LicenseExpression, combine_expressions, ExpressionError
+from license_expression import Licensing, LicenseExpression, ExpressionError, combine_expressions
 from spdx_tools.spdx.model import (Package, Document, CreationInfo, Actor, ActorType,
                                    ExternalPackageRef, ExternalPackageRefCategory, SpdxNone,
                                    Relationship, RelationshipType)
 from spdx_tools.spdx.formats import FileFormat, file_name_to_format
 
 from ..pm import Dependency, DependencyScan, License
+from ..cli import msg
 
 
 def import_scan(path: Path, fmt: str) -> t.Optional[DependencyScan]:
-    fmt = file_name_to_format(fmt.replace('-', '.'))
+    _fmt = file_name_to_format(fmt.replace('-', '.'))
 
-    if doc := _parse_file(path, fmt):
+    if doc := _parse_file(path, _fmt):
         return DependencyScan(module=doc.creation_info.name,
                               moduleId=f'spdx:{doc.creation_info.name}',
                               dependencies=_create_deps(doc))
@@ -43,12 +44,12 @@ def export_scan(scan: DependencyScan, output: t.TextIO, fmt: str):
                    packages=packages,
                    relationships=relationships)
 
-    fmt = file_name_to_format(fmt.replace('-', '.'))
-    _write_stream(doc, output, fmt)
+    _fmt = file_name_to_format(fmt.replace('-', '.'))
+    _write_stream(doc, output, _fmt)
 
 
 def _create_pkgs(deps: t.Iterable[Dependency]) -> t.Tuple[t.List[Package], t.List[Relationship]]:
-    visited = {}
+    visited: t.Dict[t.Tuple[str, t.Optional[str]], Package] = {}
 
     def _create_pkgs_impl(_deps: t.Iterable[Dependency]) -> t.Tuple[t.List[Package], t.List[Relationship]]:
         packages = []
@@ -80,11 +81,19 @@ def _create_pkg(dep: Dependency, ref_id: int) -> Package:
     pkg = Package(name=dep.name, spdx_id=f'SPDXRef-{ref_id}', download_location=SpdxNone())
     pkg.version = dep.version
 
-    try:
-        pkg.license_declared = combine_expressions([lic.name for lic in dep.licenses], relation='OR')
-    except ExpressionError:
-        print("Cannot parse licenses")
+    licensing = Licensing()
+    lic_exprs: t.List[LicenseExpression] = []
+
+    for lic in dep.licenses:
+        try:
+            lic_exprs.append(licensing.parse(lic.name, simple=True))
+        except ExpressionError:
+            msg.warn(f'Could not parse license expression "{lic.name}" of the dependency "{dep.key}"')
+
+    if not lic_exprs:
         pkg.license_declared = SpdxNone()
+    else:
+        pkg.license_declared = combine_expressions(lic_exprs, relation='OR')
 
     pkg_ref = ExternalPackageRef(
         category=ExternalPackageRefCategory.PACKAGE_MANAGER,
@@ -98,14 +107,14 @@ def _create_pkg(dep: Dependency, ref_id: int) -> Package:
 
 def _create_deps(doc: Document) -> t.List[Dependency]:
     deps = {}
-    visited = {}
+    visited: t.Dict[str, Dependency] = {}
 
     for pkg in doc.packages:
         if dep := _create_dep(pkg):
             deps[pkg.spdx_id] = dep
 
     for rel in doc.relationships:
-        if rel.relationship_type == RelationshipType.DEPENDS_ON:
+        if rel.relationship_type == RelationshipType.DEPENDS_ON and (type(rel.related_spdx_element_id) is str):
             src = deps.get(rel.spdx_element_id)
             if not src:
                 src = visited.get(rel.spdx_element_id)
@@ -121,9 +130,11 @@ def _create_deps(doc: Document) -> t.List[Dependency]:
 
                 src.dependencies.append(dst)
 
-    visited = {(dep.key, dep.version): dep for dep in visited.values()}
+    visited_deps: t.Dict[t.Tuple[str, t.Optional[str]], Dependency] = {
+        (dep.key, dep.version): dep for dep in visited.values()
+    }
 
-    stack = []
+    stack: t.List[Dependency] = []
     stack.extend(deps.values())
 
     while len(stack) > 0:
@@ -131,7 +142,7 @@ def _create_deps(doc: Document) -> t.List[Dependency]:
         cur_deps = []
 
         for dep in cur.dependencies:
-            if d := visited.pop((dep.key, dep.version), None):
+            if d := visited_deps.pop((dep.key, dep.version), None):
                 cur_deps.append(d)
                 stack.append(d)
             else:
@@ -156,7 +167,7 @@ def _create_dep(pkg: Package) -> t.Optional[Dependency]:
         except ValueError:
             purl = None
 
-        if purl and (dep := Dependency.create_from_purl(purl)):
+        if pkg.version and purl and (dep := Dependency.create_from_purl(purl)):
             dep.versions.append(pkg.version)
 
     if dep and pkg.license_declared:
@@ -183,7 +194,7 @@ def _write_stream(document: Document, stream: TextIO, fmt: FileFormat, validate=
         tagvalue_writer.write_document_to_stream(document, stream, validate)
 
 
-def _parse_file(path: Path, fmt: FileFormat) -> Document:
+def _parse_file(path: Path, fmt: FileFormat) -> t.Optional[Document]:
     from spdx_tools.spdx.parser.json import json_parser
     from spdx_tools.spdx.parser.tagvalue import tagvalue_parser
     from spdx_tools.spdx.parser.xml import xml_parser
@@ -197,3 +208,5 @@ def _parse_file(path: Path, fmt: FileFormat) -> Document:
         return xml_parser.parse_from_file(str(path), 'utf-8')
     elif fmt == FileFormat.YAML:
         return yaml_parser.parse_from_file(str(path), 'utf-8')
+
+    return None

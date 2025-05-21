@@ -1,10 +1,13 @@
 [build-system]
-requires = ['setuptools>=61.0']
+requires = [
+    'setuptools>=61.0',
+    'setuptools-scm>=8.0'
+]
 build-backend = 'setuptools.build_meta'
 
 [project]
 name = 'ts-scan'
-version = '1.1.0'
+version = '1.2.1'
 authors = [
     { name='EACG GmbH' }
 ]
@@ -13,7 +16,7 @@ readme = 'README.md'
 requires-python = '>=3.10'
 classifiers = []
 keywords = ['dependencies', 'modules', 'compliance', 'TrustSource']
-license = { text = 'Apache-2.0'}
+license = 'Apache-2.0'
 
 dependencies = [
     "defusedxml~=0.7.1",
@@ -33,6 +36,7 @@ dependencies = [
     "shippinglabel~=2.1.0",
     "tqdm~=4.67.0",
     "scanoss~=1.20.4",
+    "toml~=0.10.2"
 ]
 
 [project.urls]

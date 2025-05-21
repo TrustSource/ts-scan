@@ -27,7 +27,9 @@ from ..pm import dump_scans, ExecutableNotFoundError
               help="Project's branch in the VCS")
 @click.option('--use-syft', default=False, is_flag=True,
               help='Use Syft scanner for the file system scan')
-@click.argument('sources', type=click_params.FirstOf(click.Path(exists=True, path_type=Path), click.STRING), nargs=-1)
+@click.argument('sources',
+                type=click_params.FirstOf(click.Path(exists=True, path_type=Path), click.STRING),
+                nargs=-1)
 def scan_dependencies(sources: t.List[t.Union[Path, str]],
                       output_path: t.Optional[Path],
                       scan_format: str,

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Optional
 
 from . import PackageManagerScanner, DependencyScan, Dependency, License
+from ..cli import msg
 
 
 class NodeScanner(PackageManagerScanner):
@@ -53,7 +54,7 @@ class NodeScanner(PackageManagerScanner):
         lock_file = self.__path / "package-lock.json"
 
         if not lock_file.exists():
-            return
+            return None
 
         with lock_file.open() as lockfile:
             self.__lockfile_content = json.load(lockfile)
@@ -130,20 +131,23 @@ class NodeScanner(PackageManagerScanner):
                 dep_path = None
 
                 # find appropriate dependency version
-                for dep_version, dep_version_dict in self.__lookup[dep_name].items():
-                    dep_path = dep_version_dict["_path"]
+                if dep_lookup := self.__lookup.get(dep_name):
+                    for dep_version, dep_version_dict in dep_lookup.items():
+                        dep_path = dep_version_dict["_path"]
 
-                    if dep_version_range == "latest":
-                        break
+                        if dep_version_range == "latest":
+                            break
 
-                    try:
-                        range_spec = NpmSpec(dep_version_range)
+                        try:
+                            range_spec = NpmSpec(dep_version_range)
 
-                    except ValueError:
-                        range_spec = NpmSpec("")
+                        except ValueError:
+                            range_spec = NpmSpec("")
 
-                    if Version(dep_version) in range_spec:
-                        break
+                        if Version(dep_version) in range_spec:
+                            break
+                else:
+                    msg.warn(f"Dependency '{dep_name}' not found in lockfile")
 
                 if dep_path:
                     dep.dependencies.append(

@@ -71,7 +71,8 @@ class MavenScanner(PackageManagerScanner):
                 exit(1)
 
             # Resolve dependencies sources
-            # self.mvn('dependency:sources')
+            self._mvn('dependency:sources', '-fn')
+
             scan = None
             if nodes := Tree.from_maven_file(tree_file):
                 deps = []

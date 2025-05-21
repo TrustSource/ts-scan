@@ -58,7 +58,7 @@ def create_scanners(scanner_classes: t.Iterable[t.Type[Scanner]], **kwargs) -> [
     return [cls(**other_args, **scanner_args[cls.name().lower()]) for cls in scanner_classes]
 
 
-def do_scan(paths: [Path], **kwargs) -> t.Iterable[DependencyScan]:
+def do_scan(paths: t.List[Path], **kwargs) -> t.Iterable[DependencyScan]:
     """
     Excutes actual scan routines
     :param paths: List of paths to be scanned
@@ -69,17 +69,29 @@ def do_scan(paths: [Path], **kwargs) -> t.Iterable[DependencyScan]:
     for p in paths:
         p = p.resolve()
 
+        msg.info(f'Running dependency scan.')
+
+        scanned_at_least_once = False
+
         for scanner in scanners:
             if not scanner.accepts(p):
                 continue
 
+            scanned_at_least_once = True
+
             # with msg.loading(f'Scanning for {name} dependencies...'):
-            msg.info(f'Scanning for {scanner.name()} dependencies...')
+            msg.info(f'Found {scanner.name()} project. Scanning for dependencies...')
 
             if scan := _execute_scan(p, scanner):
+                scan.source = str(p)
                 yield scan
 
             msg.good(f'{scanner.name()} scan is done!')
+
+        if scanned_at_least_once:
+            msg.good(f'Dependency scan completed.')
+        else:
+            msg.warn(f'No supported projects found.')
 
 
 def do_scan_with_syft(sources: t.List[t.Union[Path, str]], **kwargs) -> t.Iterable[DependencyScan]:
@@ -91,6 +103,7 @@ def do_scan_with_syft(sources: t.List[t.Union[Path, str]], **kwargs) -> t.Iterab
             msg.info(f'Scanning for dependencies using Syft...')
 
             if scan := _execute_scan(src, scanners[0]):
+                scan.source = str(src)
                 yield scan
 
 
