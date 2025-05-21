@@ -6,8 +6,8 @@ Creating SBOMs meanwhile got sort of "***good development practise***". Thus, yo
 
 * Good development practise
 * Will increase the OpenSSF score for your repository
-*  You are fine out when it comes to documentation, as everything is already done ;-)
-*  Documentation remains alsways up to date
+* You are fine out when it comes to documentation, as everything is already done ;-)
+* Documentation remains alsways up to date
 
 
 
@@ -23,7 +23,7 @@ To achieve the automated SBOM geenration upon each commit, follow these steps:
 
 Go to `.git/hooks`in your repository and add a `create-sbom.sh` with `touch create-sbom.sh` and add the following commands:
 
-```#!/bin/sh
+```sh
 # Create a new SBOM file
 ts-scan scan -o SBOM-cydx.json -f cyclonedx-json .
 # Add the new file to the commit
