@@ -12,6 +12,7 @@ from importlib.metadata._meta import PackageMetadata
 from shippinglabel.requirements import parse_requirements
 
 from . import PackageManagerScanner, DependencyScan, Dependency, License
+from ..cli import msg
 
 _supported_pkg_files = [
     'setup.py',
@@ -33,11 +34,7 @@ class PypiScanner(PackageManagerScanner):
         return path.is_dir() and any((path / pkg_file).exists() for pkg_file in _supported_pkg_files)
 
     def scan(self, path: Path) -> t.Optional[DependencyScan]:
-        try:
-            metadata = build.util.project_wheel_metadata(path, isolated=False)
-        except:
-            print(f'An error occured while building packages metadata')
-            return None
+        metadata = build.util.project_wheel_metadata(path, isolated=False)
 
         if dep := self._create_dep_from_metadata(metadata):
             return DependencyScan(module=dep.name, moduleId=f'pip:{dep.name}', dependencies=[dep])
