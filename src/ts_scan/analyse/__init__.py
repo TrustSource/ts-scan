@@ -13,7 +13,7 @@ from pathlib import Path
 from threading import Lock
 
 from ..pm import DependencyScan, Dependency
-from ..cli import parse_cmd_opts_from_args
+from ..cli import parse_cmd_params_from_args
 
 __ds_dataset = None
 
@@ -25,7 +25,7 @@ __gitignore_patterns = {
 
 def _parse_ds_args(ds_args: t.List[str]) -> t.Tuple[t.List[str], t.Dict[str, t.Any]]:
     ds_args = list(itertools.chain.from_iterable(xd.split(',') for xd in ds_args))
-    ds_opts = parse_cmd_opts_from_args(ts_deepscan.cli.scan, ds_args)  # noqa
+    ds_opts = parse_cmd_params_from_args(ts_deepscan.cli.scan, ds_args, only_opts=True)  # noqa
 
     return ds_args, ds_opts
 

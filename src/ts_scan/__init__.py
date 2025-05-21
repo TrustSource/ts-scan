@@ -83,6 +83,7 @@ def do_scan(paths: t.List[Path], **kwargs) -> t.Iterable[DependencyScan]:
             msg.info(f'Found {scanner.name()} project. Scanning for dependencies...')
 
             if scan := _execute_scan(p, scanner):
+                scan.source = str(p)
                 yield scan
 
             msg.good(f'{scanner.name()} scan is done!')
@@ -102,6 +103,7 @@ def do_scan_with_syft(sources: t.List[t.Union[Path, str]], **kwargs) -> t.Iterab
             msg.info(f'Scanning for dependencies using Syft...')
 
             if scan := _execute_scan(src, scanners[0]):
+                scan.source = str(src)
                 yield scan
 
 

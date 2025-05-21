@@ -106,6 +106,8 @@ class DependencyScan:
     moduleId: str
     dependencies: t.List['Dependency'] = field(default_factory=lambda: [])
 
+    source: t.Optional[str] = field(default=None, metadata=config(exclude=lambda f: f is None))
+
     tag: t.Optional[str] = field(default=None, metadata=config(exclude=lambda f: f is None))
     branch: t.Optional[str] = field(default=None, metadata=config(exclude=lambda f: f is None))
 
