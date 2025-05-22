@@ -68,14 +68,15 @@ docker run ts-scan <COMMAND>
 
 The **ts-scan** functionality is divided into a set of commands based on the intended goal. The following commands are available:
 
-| Command	| Description 	|
-|----------	| -----------	|
-| [scan](#scan) 		| Scan for package dependencies |
-| [analyse](#analyse) 	| Perform an in-depth analysis of a scan or an SBOM file |
-| [check](#check)		| Check packages for legal issues and vulnerabilities |
-| [upload](#upload)		| Upload scan and analysis results to the TrustSource application |
-| [import](#import)		| Import SPDX and CycloneDX files directly into the TrustSource application |
-| [convert](#convert)   | Convert SBOM between supported formats (TS, SPDX, CycloneDX)
+| Command	              | Description 	                                                             |
+|-----------------------|---------------------------------------------------------------------------|
+| [init](#init) 		      | Initialize a TrustSource project                  |
+| [scan](#scan) 		      | Scan for package dependencies                                             |
+| [analyse](#analyse) 	 | Perform an in-depth analysis of a scan or an SBOM file                    |
+| [check](#check)		     | Check packages for legal issues and vulnerabilities                       |
+| [upload](#upload)		   | Upload scan and analysis results to the TrustSource application           |
+| [import](#import)		   | Import SPDX and CycloneDX files directly into the TrustSource application |
+| [convert](#convert)   | Convert SBOM between supported formats (TS, SPDX, CycloneDX)              
 
 To display a list of all available commands, use:
 
@@ -89,6 +90,46 @@ To get details about a specific command, use:
 ts-scan <COMMAND> --help
 ```
 
+## User Settings
+
+By first time **ts-scan** is executed, a user settings file is created in the home directory at **$HOME/.ts-scan/config**. It contains an empty ```[default]``` profile. 
+The user settings file can be used to store any option passed to the **ts-scan**. The groups of options can be grouped into profiles. 
+
+An example of a user settings file is:
+
+```toml
+[default]
+api_key="<TrustSource API key>"
+
+[dev]
+api_key="<TrustSource API key from the Dev account>"
+project_name="TrustSource default Project in the Dev account"
+```
+The format is a dictionary with the option name in snake-case format as a key and a value. For example, if the **ts-scan** option for the project name is ```--project-name```, the corresponding key in the user settings file is ```project_name```.
+
+When **ts-scan** is executed all options from the ```default``` profile are loaded as default values for the command line options. If an option is explicitly passed on the command line, it will override the default value. 
+
+To select a profile, use the ```-p\--profile``` option. For example, to use the ```dev``` profile, use:
+
+```shell
+ts-scan -p dev upload MyScan.json
+```
+
+In this case the **ts-scan** will use the ```api_key``` and ```project_name``` from the ```dev``` profile for the upload.
+
+## Init
+
+The **init** command initializes a TrustSource project. It creates a configuration file in the provided directory, which can be used to store the project name and API key for future use. This is particularly useful for developers, where you may want to avoid passing the API key and project name as a command-line argument every time a new scan is going to be uploaded.
+
+To initialize a project, use:
+
+```shell
+ts-scan init --project-name <TrustSource project name> --api-key <TrustSource API key> <path to the project directory>
+```
+
+Both parameters are optional, for example only a project name can be stored inside the project while the API key is stored in the [user settings file](#user-settings).
+
+**Note**: the project settings override the user settings file and the explicitly passed command line options override the project settings. For example if the API key is passed on the command line, it will override the API key stored in the project settings file.
 
 ## Scan
 
