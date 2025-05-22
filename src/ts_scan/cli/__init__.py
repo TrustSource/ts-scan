@@ -54,14 +54,16 @@ def cli(ctx, config: Path, profile: str):
     ctx.obj['config'] = cfg_data
     ctx.obj['config_path'] = cfg_path
 
-    if defaults := cfg_data.get(profile):
-        ctx.default_map = defaults
+    defaults = cfg_data.get(profile)
 
-        for sub in ctx.command.commands.values():
-            sub.context_settings['default_map'] = defaults
-    else:
+    if defaults is None:
         msg.fail(f"Profile '{profile}' not found in the config file.")
         exit(1)
+
+    ctx.default_map = defaults
+
+    for sub in ctx.command.commands.values():
+        sub.context_settings['default_map'] = defaults
 
     if args := ctx.obj['args']:
         params = parse_cmd_params_from_args(ctx.command.commands[ctx.invoked_subcommand], args.copy())
