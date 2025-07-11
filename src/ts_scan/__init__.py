@@ -13,12 +13,14 @@ __version__ = '1.1.0'
 def __get_pm_scanner_classes() -> t.List[t.Type[Scanner]]:
     from .pm.pypi import PypiScanner
     from .pm.maven import MavenScanner
+    from .pm.gradle import GradleScanner
     from .pm.node import NodeScanner
     from .pm.nuget import NugetScanner
 
     return [
         PypiScanner,
         MavenScanner,
+        GradleScanner,
         NodeScanner,
         NugetScanner
     ]
@@ -50,8 +52,8 @@ def create_scanners(scanner_classes: t.Iterable[t.Type[Scanner]], **kwargs) -> [
         if scanner_prefix_pos >= 0:
             scanner_prefix = arg[:scanner_prefix_pos]
             scanner_arg = arg[scanner_prefix_pos + 1:]
-            if _scanner_args := scanner_args.get(scanner_prefix):
-                _scanner_args[scanner_arg] = val
+            if scanner_prefix in scanner_args:
+                scanner_args[scanner_prefix][scanner_arg] = val
         else:
             other_args[arg] = val
 
