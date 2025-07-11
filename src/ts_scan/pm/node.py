@@ -5,17 +5,17 @@ import typing as t
 from semantic_version import Version, NpmSpec
 
 from pathlib import Path
-from typing import Optional
 
 from . import PackageManagerScanner, DependencyScan, Dependency, License
 from ..cli import msg
 
 
 class NodeScanner(PackageManagerScanner):
-    def __init__(self, enableMetadataRetrieval=False, **kwargs):
+    def __init__(self, enableMetadataRetrieval=False, includeDevDependencies=False, **kwargs):
         super().__init__(**kwargs)
 
         self.enableMetadataRetrieval = enableMetadataRetrieval
+        self.includeDevDependencies = includeDevDependencies
 
         self.__path = None
         self.__abs_module_path = None
@@ -40,6 +40,11 @@ class NodeScanner(PackageManagerScanner):
                 'default': False,
                 'is_flag': True,
                 'help': 'Enable retrieving package metadata from the NPMJS online registry'
+            },
+            'includeDevDependencies': {
+                'default': False,
+                'is_flag': True,
+                'help': 'Include development dependencies in the scan results'
             }
         }
 
@@ -50,7 +55,11 @@ class NodeScanner(PackageManagerScanner):
         self.__path = path
         self.__abs_module_path = path.resolve().absolute()
 
-        self._exec('install', cwd=self.__path)
+        args = ['install']
+        if not self.includeDevDependencies:
+            args.append('--omit=dev')
+
+        self._exec(*args, cwd=self.__path)
         lock_file = self.__path / "package-lock.json"
 
         if not lock_file.exists():
@@ -156,7 +165,7 @@ class NodeScanner(PackageManagerScanner):
 
         return dep
 
-    def _metadata_from_registry(self, name: str, version: str) -> Optional[Dependency]:
+    def _metadata_from_registry(self, name: str, version: str) -> t.Optional[Dependency]:
         template = "https://registry.npmjs.org/{}/{}"
 
         try:
