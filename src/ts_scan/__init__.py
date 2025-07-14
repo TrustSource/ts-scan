@@ -2,6 +2,7 @@ import click
 import typing as t
 
 from pathlib import Path
+from subprocess import CalledProcessError
 
 from .pm import Scanner, Dependency, DependencyScan
 from .cli import cli, msg
@@ -86,9 +87,8 @@ def do_scan(paths: t.List[Path], **kwargs) -> t.Iterable[DependencyScan]:
 
             if scan := _execute_scan(p, scanner):
                 scan.source = str(p)
+                msg.good(f'{scanner.name()} scan is done!')
                 yield scan
-
-            msg.good(f'{scanner.name()} scan is done!')
 
         if scanned_at_least_once:
             msg.good(f'Dependency scan completed.')
@@ -112,6 +112,16 @@ def do_scan_with_syft(sources: t.List[t.Union[Path, str]], **kwargs) -> t.Iterab
 def _execute_scan(src: t.Union[Path, str], scanner: Scanner) -> t.Optional[DependencyScan]:
     try:
         return scanner.scan(src)
+
+    except CalledProcessError as err:
+        if scanner.verbose:
+            print(err.stdout.decode('utf-8'))
+            print(err.stderr.decode('utf-8'))
+
+        msg.fail(f'{scanner.name()} failed with non-zero exit code {err.returncode}.')
+        if not scanner.verbose:
+            msg.fail(f'Use --verbose to see the error details.')
+
     except Exception as err:
         msg.fail(f'An error occured while scanning {scanner.name()} dependencies...')
 

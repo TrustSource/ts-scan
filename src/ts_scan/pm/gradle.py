@@ -4,7 +4,8 @@ import typing as t
 from pathlib import Path
 
 from .maven.pom_utils import Pom
-from . import PackageManagerScanner, DependencyScan, Dependency, License
+from . import PackageManagerScanner, DependencyScan, Dependency
+from ..cli import msg
 
 
 class GradleScanner(PackageManagerScanner):
@@ -38,14 +39,17 @@ class GradleScanner(PackageManagerScanner):
         return path.is_dir() and (path / 'build.gradle').exists() or (path / 'build.gradle.kts').exists()
 
     def scan(self, path: Path) -> t.Optional[DependencyScan]:
-        res = self._exec('dependencies', f'--configuration={self.configuration}', '--console=plain', cwd=path)
+        res = self._exec('dependencies', f'--configuration={self.configuration}', '--console=plain',
+                         cwd=path,
+                         capture_output=True)
+
+        if not self.__gradle_cache.exists():
+            msg.warn(f"Gradle cache not found at {self.__gradle_cache}. Dependency resolution may be incomplete.")
 
         output = res.stdout.decode('utf-8')
         deps = self.extract_dependencies_from_output(output)
 
-        return DependencyScan(module='unknown',
-                              moduleId='unknown',
-                              dependencies=deps)
+        return DependencyScan(module='unknown', moduleId='gradle:unknown', dependencies=deps)
 
     def extract_dependencies_from_output(self, output: str) -> t.List[Dependency]:
         """
