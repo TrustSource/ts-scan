@@ -30,7 +30,7 @@ class GradleScanner(PackageManagerScanner):
         return super().options() | {
             'configuration': {
                 'type': str,
-                'required': True,
+                'required': False,
                 'help': 'Specify the Gradle configuration to scan (e.g., "compileClasspath", "runtimeClasspath")'
             }
         }
