@@ -71,20 +71,31 @@ class NugetScanner(PackageManagerScanner):
 
     @staticmethod
     def _determine_project_type(path: Path) -> t.Optional[t.Tuple[ProjectType, t.List[Path]]]:
-        if files := list(path.glob('*.nuspec')):
-            return ProjectType.NUSPEC, files
-
-        elif files := list(path.glob('*.*proj')):
-            return ProjectType.PACKAGE_REFERENCE, files
-
-        elif files := list(path.glob('packages.config')):
-            return ProjectType.PACKAGES_CONFIG, files
-
-        elif files := list(path.glob('*.sln')):
-            return ProjectType.SOLUTION, files
-
+        if path.is_file():
+            if path.suffix == '.nuspec':
+                return ProjectType.NUSPEC, [path]
+            elif path.suffix in ('.csproj', '.vbproj', '.fsproj', '.proj'):
+                return ProjectType.PACKAGE_REFERENCE, [path]
+            elif path.name == 'packages.config':
+                return ProjectType.PACKAGES_CONFIG, [path]
+            elif path.suffix == '.sln':
+                return ProjectType.SOLUTION, [path]
+            else:
+                return None
         else:
-            return None
+            if files := list(path.glob('*.nuspec')):
+                return ProjectType.NUSPEC, files
+
+            elif files := list(path.glob('*.*proj')):
+                return ProjectType.PACKAGE_REFERENCE, files
+
+            elif files := list(path.glob('packages.config')):
+                return ProjectType.PACKAGES_CONFIG, files
+
+            elif files := list(path.glob('*.sln')):
+                return ProjectType.SOLUTION, files
+            else:
+                return None
 
     def _process_solution_file(self, solution: Path, depth: int = 0) -> t.List[Dependency]:
         with open(solution, "r") as f:
@@ -106,11 +117,13 @@ class NugetScanner(PackageManagerScanner):
         return deps
 
     def _process_with_lock_file(self, project_file: Path, depth: int = 0) -> t.List[Dependency]:
+        working_dir = self.__path if self.__path.is_dir() else self.__path.parent
+
         with TemporaryDirectory() as temp_dir:
             _ = self._exec("restore", str(project_file),
                            "-UseLockFile",
                            "-PackagesDirectory", temp_dir,
-                           cwd=self.__path)
+                           cwd=working_dir)
 
         lockfile = project_file.parent / "packages.lock.json"
 
@@ -218,7 +231,8 @@ class NugetScanner(PackageManagerScanner):
         return deps
 
     def _find_global_packages_dir(self) -> Path:
-        proc = self._exec('locals', 'global-packages', '-list', capture_output=True, cwd=self.__path)
+        working_dir = self.__path if self.__path.is_dir() else self.__path.parent
+        proc = self._exec('locals', 'global-packages', '-list', capture_output=True, cwd=working_dir)
 
         result = proc.stdout.decode("utf-8")
         result = Path(result.split("global-packages: ")[1].strip())
