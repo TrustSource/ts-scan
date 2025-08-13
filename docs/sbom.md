@@ -20,6 +20,8 @@ The ```-f <output format>``` option controls the output format and can be:
 * ```spdx-[tag|json|yaml|xml]``` - One of the SPDX formtas, e.g. ```spdx-json```
 * ```cyclonedx-[json|xml]``` - One of the CycloneDX formats, e.g. ```cyclonedx-json```
 
+PLEASE NOTE: The ```<path to the project directory>``` may also point to the name of a specific solution or project file. Given you have several solutions in one folder, this would allow you to scan only one of them.
+
 ## Options
 
 **ts-scan** contains some general options as well as options that only apply while scanning specific package types. The package specific options are prefixed by the type of the package management system. We use the [Package URL Type](https://github.com/package-url/purl-spec/blob/master/PURL-TYPES.rst) as a prefix. The following options are valid for most supported package management system:
