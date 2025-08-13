@@ -20,7 +20,7 @@ The ```-f <output format>``` option controls the output format and can be:
 * ```spdx-[tag|json|yaml|xml]``` - One of the SPDX formtas, e.g. ```spdx-json```
 * ```cyclonedx-[json|xml]``` - One of the CycloneDX formats, e.g. ```cyclonedx-json```
 
-PLEASE NOTE: The ```<path to the project directory>``` may also point to the name of a specific .Net solution. Given you have several solutions in one filder, this would allow you to scan only one of them.
+PLEASE NOTE: The ```<path to the project directory>``` may also point to the name of a specific solution or project file. Given you have several solutions in one folder, this would allow you to scan only one of them.
 
 ## Options
 
