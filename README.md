@@ -133,12 +133,13 @@ Both parameters are optional, for example only a project name can be stored insi
 
 ## Scan
 
-The **scan** command searches for package dependencies in your project. By providing a path, ts-scan automatically detects supported package management systems and extracts a full dependency tree. The scan results can be stored in a file using either the internal TS format or one of the supported SBOM formats: SPDX or CycloneDX.
+The **scan** command searches for package dependencies in your project. 
+By providing a path to either a project directory or a project file—depending on whether the package manager is file-based (e.g., .NET solutions, Maven) or directory-based (e.g., NPM, Gradle)—ts-scan automatically detects supported package management systems and extracts the full dependency tree. The scan results can be saved to a file using either the internal TS format or one of the supported SBOM formats: SPDX or CycloneDX.
 
 To execute a scan and store results into a file, use:
 
 ```shell
-ts-scan scan -o <path to the output file> [-f <output format>] <path to the project directory>
+ts-scan scan -o <path to the output file> [-f <output format>] <path to the project directory or a project file>
 ```
 
 The ```-f <output format>``` option controls the output format and can be:
