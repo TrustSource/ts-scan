@@ -77,18 +77,20 @@ class NodeScanner(PackageManagerScanner):
         # then traverse graph as described in lockfile
         pkgs = self.__lockfile_content['packages'].keys()
 
-        if deps := [self._dep_from_lock(self.__lockfile_content, pkg_path) for pkg_path in pkgs]:
-            module = ''
-            moduleId = ''
+        deps = []
+        for pkg_path in pkgs:
+            if pkg_dep := self._dep_from_lock(self.__lockfile_content, pkg_path):
+                deps.append(pkg_dep)
 
-            if root and (module := root.get('name')):
-                moduleId = 'npm:' + module
-                if version := root.get('version'):
-                    moduleId += ':' + version
+        module = ''
+        moduleId = ''
 
-            return DependencyScan(module=module, moduleId=moduleId, dependencies=deps)
-        else:
-            return None
+        if root and (module := root.get('name')):
+            moduleId = 'npm:' + module
+            if version := root.get('version'):
+                moduleId += ':' + version
+
+        return DependencyScan(module=module, moduleId=moduleId, dependencies=deps)
 
     @staticmethod
     def _dep_name_from_path(package_path: str) -> str:
@@ -108,10 +110,13 @@ class NodeScanner(PackageManagerScanner):
 
         return deps_dict
 
-    def _dep_from_lock(self, lock: dict, package_path: str = "") -> Dependency:
+    def _dep_from_lock(self, lock: dict, package_path: str = "") -> t.Optional[Dependency]:
         pkg = lock["packages"][package_path]
-        name = pkg.get("name")
 
+        if not self.includeDevDependencies and pkg.get('dev', False):
+            return None
+
+        name = pkg.get("name")
         if not name:
             name = NodeScanner._dep_name_from_path(package_path)
 
@@ -158,10 +163,8 @@ class NodeScanner(PackageManagerScanner):
                 else:
                     msg.warn(f"Dependency '{dep_name}' not found in lockfile")
 
-                if dep_path:
-                    dep.dependencies.append(
-                        self._dep_from_lock(self.__lockfile_content, dep_path)
-                    )
+                if dep_path and (_dep := self._dep_from_lock(self.__lockfile_content, dep_path)):
+                    dep.dependencies.append(_dep)
 
         return dep
 

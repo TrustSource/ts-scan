@@ -3,7 +3,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import re
+import json
 import build.util
+import urllib.parse
 import typing as t
 
 from pathlib import Path
@@ -12,7 +14,6 @@ from importlib.metadata._meta import PackageMetadata
 from shippinglabel.requirements import parse_requirements
 
 from . import PackageManagerScanner, DependencyScan, Dependency, License
-from ..cli import msg
 
 _supported_pkg_files = [
     'setup.py',
@@ -58,23 +59,72 @@ class PypiScanner(PackageManagerScanner):
         if name not in self.__processed_deps:
             self.__processed_deps.add(name)
 
-            if licence := metadata.get('License', None):
-                dep.licenses.append(License(name=licence))
-
-            dep.repoUrl = metadata.get('Download-URL', '')
             dep.description = metadata.get('Summary', '')
-            dep.homepageUrl = metadata.get('Home-page', '')
+
+            if lic := metadata.get('License-Expression'):
+                dep.licenses.append(License(name=lic))
+            elif lic := metadata.get('License'):
+                dep.licenses.append(License(name=lic))
+
+            if proj_urls := metadata.get_all('Project-URL', []):
+                for proj_url in proj_urls:
+                    proj_url = proj_url.split(',', 1)
+
+                    lbl = _normalize_label(proj_url[0].strip())
+                    url = proj_url[1].strip()
+
+                    if lbl in ('source', 'sources', 'repository', 'sourcecode', 'github'):
+                        dep.sourceUrl = url
+                    elif lbl == 'homepage':
+                        dep.homepageUrl = url
+            else:
+                # Deprecated fields
+                dep.repoUrl = metadata.get('Download-URL', '')
+                dep.homepageUrl = metadata.get('Home-page', '')
 
             dist = distribution(name)
+            dist_path = None
+            dist_editable_path = None
 
-            if lic_file := metadata.get('License-File', None):
-                # noinspection PyTypeChecker
-                dep.license_file = str(Path(dist.locate_file(lic_file)).resolve())
+            # noinspection PyTypeChecker
+            site_packages = Path(dist.locate_file(''))
+            for file in dist.files:
+                if file.name == 'METADATA' and file.parent.name.endswith('.dist-info'):
+                    dist_path = site_packages / file.parent
 
-            if top_level := dist.read_text('top_level.txt'):
+                if file.name.startswith('__editable__') and file.name.endswith('.pth'):
+                    # Open manually as dist.read_text() does not work here
+                    with (site_packages / file.name).open() as fp:
+                        dist_editable_path = fp.read().strip()
+
+            if (lic_file := metadata.get('License-File')) and dist_path is not None:
+                lic_file_path = dist_path / f'licenses/{lic_file}'
+
+                if lic_file_path.exists():
+                    dep.license_file = str(lic_file_path)
+                else:
+                    lic_file_path = dist_path / lic_file
+                    if lic_file_path.exists():
+                        dep.license_file = str(lic_file_path)
+
+            if dist_editable_path:
+                dep.package_files.append(dist_editable_path)
+            elif top_level := dist.read_text('top_level.txt'):
                 # noinspection PyTypeChecker
-                files = (str(Path(dist.locate_file(f)).resolve()) for f in top_level.split('\n') if f)
-                dep.package_files.extend(files)
+                files = (Path(dist.locate_file(f)).resolve() for f in top_level.split('\n') if f)
+                dep.package_files.extend(str(f) for f in files if f.exists())
+
+            # if dist_path:
+            #     direct_url_file = dist_path / 'direct_url.json'
+            #     if direct_url_file.exists():
+            #         with direct_url_file.open() as fp:
+            #             data = json.load(fp)
+            #             if data.get('dir_info', {}).get('editable', False):
+            #                 url = data['url']
+            #                 if url.startswith('file://'):
+            #                     dep.package_files.append(urllib.parse.urlparse(url).path)
+            #                 else:
+            #                     dep.package_files.append(url)
 
             # reqs = metadata.get_all('Requires-Dist', [])
             if reqs := dist.requires:
@@ -107,3 +157,10 @@ def _extract_imported_pkgs(path: Path) -> t.List[str]:
 def _extract_required_pkgs(reqs: t.List[str]) -> t.Iterable[str]:
     reqs, _ = parse_requirements(reqs)
     return {req.name for req in reqs}
+
+
+def _normalize_label(label: str) -> str:
+    import string
+    chars_to_remove = string.punctuation + string.whitespace
+    removal_map = str.maketrans("", "", chars_to_remove)
+    return label.translate(removal_map).lower()

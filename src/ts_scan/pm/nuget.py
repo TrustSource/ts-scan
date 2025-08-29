@@ -1,4 +1,5 @@
 import json
+import shutil
 import typing as t
 
 from pathlib import Path, PureWindowsPath
@@ -27,6 +28,7 @@ class NugetScanner(PackageManagerScanner):
         self.__module_id = None
         self.__global_packages_dir = None
         self.__n_fail = 0
+        self.__using_dotnet_sdk = False
 
     @staticmethod
     def name() -> str:
@@ -40,6 +42,10 @@ class NugetScanner(PackageManagerScanner):
         return self._determine_project_type(path) is not None
 
     def scan(self, path: Path) -> t.Optional[DependencyScan]:
+        if not self.executable_path and not shutil.which(self.executable()):
+            self.executable_path = shutil.which('dotnet')
+            self.__using_dotnet_sdk = True
+
         self.__path = path
         self.__global_packages_dir = self._find_global_packages_dir()
 
@@ -121,8 +127,8 @@ class NugetScanner(PackageManagerScanner):
 
         with TemporaryDirectory() as temp_dir:
             _ = self._exec("restore", str(project_file),
-                           "-UseLockFile",
-                           "-PackagesDirectory", temp_dir,
+                           "--use-lock-file" if self.__using_dotnet_sdk else "-UseLockFile",
+                           "--packages" if self.__using_dotnet_sdk else "-PackagesDirectory", temp_dir,
                            cwd=working_dir)
 
         lockfile = project_file.parent / "packages.lock.json"
@@ -232,7 +238,12 @@ class NugetScanner(PackageManagerScanner):
 
     def _find_global_packages_dir(self) -> Path:
         working_dir = self.__path if self.__path.is_dir() else self.__path.parent
-        proc = self._exec('locals', 'global-packages', '-list', capture_output=True, cwd=working_dir)
+
+        args = ['nuget'] if self.__using_dotnet_sdk else []
+        args.extend(['locals', 'global-packages'])
+        args.append('--list' if self.__using_dotnet_sdk else '-list')
+
+        proc = self._exec(*args, capture_output=True, cwd=working_dir)
 
         result = proc.stdout.decode("utf-8")
         result = Path(result.split("global-packages: ")[1].strip())
