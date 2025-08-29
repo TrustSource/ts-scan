@@ -57,10 +57,10 @@ docker buildx build --platform linux/amd64 -t ts-scan .
 
 Reason for this is, that pyminr - the encryption scanner - might fail to install on ARM chips.
 
-#### Use ts-scan from the Docker image
+#### Scan with ts-scan from the Docker image
 
 ```shell
-docker run ts-scan <COMMAND>
+docker run -it --rm -v <PROJECT_PATH>:/project trustsource/ts-scan scan -o /project/scan.json /project 
 ```
 
 
