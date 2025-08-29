@@ -1,6 +1,5 @@
 import itertools
 import typing as t
-import importlib.resources
 import concurrent.futures as futures
 
 import ts_deepscan.cli
@@ -40,7 +39,7 @@ def _get_ds_dataset():
 
 
 def _analyse_dep_with_ds(dep, dataset, **ds_opts) -> tuple:
-    gitignores = [importlib.resources.path(f'{__package__}.gitignore', pat)
+    gitignores = [Path(__file__).parent.joinpath('gitignore').joinpath(pat)
                   for pat in __gitignore_patterns.get(dep.type, [])]
 
     scanner = ts_deepscan.create_scanner(**ds_opts, default_gitignores=gitignores, dataset=dataset)  # noqa
