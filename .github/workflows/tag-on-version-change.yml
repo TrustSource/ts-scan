@@ -41,7 +41,6 @@ jobs:
           if [ "$old" != "$new" ]; then
             git config user.name "github-actions"
             git config user.email "github-actions@github.com"
-            git tag "v$new"
-            git push origin "v$new"
+            git tag "$new"
+            git push origin "$new"
           fi
-
