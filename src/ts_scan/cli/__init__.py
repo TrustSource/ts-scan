@@ -189,11 +189,7 @@ def param_default_value(param: click.Parameter, ctx: click.Context):
 cli.api_default_options = api_default_options
 cli.inout_default_options = inout_default_options
 
-sbom_formats = {
-    'spdx-rdf': 'spdx/rdf',
-    'spdx-json': 'spdx/json',
-    'cyclonedx': 'cyclonedx'
-}
+sbom_formats = ['spdx', 'cyclonedx']
 
 scan_formats = [
     'ts',
