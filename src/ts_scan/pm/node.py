@@ -11,10 +11,16 @@ from ..cli import msg
 
 
 class NodeScanner(PackageManagerScanner):
-    def __init__(self, enableMetadataRetrieval=False, includeDevDependencies=False, **kwargs):
+    def __init__(self,
+                 enableMetadataRetrieval=False,
+                 enableLifecycleScripts=False,
+                 includeDevDependencies=False,
+                 **kwargs):
+
         super().__init__(**kwargs)
 
         self.enableMetadataRetrieval = enableMetadataRetrieval
+        self.enableLifecycleScripts = enableLifecycleScripts
         self.includeDevDependencies = includeDevDependencies
 
         self.__path = None
@@ -41,11 +47,16 @@ class NodeScanner(PackageManagerScanner):
                 'is_flag': True,
                 'help': 'Enable retrieving package metadata from the NPMJS online registry'
             },
+            'enableLifecycleScripts': {
+                'default': False,
+                'is_flag': True,
+                'help': 'Enable running lifecycle scripts during install (may be a security risk)'
+            },
             'includeDevDependencies': {
                 'default': False,
                 'is_flag': True,
                 'help': 'Include development dependencies in the scan results'
-            }
+            },
         }
 
     def accepts(self, path: Path) -> bool:
@@ -56,6 +67,10 @@ class NodeScanner(PackageManagerScanner):
         self.__abs_module_path = path.resolve().absolute()
 
         args = ['install']
+
+        if not self.enableLifecycleScripts:
+            args.append('--ignore-scripts')
+
         if not self.includeDevDependencies:
             args.append('--omit=dev')
 
@@ -86,9 +101,18 @@ class NodeScanner(PackageManagerScanner):
         moduleId = ''
 
         if root and (module := root.get('name')):
-            moduleId = 'npm:' + module
+            dep = NodeDependency(module)
+            moduleId = dep.key
+
             if version := root.get('version'):
+                dep.versions.append(version)
                 moduleId += ':' + version
+
+            dep.package_files.append(str(path))
+            dep.load_from_package()
+
+            dep.dependencies = deps
+            deps = [dep]
 
         return DependencyScan(module=module, moduleId=moduleId, dependencies=deps)
 
@@ -122,13 +146,16 @@ class NodeScanner(PackageManagerScanner):
 
         version = pkg["version"]
 
-        dep = Dependency("npm:" + name, name, type='npm')
+        dep = NodeDependency(name)
         dep.versions.append(version)
 
         if name + version not in self.__processed_deps:
             self.__processed_deps.add(name + version)
 
-            dep.package_files.append(str(self.__abs_module_path / package_path))
+            pkg_files_path = self.__abs_module_path / package_path
+            dep.package_files.append(str(pkg_files_path))
+
+            dep.load_from_package()
 
             # msg.info(f"Getting metadata for {name} {version}...")
             if self.enableMetadataRetrieval and (meta := self._metadata_from_registry(name, version)):
@@ -194,3 +221,30 @@ class NodeScanner(PackageManagerScanner):
         dep.licenses.append(License(meta.get("license")))
 
         return dep
+
+
+class NodeDependency(Dependency):
+    def __init__(self, name: str):
+        super().__init__(key="npm:" + name, name=name, type='npm')
+
+    def package_file(self) -> t.Optional[Path]:
+        for p in self.package_files:
+            path = Path(p) / 'package.json'
+            if path.exists():
+                return path
+        return None
+
+    def load_from_package(self):
+        pkg_path = self.package_file()
+        if not pkg_path:
+            return
+
+        with pkg_path.open() as fp:
+            pkg_data = json.load(fp)
+
+        if scripts := pkg_data.get('scripts'):
+            lifecycle_scripts = [s for s in scripts if s in ('preinstall', 'install', 'postinstall')]
+            if len(lifecycle_scripts) > 0:
+                self.meta['lifecycleScripts'] = True
+                msg.warn(
+                    f"{self.purl}: package contains lifecycle scripts {lifecycle_scripts}.This may be a security risk.")
