@@ -1,0 +1,21 @@
+on:
+  push:
+    branches: [ main]
+
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  dependencies-scan:
+    name: Dependencies Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run TS-Scan
+        uses: TrustSource/ts-scan-action@v1
+        with:
+          project_name: ts-scan
+          api_key: ${{ secrets.TRUSTSOURCE_API_KEY }}
