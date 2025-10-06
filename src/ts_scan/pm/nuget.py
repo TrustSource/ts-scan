@@ -1,6 +1,7 @@
 import json
 import shutil
 import typing as t
+import re
 
 from pathlib import Path, PureWindowsPath
 from tempfile import TemporaryDirectory
@@ -103,22 +104,33 @@ class NugetScanner(PackageManagerScanner):
             else:
                 return None
 
+    SLN_PROJECT_RE = re.compile(
+        r'^Project\("\s*({[A-F0-9\-]+})\s*"\)\s*=\s*"(.*?)"\s*,\s*"(.*?)"\s*,\s*"{[A-F0-9\-]+}"',
+        re.IGNORECASE | re.MULTILINE
+    )
+
+    SLN_FOLDER_TYPE_GUIDS = [
+        '{2150E333-8FDC-42A3-9474-1A3956D46DE8}',
+        '{66A26720-8FB5-11D2-AA7E-00C04F688DDE}'
+    ]
+
     def _process_solution_file(self, solution: Path, depth: int = 0) -> t.List[Dependency]:
         with open(solution, "r") as f:
-            projects = [line for line in f if line.strip().startswith("Project(")]
+            content = f.read()
 
-        # discard first Project line as it refers to itself
-        # projects = projects[1:]
+        # Extract (project_name, project_file_location)
+        projects = [
+            (m.group(2), m.group(3))
+            for m in self.SLN_PROJECT_RE.finditer(content)
+            if m.group(1).upper() not in self.SLN_FOLDER_TYPE_GUIDS
+        ]
 
-        projects = [p.split("=")[-1].strip() for p in projects]
-        _, paths = zip(*[p.split(",")[:2] for p in projects])
-
-        paths = [Path(PureWindowsPath(p.strip(' "')).as_posix()) for p in paths]
-        paths = [p.parent for p in paths]
+        paths = [Path(PureWindowsPath(p[1]).as_posix()) for p in projects]
 
         deps = []
         for path in paths:
-            deps.extend(self._process_package(solution.parent / path, depth=depth))
+            if (solution.parent / path).is_file():
+                deps.extend(self._process_package(solution.parent / path, depth=depth))
 
         return deps
 

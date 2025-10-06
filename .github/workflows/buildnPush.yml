@@ -1,0 +1,100 @@
+name: buildnPush
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  check-and-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      tagged: ${{ steps.set_tagged.outputs.tagged }}
+      tag_name: ${{ steps.set_tagged.outputs.tag_name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if pyproject.toml changed
+        id: pyproject_changed
+        run: |
+          if git diff --name-only HEAD^ HEAD | grep -q pyproject.toml; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get previous version
+        if: steps.pyproject_changed.outputs.changed == 'true'
+        run: |
+          git show HEAD^:pyproject.toml | grep -E '^version' | head -1 | sed 's/version = //' | tr -d "'\"" > old_version.txt
+
+      - name: Get new version
+        if: steps.pyproject_changed.outputs.changed == 'true'
+        run: |
+          grep -E '^version' pyproject.toml | head -1 | sed 's/version = //' | tr -d "'\"" > new_version.txt
+
+      - name: Compare versions and tag
+        id: set_tagged
+        if: steps.pyproject_changed.outputs.changed == 'true'
+        run: |
+          old=$(cat old_version.txt)
+          new=$(cat new_version.txt)
+          if [ "$old" != "$new" ]; then
+            git config user.name "github-actions"
+            git config user.email "github-actions@github.com"
+            git tag "$new"
+            git push origin "$new"
+            echo "tagged=true" >> $GITHUB_OUTPUT
+            echo "tag_name=$new" >> $GITHUB_OUTPUT
+          else
+            echo "tagged=false" >> $GITHUB_OUTPUT
+          fi
+
+  build-and-push-docker:
+    needs: check-and-tag
+    if: needs.check-and-tag.outputs.tagged == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.FRED4TS2DH }}
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            trustsource/ts-scan:latest
+            trustsource/ts-scan:${{ needs.check-and-tag.outputs.tag_name }}
+
+  build-and-push-pypi:
+    needs: check-and-tag
+    if: needs.check-and-tag.outputs.tagged == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build Python package
+        run: |
+          python -m pip install --upgrade build
+          python -m build
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN }}
+
