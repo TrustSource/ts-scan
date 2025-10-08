@@ -4,7 +4,7 @@ import typing as t
 from pathlib import Path
 from subprocess import CalledProcessError
 
-from .pm import Scanner, Dependency, DependencyScan
+from .pm import Scanner, Dependency, DependencyScan, License, get_license_from_text
 from .cli import cli, msg
 
 
@@ -44,7 +44,7 @@ def scanner_options(f):
 cli.scanner_options = scanner_options
 
 
-def create_scanners(scanner_classes: t.Iterable[t.Type[Scanner]], **kwargs) -> [Scanner]:
+def create_scanners(scanner_classes: t.Iterable[t.Type[Scanner]], **kwargs) -> t.List[Scanner]:
     scanner_args = {cls.name().lower(): {} for cls in scanner_classes}
     other_args = {}
 
@@ -136,5 +136,10 @@ def _execute_scan(src: t.Union[Path, str], scanner: Scanner) -> t.Optional[Depen
 def process_scan(scan: DependencyScan) -> DependencyScan:
     for dep in scan.iterdeps():
         dep.meta['purl'] = dep.purl.to_string()
+
+        if not dep.licenses and dep.license_file:
+            if res := get_license_from_text(Path(dep.license_file).read_text()):
+                dep.meta['license_file'] = res[0]
+                dep.licenses = [License(name=lic) for lic in res[1]]
 
     return scan

@@ -29,7 +29,7 @@ def _parse_ds_args(ds_args: t.List[str]) -> t.Tuple[t.List[str], t.Dict[str, t.A
     return ds_args, ds_opts
 
 
-def _get_ds_dataset():
+def get_ds_dataset():
     global __ds_dataset
 
     if not __ds_dataset:
@@ -51,11 +51,11 @@ def _analyse_dep_with_ds(dep, dataset, **ds_opts) -> tuple:
         sources = [Path(src) for src in dep.package_files]
         ds_res = ts_deepscan.execute_scan(sources, scanner, title=dep.key)
 
-    if (lic_file := dep.license_file) and __ds_dataset:
+    if ('license_file' not in dep.meta) and (lic_file := dep.license_file):
         lic_file_path = Path(lic_file)
         if lic_file_path.exists():
             with lic_file_path.open(errors="surrogateescape") as fp:
-                lic_file_res = ts_deepscan.analyser.textutils.analyse_license_text(fp.read(), __ds_dataset)  # noqa
+                lic_file_res = ts_deepscan.analyser.textutils.analyse_license_text(fp.read(), dataset)
 
     return ds_res, lic_file_res
 
@@ -80,10 +80,10 @@ def _analyse_dep_with_ds_completed(dep, scan, pbar, completion_lock):
 
 def analyse_scan_with_ds(scan: DependencyScan, ds_args: t.List[str]):
     if scan.deepscans:
-        return scan
+        return
 
     ds_args, ds_opts = _parse_ds_args(ds_args)
-    dataset = _get_ds_dataset()
+    dataset = get_ds_dataset()
 
     tasks = []
     pool = futures.ThreadPoolExecutor(max_workers=2)
@@ -104,7 +104,7 @@ def analyse_scan_with_ds(scan: DependencyScan, ds_args: t.List[str]):
 
 def analyse_path_with_ds(path: Path, ds_args: t.List[str]) -> DSScan:
     ds_args, ds_opts = _parse_ds_args(ds_args)
-    dataset = _get_ds_dataset()
+    dataset = get_ds_dataset()
 
     scanner = ts_deepscan.create_scanner(**ds_opts, dataset=dataset)  # noqa
 

@@ -3,9 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import re
-import json
 import build.util
-import urllib.parse
 import typing as t
 
 from pathlib import Path
@@ -13,7 +11,8 @@ from importlib.metadata import distribution, PackageNotFoundError
 from importlib.metadata._meta import PackageMetadata
 from shippinglabel.requirements import parse_requirements
 
-from . import PackageManagerScanner, DependencyScan, Dependency, License
+from . import PackageManagerScanner, DependencyScan, Dependency, License, get_license_from_text
+
 
 _supported_pkg_files = [
     'setup.py',
@@ -61,11 +60,6 @@ class PypiScanner(PackageManagerScanner):
 
             dep.description = metadata.get('Summary', '')
 
-            if lic := metadata.get('License-Expression'):
-                dep.licenses.append(License(name=lic))
-            elif lic := metadata.get('License'):
-                dep.licenses.append(License(name=lic))
-
             if proj_urls := metadata.get_all('Project-URL', []):
                 for proj_url in proj_urls:
                     proj_url = proj_url.split(',', 1)
@@ -97,7 +91,16 @@ class PypiScanner(PackageManagerScanner):
                     with (site_packages / file.name).open() as fp:
                         dist_editable_path = fp.read().strip()
 
-            if (lic_file := metadata.get('License-File')) and dist_path is not None:
+            # Collect license information
+            lic_file = None
+            lic_file_info = metadata.get_all('License-File', [])
+
+            if len(lic_file_info) > 1:
+                lic_file = next((lf for lf in lic_file_info if 'license' in lf.lower()), None)
+            elif lic_file_info:
+                lic_file = lic_file_info[0]
+
+            if lic_file and dist_path is not None:
                 lic_file_path = dist_path / f'licenses/{lic_file}'
 
                 if lic_file_path.exists():
@@ -107,12 +110,24 @@ class PypiScanner(PackageManagerScanner):
                     if lic_file_path.exists():
                         dep.license_file = str(lic_file_path)
 
+            if lic := metadata.get('License-Expression'):
+                dep.licenses.append(License(name=lic))
+            elif (lic_text := metadata.get('License')) and not dep.license_file:
+                if lics := get_license_from_text(lic_text, as_lic_text_only=False):
+                    dep.licenses.extend(License(name=lic) for lic in lics[1])
+                # If the license text is very short, it might be a license name
+                elif len(lic_text) < 30:
+                    dep.licenses.append(License(name=lic_text))
+
+            # Collect package files
             if dist_editable_path:
                 dep.package_files.append(dist_editable_path)
             elif top_level := dist.read_text('top_level.txt'):
                 # noinspection PyTypeChecker
                 files = (Path(dist.locate_file(f)).resolve() for f in top_level.split('\n') if f)
                 dep.package_files.extend(str(f) for f in files if f.exists())
+
+            # Collect dependencies
 
             # if dist_path:
             #     direct_url_file = dist_path / 'direct_url.json'
