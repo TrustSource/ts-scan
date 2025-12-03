@@ -41,11 +41,13 @@ class SyftScanner(Scanner):
                 else:
                     try:
                         url = urlparse(src)
-                        scan.moduleId = f'{url.scheme}:{scan.module}'
+                        scan.moduleId = f'{url.scheme}:{scan.moduleId}'
                     except ValueError:
                         pass
 
                 return scan
+
+            return None
 
     @staticmethod
     def __create_scan(path: Path) -> t.Optional[DependencyScan]:
@@ -54,14 +56,30 @@ class SyftScanner(Scanner):
 
         doc = Document.model_validate_json(data)
 
+        module = None
+        moduleId = None
+
         if distro := doc.distro:
-            module = distro.id
-        else:
+            if distro.prettyName:
+                module = distro.prettyName
+            elif distro.name:
+                module = distro.name
+
+            if distro.id:
+                moduleId = distro.id + (f':{distro.versionID}' if distro.versionID else '')
+
+        if not module:
             module = doc.descriptor.name
 
-        deps = [SyftScanner.__create_dep(pkg) for pkg in doc.artifacts]
+        if not moduleId:
+            moduleId = module
 
-        return DependencyScan(module=module, moduleId=module, dependencies=deps)
+        deps = []
+        for pkg in doc.artifacts:
+            if dep := SyftScanner.__create_dep(pkg):
+                deps.append(dep)
+
+        return DependencyScan(module=module, moduleId=moduleId, dependencies=deps)
 
     @staticmethod
     def __create_dep(pkg: Package, use_purl_as_version=False) -> t.Optional[Dependency]:
@@ -73,34 +91,23 @@ class SyftScanner(Scanner):
             purl = None
 
         if purl:
-            key = SyftScanner._map_purl_type(purl.type)
-            if purl.namespace:
-                key += ':' + purl.namespace
-            key += ':' + purl.name
-
             if not use_purl_as_version:
-                ver = pkg.version
+                versions = [pkg.version]
             else:
-                ver = pkg.purl
+                versions = []
 
-            ns = purl.namespace if purl.namespace else ''
+            dep = Dependency.create_from_purl(purl, versions_override=versions)
 
-            dep = Dependency(key, pkg.name, versions=[ver], type=purl.type, namespace=ns)
-            dep.meta['purl'] = pkg.purl
-
-            for pkg_lic in pkg.licenses.root:
-                if pkg_lic.type == 'declared':
-                    lic = License(pkg_lic.value)
-                    if pkg_lic.urls:
-                        lic.url = pkg_lic.urls[0]
-                    dep.licenses.append(lic)
+            if dep:
+                for pkg_lic in pkg.licenses.root:
+                    if pkg_lic.type == 'declared':
+                        lic = License(pkg_lic.value)
+                        if pkg_lic.urls:
+                            lic.url = pkg_lic.urls[0]
+                        dep.licenses.append(lic)
+            else:
+                msg.warn(f'Could not create dependency from purl: {pkg.purl}')
+        else:
+            msg.warn(f'Skipping package {pkg.name} as it has no purl.')
 
         return dep
-
-    @staticmethod
-    def _map_purl_type(ty: str):
-        # TrustSource key mapping
-        if ty == 'maven':
-            return 'mvn'
-        else:
-            return ty

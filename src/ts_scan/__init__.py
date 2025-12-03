@@ -8,7 +8,28 @@ from .pm import Scanner, Dependency, DependencyScan, License, get_license_from_t
 from .cli import cli, msg
 
 
-__version__ = '1.1.0'
+def _get_version_from_metadata(default: str = '1.0.0') -> str:
+    try:
+        from importlib.metadata import version, PackageNotFoundError
+    except Exception:
+        try:
+            from importlib_metadata import version, PackageNotFoundError  # type: ignore
+        except Exception:
+            return default
+
+    candidates = ['ts-scan', 'ts_scan', __name__]
+    for name in candidates:
+        try:
+            return version(name)
+        except PackageNotFoundError:
+            continue
+        except Exception:
+            continue
+
+    return default
+
+
+__version__ = _get_version_from_metadata()
 
 
 def __get_pm_scanner_classes() -> t.List[t.Type[Scanner]]:
@@ -115,8 +136,10 @@ def _execute_scan(src: t.Union[Path, str], scanner: Scanner) -> t.Optional[Depen
 
     except CalledProcessError as err:
         if scanner.verbose:
-            print(err.stdout.decode('utf-8'))
-            print(err.stderr.decode('utf-8'))
+            if stdout := err.stdout:
+                print(stdout.decode('utf-8'))                
+            if stderr := err.stderr:
+                print(stderr.decode('utf-8'))
 
         msg.fail(f'{scanner.name()} failed with non-zero exit code {err.returncode}.')
         if not scanner.verbose:

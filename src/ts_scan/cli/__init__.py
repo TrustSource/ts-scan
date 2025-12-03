@@ -145,7 +145,7 @@ def inout_default_options(_in: bool, _out: bool, _fmt: bool):
     return _apply
 
 
-def parse_cmd_params_from_args(cmd: click.Command, args: [str], only_opts=False) -> t.Dict[str, t.Any]:
+def parse_cmd_params_from_args(cmd: click.Command, args: t.List[str], only_opts=False) -> t.Dict[str, t.Any]:
     with cmd.context_class(cmd) as ctx:
         parser = cmd.make_parser(ctx)
         params, _, param_order = parser.parse_args(args=args)
@@ -159,7 +159,7 @@ def parse_cmd_params_from_args(cmd: click.Command, args: [str], only_opts=False)
     return res
 
 
-def parse_input_from_args(args: [str]) -> t.Optional[Path]:
+def parse_input_from_args(args: t.List[str]) -> t.Optional[Path]:
     input_arg = click.Argument(['path'], type=click.Path(exists=True, path_type=Path))
 
     parser = click.OptionParser()

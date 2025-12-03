@@ -22,6 +22,10 @@ class ExecutableNotFoundError(Exception):
     pass
 
 
+class PackageFileNotFoundError(Exception):
+    pass
+
+
 class Scanner(abc.ABC):
     OptionsType = t.Dict[str, t.Dict[str, t.Any]]
 
@@ -113,6 +117,13 @@ class DependencyScan:
 
     deepscans: t.Dict[str, DSScan] = field(default_factory=lambda: {})
 
+    @staticmethod
+    def from_dep(dep: 'Dependency') -> 'DependencyScan':
+        module_id = dep.key
+        if dep.version:
+            module_id += ':' + dep.version
+        return DependencyScan(module=dep.name, moduleId=module_id, dependencies=[dep])
+
     def iterdeps(self) -> t.Iterable['Dependency']:
         deps = list(self.dependencies)
         while deps:
@@ -134,9 +145,10 @@ class DependencyScan:
 @dataclass_json
 @dataclass
 class Dependency:
-    key: str
     name: str
     type: str
+
+    key: str = field(default=None, metadata=config(exclude=lambda v: v is None))
 
     namespace: str = ''
 
@@ -157,6 +169,10 @@ class Dependency:
 
     crypto_algorithms: t.List['CryptoAlgorithm'] = field(default_factory=lambda: [])
 
+    def __post_init__(self):
+        if self.key is None:
+            self.key = f'{self.type}:{self.name}'
+
     @property
     def version(self) -> t.Optional[str]:
         return self.versions[0] if len(self.versions) == 1 else None
@@ -169,28 +185,43 @@ class Dependency:
                           version=self.version)
 
     @staticmethod
-    def create_from_purl(purl: t.Union[str, PackageURL]) -> t.Optional['Dependency']:
+    def create_from_purl(purl: t.Union[str, PackageURL],
+                         versions_override: t.Optional[t.List[str]] = None) -> t.Optional['Dependency']:
         if type(purl) is str:
             try:
-                purl = PackageURL.from_string(purl)
+                _purl = PackageURL.from_string(purl)
             except ValueError:
                 return None
 
-        key = purl.type
+        key = Dependency._map_purl_type(purl.type)
         if purl.namespace:
             key += ':' + purl.namespace
         key += ':' + purl.name
+
+        versions = [purl.version] if purl.version else []
+
+        if versions_override:
+            versions = versions_override
 
         return Dependency(key=key,
                           name=purl.name,
                           type=purl.type,
                           namespace=purl.namespace,
+                          versions=versions,
                           meta={'purl': purl.to_string()})
 
     def add_crypto_algorithm(self, algorithm: str, strength: str):
         if next((a for a in self.crypto_algorithms if
                  a.algorithm == algorithm and a.strength == strength), None) is None:
             self.crypto_algorithms.append(CryptoAlgorithm(algorithm=algorithm, strength=strength))
+
+    @staticmethod
+    def _map_purl_type(ty: str):
+        # TrustSource key mapping
+        if ty == 'maven':
+            return 'mvn'
+        else:
+            return ty
 
 
 class LicenseKind(str, Enum):
