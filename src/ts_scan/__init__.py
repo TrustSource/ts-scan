@@ -38,13 +38,19 @@ def __get_pm_scanner_classes() -> t.List[t.Type[Scanner]]:
     from .pm.gradle import GradleScanner
     from .pm.node import NodeScanner
     from .pm.nuget import NugetScanner
+    from .pm.cargo import CargoScanner
+    from .pm.golang import GolangScanner
+    from .pm.generic import GenericScanner
 
     return [
         PypiScanner,
         MavenScanner,
         GradleScanner,
         NodeScanner,
-        NugetScanner
+        NugetScanner,
+        CargoScanner,
+        GolangScanner,
+        GenericScanner
     ]
 
 
