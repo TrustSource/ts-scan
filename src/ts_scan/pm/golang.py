@@ -5,7 +5,8 @@ import typing as t
 from pathlib import Path
 
 
-from . import PackageManagerScanner, DependencyScan, Dependency, PackageFileNotFoundError
+from ts_scan_core import DependencyScan, Dependency
+from . import PackageManagerScanner, PackageFileNotFoundError
 
 
 class GolangScanner(PackageManagerScanner):

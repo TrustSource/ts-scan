@@ -4,7 +4,7 @@ from functools import cached_property
 from pathlib import Path
 from defusedxml import ElementTree as ET
 
-from .. import License
+from ts_scan_core import License
 
 
 class Pom:

@@ -6,7 +6,8 @@ from semantic_version import Version, NpmSpec
 
 from pathlib import Path
 
-from . import PackageManagerScanner, DependencyScan, Dependency, License
+from ts_scan_core import DependencyScan, Dependency, License
+from . import PackageManagerScanner
 from ..cli import msg
 
 

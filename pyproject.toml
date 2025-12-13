@@ -46,7 +46,7 @@ Homepage = 'https://github.com/trustsource/ts-scan.git'
 ts-scan = "ts_scan.cli:start"
 
 [tool.setuptools.packages.find]
-where = ['src']
+where = ['src', 'src/ts_scan_core']
 
 # [tool.setuptools.package-data]
 # ts_scan.analyse.gitignore = ['ts_scan/analyse/gitignore/*.gitignore']

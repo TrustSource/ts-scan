@@ -5,7 +5,7 @@ from pathlib import Path
 
 from . import cli, scan_formats
 from .scan import output_scans
-from ..pm import load_scans
+from ts_scan_core import load_scans
 
 
 @cli.command('convert', help='Converts SBOM elements from one format to another')

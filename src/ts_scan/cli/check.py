@@ -7,7 +7,8 @@ from pathlib import Path
 from concurrent import futures
 
 from . import cli, load_scans_from_file
-from .. import msg, DependencyScan
+from .. import msg
+from ts_scan_core import DependencyScan
 
 from ..api import TrustSourceAPI
 

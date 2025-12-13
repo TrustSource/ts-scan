@@ -12,7 +12,7 @@ from cyclonedx.factory.license import LicenseFactory
 from cyclonedx.schema import OutputFormat, SchemaVersion
 from cyclonedx.output import make_outputter
 
-from ..pm import Dependency, DependencyScan, License
+from .model import Dependency, DependencyScan, License
 
 _lic_factory = LicenseFactory()
 

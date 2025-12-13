@@ -9,7 +9,8 @@ from enum import Enum
 
 from defusedxml import ElementTree
 
-from . import PackageManagerScanner, Dependency, DependencyScan, License
+from ts_scan_core import Dependency, DependencyScan, License
+from . import PackageManagerScanner
 
 
 class ProjectType(Enum):

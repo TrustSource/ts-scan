@@ -9,7 +9,7 @@ import toml
 from wasabi import Printer
 from pathlib import Path
 
-from ..pm import DependencyScan, load_scans
+from ts_scan_core import DependencyScan, load_scans
 
 _default_config_location = '~/.ts-scan/config'
 

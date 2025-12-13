@@ -6,7 +6,7 @@ from pathlib import Path
 
 from . import cli, load_scans_from_file
 from .scan import output_scans
-from .. import DependencyScan
+from ts_scan_core import DependencyScan
 
 from ..analyse import analyse_scan_with_ds, analyse_path_with_ds
 from ..analyse.scanoss import analyse_scan as analyse_scan_with_scanoss

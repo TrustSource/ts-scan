@@ -7,7 +7,8 @@ from tempfile import TemporaryDirectory
 
 from xml.etree import ElementTree as ET
 
-from .. import PackageManagerScanner, DependencyScan, Dependency
+from ts_scan_core import DependencyScan, Dependency
+from .. import PackageManagerScanner
 
 from .pom_utils import Pom
 from .tree_utils import Tree

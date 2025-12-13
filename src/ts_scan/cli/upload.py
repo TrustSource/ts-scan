@@ -5,7 +5,7 @@ from tqdm import tqdm
 from pathlib import Path
 
 from . import cli, msg, load_scans_from_file
-from ..pm import DependencyScan, dump_scans
+from ts_scan_core import DependencyScan, dump_scans
 from ..api import TrustSourceAPI
 
 

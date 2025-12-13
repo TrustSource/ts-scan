@@ -11,7 +11,8 @@ from importlib.metadata import distribution, PackageNotFoundError
 from importlib.metadata._meta import PackageMetadata
 from shippinglabel.requirements import parse_requirements
 
-from . import PackageManagerScanner, DependencyScan, Dependency, License, get_license_from_text
+from ts_scan_core import DependencyScan, Dependency, License
+from . import PackageManagerScanner, get_license_from_text
 
 
 _supported_pkg_files = [

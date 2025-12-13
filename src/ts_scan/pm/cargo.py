@@ -5,7 +5,8 @@ import typing as t
 from pathlib import Path
 from collections import defaultdict
 
-from . import PackageManagerScanner, DependencyScan, Dependency, License, PackageFileNotFoundError
+from ts_scan_core import DependencyScan, Dependency, License
+from . import PackageManagerScanner, PackageFileNotFoundError
 
 
 class CargoScanner(PackageManagerScanner):

@@ -13,7 +13,8 @@ from .. import (msg,
                 do_scan_with_syft,
                 process_scan)
 
-from ..pm import dump_scans, ExecutableNotFoundError
+from ts_scan_core import dump_scans
+from ..pm import ExecutableNotFoundError
 
 
 @cli.command('scan', help='Scans a target and determines its composition')

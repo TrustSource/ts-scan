@@ -11,7 +11,7 @@ from tqdm import tqdm
 from pathlib import Path
 from threading import Lock
 
-from ..pm import DependencyScan, Dependency
+from ts_scan_core import DependencyScan, Dependency
 from ..cli import parse_cmd_params_from_args
 
 __ds_dataset = None
@@ -112,7 +112,7 @@ def analyse_path_with_ds(path: Path, ds_args: t.List[str]) -> DSScan:
 
 
 def extend_dep_from_ds(dep: Dependency, ds: DSScan):
-    from ..pm import License, LicenseKind
+    from ts_scan_core import License, LicenseKind
 
     for ds_lic in ds.summary.get('licenses', []):
         if next((lic for lic in dep.licenses

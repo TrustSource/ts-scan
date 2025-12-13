@@ -4,7 +4,8 @@ import typing as t
 from pathlib import Path
 
 from .maven.pom_utils import Pom
-from . import PackageManagerScanner, DependencyScan, Dependency
+from ts_scan_core import DependencyScan, Dependency
+from . import PackageManagerScanner
 from ..cli import msg
 
 

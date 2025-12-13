@@ -1,4 +1,5 @@
 import typing as t
+import logging
 from typing_extensions import TextIO
 
 from copy import copy
@@ -13,8 +14,9 @@ from spdx_tools.spdx.model import (Package, Document, CreationInfo, Actor, Actor
                                    Relationship, RelationshipType)
 from spdx_tools.spdx.formats import FileFormat, file_name_to_format
 
-from ..pm import Dependency, DependencyScan, License
-from ..cli import msg
+from .model import Dependency, DependencyScan, License
+
+logger = logging.getLogger(__name__)
 
 
 def import_scan(path: Path, fmt: str) -> t.Optional[DependencyScan]:
@@ -88,7 +90,7 @@ def _create_pkg(dep: Dependency, ref_id: int) -> Package:
         try:
             lic_exprs.append(licensing.parse(lic.name, simple=True))
         except ExpressionError:
-            msg.warn(f'Could not parse license expression "{lic.name}" of the dependency "{dep.key}"')
+            logger.warning(f'Could not parse license expression "{lic.name}" of the dependency "{dep.key}"')
 
     if not lic_exprs:
         pkg.license_declared = SpdxNone()

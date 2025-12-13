@@ -7,7 +7,7 @@ from tqdm import tqdm
 from ts_deepscan import Scan as DSScan
 
 from .. import __version__, msg
-from ..pm import DependencyScan
+from ts_scan_core import DependencyScan
 
 __scanoss_api = None
 __ts_scan_user_agent = f'ts-scan/{__version__}'

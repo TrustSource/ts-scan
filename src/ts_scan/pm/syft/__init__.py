@@ -6,7 +6,8 @@ from urllib.parse import urlparse
 from packageurl import PackageURL
 
 from .model import Document, Package
-from ts_scan.pm import Scanner, Dependency, DependencyScan, License
+from ts_scan_core import Dependency, DependencyScan, License
+from ts_scan.pm import Scanner
 from ts_scan.cli import msg
 
 

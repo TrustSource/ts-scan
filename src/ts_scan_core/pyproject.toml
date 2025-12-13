@@ -1,0 +1,35 @@
+[build-system]
+requires = [
+    'setuptools>=61.0',
+    'setuptools-scm>=8.0'
+]
+build-backend = 'setuptools.build_meta'
+
+[project]
+name = 'ts-scan-core'
+version = '1.0.0'
+authors = [
+    { name='EACG GmbH' }
+]
+description = 'TrustSource Core Library - shared components for ts-scan ecosystem'
+readme = 'README.md'
+requires-python = '>=3.10'
+classifiers = []
+keywords = ['dependencies', 'modules', 'compliance', 'TrustSource']
+license = 'Apache-2.0'
+
+dependencies = [
+    "dataclasses-json~=0.6.7",
+    "packageurl-python~=0.17.5",
+    "license-expression~=30.4.0",
+    "spdx-tools>=0.8.2",
+    "cyclonedx-python-lib~=8.5.0",
+    "defusedxml~=0.7.1",
+]
+
+[project.urls]
+Homepage = 'https://github.com/trustsource/ts-scan.git'
+
+[tool.setuptools.packages.find]
+where = ['.']
+include = ['ts_scan_core*']

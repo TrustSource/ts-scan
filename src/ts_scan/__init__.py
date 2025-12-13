@@ -4,7 +4,9 @@ import typing as t
 from pathlib import Path
 from subprocess import CalledProcessError
 
-from .pm import Scanner, Dependency, DependencyScan, License, get_license_from_text
+from ts_scan_core import DependencyScan, License
+
+from .pm import Scanner, get_license_from_text
 from .cli import cli, msg
 
 

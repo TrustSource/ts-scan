@@ -2,7 +2,8 @@ import typing as t
 
 from pathlib import Path
 
-from . import PackageManagerScanner, DependencyScan, Dependency
+from ts_scan_core import DependencyScan, Dependency
+from . import PackageManagerScanner
 
 from ..analyse import analyse_path_with_ds
 from ..analyse.scanoss import analyse_scan as analyse_scan_with_scanoss
