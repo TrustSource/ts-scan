@@ -114,10 +114,12 @@ def analyse_path_with_ds(path: Path, ds_args: t.List[str]) -> DSScan:
 def extend_dep_from_ds(dep: Dependency, ds: DSScan):
     from ..pm import License, LicenseKind
 
-    for ds_lic in ds.summary.get('licenses', []):
-        if next((lic for lic in dep.licenses
-                 if lic.kind == LicenseKind.EFFECTIVE and lic.name == ds_lic), None) is None:
-            dep.licenses.append(License(name=ds_lic, kind=LicenseKind.EFFECTIVE))
+    if ds_summary := ds.summary_at_path(path=''):
+        for ds_lic in ds_summary.licenses:
+            if next((lic for lic in dep.licenses
+                    if lic.kind == LicenseKind.EFFECTIVE and lic.name == ds_lic), None) is None:
+                dep.licenses.append(License(name=ds_lic, kind=LicenseKind.EFFECTIVE))
 
-    for name, coding in ds.summary.get('crypto_algorithms', {}).items():
-        dep.add_crypto_algorithm(algorithm=name, strength=coding)
+        for name, codings in ds_summary.crypto_algorithms.items():
+            for coding in codings:
+                dep.add_crypto_algorithm(algorithm=name, strength=coding)

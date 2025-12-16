@@ -24,12 +24,14 @@ class GenericScanner(PackageManagerScanner):
         root = Dependency(name=path.name, type='unknown')
         scan = DependencyScan.from_dep(root)
 
-        ds = analyse_path_with_ds(path, ds_args=["--include-scanoss-wfp"])
+        ds = analyse_path_with_ds(path, ds_args=["--include-scanoss-wfp", "--use-scanoss-api"])
         scan.deepscans[root.key] = ds
 
         analyse_scan_with_scanoss(scan, api_key=None)
 
-        root.dependencies = [Dependency.create_from_purl(purl, versions_override=versions)
-                             for purl, versions in ds.summary.get('links', {}).items()]
+        if ds_summary := ds.summary_at_path(''):
+            for purl, versions in ds_summary.components.items():
+                if dep := Dependency.create_from_purl(purl, versions_override=list(versions)):
+                    root.dependencies.append(dep)                                
 
         return scan

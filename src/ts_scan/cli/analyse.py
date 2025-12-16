@@ -29,17 +29,21 @@ def analyse_scan(path: Path,
                  scanoss_api_key: t.Optional[str],
                  xdeepscan: tuple[str]):
 
-    xdeepscan = list(xdeepscan)
+    ds_args = list(xdeepscan)
 
     if not disable_deepscan:
-        if not disable_scanoss and "--include-scanoss-wfp" not in xdeepscan:
-            xdeepscan.append("--include-scanoss-wfp")
+        if not disable_scanoss and "--include-scanoss-wfp" not in ds_args:
+            ds_args.append("--include-scanoss-wfp")
+            ds_args.append("--use-scanoss-api")
+
+            if scanoss_api_key:
+                ds_args.append(f"--scanoss-api-key={scanoss_api_key}")
 
     analysed_scans = []
 
     if path.is_dir():
         if not disable_deepscan:
-            ds_scan = analyse_path_with_ds(path, ds_args=xdeepscan)
+            ds_scan = analyse_path_with_ds(path, ds_args=ds_args)
             scan = DependencyScan(module='unknown', moduleId='unknown')
             scan.deepscans['unknown'] = ds_scan
 
@@ -53,7 +57,7 @@ def analyse_scan(path: Path,
         for s in scans:
             # Apply DS analysis
             if not disable_deepscan:
-                analyse_scan_with_ds(s, ds_args=xdeepscan)
+                analyse_scan_with_ds(s, ds_args=ds_args)
 
             # Apply ScanOSS analysis
             if not disable_scanoss:
