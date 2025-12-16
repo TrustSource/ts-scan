@@ -148,7 +148,7 @@ class Dependency:
     name: str
     type: str
 
-    key: str = field(default=None, metadata=config(exclude=lambda v: v is None))
+    key: str = field(default=None, metadata=config(exclude=lambda v: v is None)) # type: ignore
 
     namespace: str = ''
 
@@ -192,23 +192,28 @@ class Dependency:
                 _purl = PackageURL.from_string(purl)
             except ValueError:
                 return None
+        elif type(purl) is PackageURL:
+            _purl = purl
 
-        key = Dependency._map_purl_type(purl.type)
-        if purl.namespace:
-            key += ':' + purl.namespace
-        key += ':' + purl.name
+        else:
+            return None
+        
+        key = Dependency._map_purl_type(_purl.type)
+        if _purl.namespace:
+            key += ':' + _purl.namespace
+        key += ':' + _purl.name
 
-        versions = [purl.version] if purl.version else []
+        versions = [_purl.version] if _purl.version else []
 
         if versions_override:
             versions = versions_override
 
         return Dependency(key=key,
-                          name=purl.name,
-                          type=purl.type,
-                          namespace=purl.namespace,
+                          name=_purl.name,
+                          type=_purl.type,
+                          namespace=_purl.namespace if _purl.namespace else '',
                           versions=versions,
-                          meta={'purl': purl.to_string()})
+                          meta={'purl': _purl.to_string()})
 
     def add_crypto_algorithm(self, algorithm: str, strength: str):
         if next((a for a in self.crypto_algorithms if
