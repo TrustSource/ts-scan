@@ -120,8 +120,8 @@ class DependencyScan:
     @staticmethod
     def from_dep(dep: 'Dependency') -> 'DependencyScan':
         module_id = dep.key
-        if dep.version:
-            module_id += ':' + dep.version
+        # if dep.version:        
+        #     module_id += ':' + dep.version
         return DependencyScan(module=dep.name, moduleId=module_id, dependencies=[dep])
 
     def iterdeps(self) -> t.Iterable['Dependency']:

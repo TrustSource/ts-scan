@@ -13,7 +13,7 @@ from ..pm import DependencyScan, load_scans
 
 _default_config_location = '~/.ts-scan/config'
 
-msg = Printer(line_max=240)
+msg = Printer(line_max=240, colors={'info': 'cyan'})
 
 
 def start():

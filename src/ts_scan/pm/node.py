@@ -97,9 +97,6 @@ class NodeScanner(PackageManagerScanner):
             if pkg_dep := self._dep_from_lock(self.__lockfile_content, pkg_path):
                 deps.append(pkg_dep)
 
-        module = ''
-        moduleId = ''
-
         if root and (module := root.get('name')):
             dep = NodeDependency(module)
             moduleId = dep.key
@@ -112,9 +109,12 @@ class NodeScanner(PackageManagerScanner):
             dep.load_from_package()
 
             dep.dependencies = deps
-            deps = [dep]
+            
+            return  DependencyScan.from_dep(dep)
+        
+        else:
+            return DependencyScan(module="unknown", moduleId="npm:unknown", dependencies=deps)
 
-        return DependencyScan(module=module, moduleId=moduleId, dependencies=deps)
 
     @staticmethod
     def _dep_name_from_path(package_path: str) -> str:

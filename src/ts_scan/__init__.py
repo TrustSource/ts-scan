@@ -7,7 +7,6 @@ from subprocess import CalledProcessError
 from .pm import Scanner, Dependency, DependencyScan, License, get_license_from_text
 from .cli import cli, msg
 
-
 def _get_version_from_metadata(default: str = '1.0.0') -> str:
     try:
         from importlib.metadata import version, PackageNotFoundError
@@ -40,7 +39,6 @@ def __get_pm_scanner_classes() -> t.List[t.Type[Scanner]]:
     from .pm.nuget import NugetScanner
     from .pm.cargo import CargoScanner
     from .pm.golang import GolangScanner
-    from .pm.generic import GenericScanner
 
     return [
         PypiScanner,
@@ -49,8 +47,7 @@ def __get_pm_scanner_classes() -> t.List[t.Type[Scanner]]:
         NodeScanner,
         NugetScanner,
         CargoScanner,
-        GolangScanner,
-        GenericScanner
+        GolangScanner
     ]
 
 
@@ -71,7 +68,7 @@ def scanner_options(f):
 cli.scanner_options = scanner_options
 
 
-def create_scanners(scanner_classes: t.Iterable[t.Type[Scanner]], **kwargs) -> t.List[Scanner]:
+def create_scanners(scanner_classes: t.Iterable[t.Type[Scanner]], **kwargs) -> t.Iterable[Scanner]:
     scanner_args = {cls.name().lower(): {} for cls in scanner_classes}
     other_args = {}
 
@@ -94,33 +91,49 @@ def do_scan(paths: t.List[Path], **kwargs) -> t.Iterable[DependencyScan]:
     :param paths: List of paths to be scanned
     :return: An iterable over scan results
     """
+
+    def apply_scanner(s, p) -> t.Tuple[bool, t.Optional[DependencyScan]]:
+        if s.accepts(p):
+            msg.info(f'Found {s.name()} project. Scanning for dependencies...')
+            scan = _execute_scan(p, s)
+            if scan:
+                scan.source = str(p)
+                msg.good(f'{s.name()} scan is done!')
+            
+            return True, scan
+        
+        return False, None
+
+
     scanners = [s for s in create_scanners(__get_pm_scanner_classes(), **kwargs) if not s.ignore]
 
     for p in paths:
         p = p.resolve()
 
-        msg.info(f'Running dependency scan.')
-
+        msg.info(f'Running dependency scan for {p}.')
         scanned_at_least_once = False
 
         for scanner in scanners:
-            if not scanner.accepts(p):
-                continue
-
-            scanned_at_least_once = True
-
-            # with msg.loading(f'Scanning for {name} dependencies...'):
-            msg.info(f'Found {scanner.name()} project. Scanning for dependencies...')
-
-            if scan := _execute_scan(p, scanner):
-                scan.source = str(p)
-                msg.good(f'{scanner.name()} scan is done!')
+            accepted, scan = apply_scanner(scanner, p)
+            
+            if accepted:
+                scanned_at_least_once = True
+            
+            if scan:
                 yield scan
+           
 
         if scanned_at_least_once:
             msg.good(f'Dependency scan completed.')
         else:
-            msg.warn(f'No supported projects found.')
+            from .pm.generic import GenericScanner
+            
+            if generic_scanner := next(iter(create_scanners([GenericScanner], **kwargs)), None) :
+                _, scan = apply_scanner(generic_scanner, p)
+                if scan:
+                    yield scan
+            else:
+                msg.warn(f'No supported projects found.')
 
 
 def do_scan_with_syft(sources: t.List[t.Union[Path, str]], **kwargs) -> t.Iterable[DependencyScan]:

@@ -51,7 +51,7 @@ class NugetScanner(PackageManagerScanner):
         self.__global_packages_dir = self._find_global_packages_dir()
 
         if deps := self._process_package(self.__path):
-            return DependencyScan(module='', moduleId='', dependencies=deps)
+            return DependencyScan(module='unknown', moduleId='nuget:unknown', dependencies=deps)
         else:
             return None
 
@@ -218,7 +218,7 @@ class NugetScanner(PackageManagerScanner):
                 dep_key = "nuget:" + name
                 dep_id = dep_key + ":" + version
 
-                dep = Dependency(dep_key, name, type='nuget')
+                dep = Dependency(key=dep_key, name=name, type='nuget')
                 dep.versions.append(version)
 
                 if dep_id not in self.__processed_deps:
@@ -231,7 +231,8 @@ class NugetScanner(PackageManagerScanner):
                         dep_dir = candidates[0]
 
                         dep_files = dep_dir.rglob('**')
-                        dep_files = [p for p in dep_files if Path(p).is_file()]
+                        dep_files = [str(p) for p in dep_files if Path(p).is_file()]
+
                         dep.package_files.extend(dep_files)
 
                         if dep_nuspec := list(dep_dir.glob('*.nuspec')):

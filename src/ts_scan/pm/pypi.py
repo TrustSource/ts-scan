@@ -37,7 +37,7 @@ class PypiScanner(PackageManagerScanner):
         metadata = build.util.project_wheel_metadata(path, isolated=False)
 
         if dep := self._create_dep_from_metadata(metadata):
-            return DependencyScan(module=dep.name, moduleId=f'pip:{dep.name}', dependencies=[dep])
+            return DependencyScan.from_dep(dep)
         else:
             return None
 

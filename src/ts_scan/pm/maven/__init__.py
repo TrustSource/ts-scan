@@ -88,7 +88,7 @@ class MavenScanner(PackageManagerScanner):
                 version = self._evaluate('project.version', temp_dir)
 
                 scan = DependencyScan(module=name,
-                                      moduleId=f'mvn:{groupId}:{artifactId}' + f':{version}' if version else '',
+                                      moduleId=f'mvn:{groupId}:{artifactId}',
                                       dependencies=deps)
 
             return scan
