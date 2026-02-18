@@ -4,11 +4,11 @@
 
 ## Pull the docker image
 We do maintain a docker image that includes all supported package management systems. This has the advantage, that you must not setup the package managers to asses particular packagemanagement systems. Whenever ts-scan finds the indication of a supported system, it will use it to determine the trasnsitive dependencies.  
-Whenever we provide a new version of ts-scan, the docker image is automatically build and uploaded to dockerhub, using the ts-scan version as tag. Pulling the <code>latest</code> tag will always pull the updated version. YOu may make use of it in your code pipelines.
+Whenever we provide a new version of ts-scan, the docker image is automatically build and uploaded to dockerhub, using the ts-scan version as tag. Pulling the <code>latest</code> tag will always pull the updated version. You may make use of it in your code pipelines.
 
 ```shell
-socker pull ts-scan:latest
-``` 
+docker pull ts-scan:latest
+```
 
 ## Build the docker image
 
@@ -52,5 +52,4 @@ Replace `<COMMAND>` with whatever action you want to perform. See our [use cases
 >  [!CAUTION] 
 >
 > Scanning of Docker images using Syft from within the *ts-scan* Docker image is **not** supported for security reasons! It would require excessive privileges, so that we recommend to scan docker images from local.
-
 
