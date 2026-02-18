@@ -2,12 +2,11 @@ FROM trustsource/ts-deepscan
 LABEL maintainer="Grigory Markin <gmn@eacg.de>"
 
 RUN apt-get update && \
-    apt-get install -y curl
+    apt-get install -y curl gpg
 
-# Packages needed for .NET SDK installation
-RUN curl -o packages-microsoft-prod.deb https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb \
-    && dpkg -i packages-microsoft-prod.deb \
-    && rm packages-microsoft-prod.deb
+# Setup Microsoft repository with modern signing
+RUN curl -sSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /usr/share/keyrings/microsoft-prod.gpg \
+    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-prod.gpg] https://packages.microsoft.com/debian/12/prod bookworm main" > /etc/apt/sources.list.d/microsoft-prod.list
 
 # Install package managers: Maven, NPM, Gradle, .NET Core & Mono
 RUN apt-get update && \
