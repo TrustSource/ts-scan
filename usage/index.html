@@ -1,0 +1,1896 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Provides a static site that introduces the TrustSource guide to operating ts-scan">
+      
+      
+        <meta name="author" content="TrustSource Team">
+      
+      
+        <link rel="canonical" href="https://trustsource.github.io/ts-scan/usage/">
+      
+      
+        <link rel="prev" href="../setup/">
+      
+      
+        <link rel="next" href="../sbom/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
+    
+    
+      
+        <title>Usage - TrustSource ts-scan</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+  
+
+
+  
+  
+
+<script id="__analytics">function __md_analytics(){function e(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],e("js",new Date),e("config","G-ZSZXY48Y3G"),document.addEventListener("DOMContentLoaded",(function(){document.forms.search&&document.forms.search.query.addEventListener("blur",(function(){this.value&&e("event","search",{search_term:this.value})}));document$.subscribe((function(){var t=document.forms.feedback;if(void 0!==t)for(var a of t.querySelectorAll("[type=submit]"))a.addEventListener("click",(function(a){a.preventDefault();var n=document.location.pathname,d=this.getAttribute("data-md-value");e("event","feedback",{page:n,data:d}),t.firstElementChild.disabled=!0;var r=t.querySelector(".md-feedback__note [data-md-value='"+d+"']");r&&(r.hidden=!1)})),t.hidden=!1})),location$.subscribe((function(t){e("config","G-ZSZXY48Y3G",{page_path:t.pathname})}))}));var t=document.createElement("script");t.async=!0,t.src="https://www.googletagmanager.com/gtag/js?id=G-ZSZXY48Y3G",document.getElementById("__analytics").insertAdjacentElement("afterEnd",t)}</script>
+  
+    <script>if("undefined"!=typeof __md_analytics){var consent=__md_get("__consent");consent&&consent.analytics&&__md_analytics()}</script>
+  
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#introduction" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="https://www.trustsource.io" title="TrustSource ts-scan" class="md-header__button md-logo" aria-label="TrustSource ts-scan" data-md-component="logo">
+      
+  <img src="../assets/TS_logo_lang.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            TrustSource ts-scan
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Usage
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="teal"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="teal"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/trustsource/ts-scan" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href=".." class="md-tabs__link">
+          
+  
+  
+    
+  
+  Overview
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../setup/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Installation
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Usage
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../security/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Security
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../about/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  About
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="https://www.trustsource.io" title="TrustSource ts-scan" class="md-nav__button md-logo" aria-label="TrustSource ts-scan" data-md-component="logo">
+      
+  <img src="../assets/TS_logo_lang.png" alt="logo">
+
+    </a>
+    TrustSource ts-scan
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/trustsource/ts-scan" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href=".." class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_1" id="__nav_1_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Overview
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding Features
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guidelines/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coding Guidelines
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Usage
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_2" id="__nav_3_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scan for
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Scan for
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sbom/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    dependencies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../licenses/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    licenses
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../encryption/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    encryption
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vulns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vulnerabilities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../malware/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    malware
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../snippets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    snippets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_3" id="__nav_3_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Convert
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Convert
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../convert/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Convert
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_4" id="__nav_3_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operate
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Operate
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../multiscan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    multiple artefacts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    exporting results
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../container/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    operating inside a container
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5" id="__nav_3_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Use Cases
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Use Cases
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../uc01-autoSoCommit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Auto Scan on Commit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../uc02-SBOM2Git/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Add SBOM 2 Git
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../uc03-check/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Check 4 Vulns before commit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    About
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    About
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../about/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    About ts-scan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CHANGELOG/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<p><img alt="Supported Versions" src="https://img.shields.io/badge/Python-%203.10,%203.11,%203.12-blue" /> <a href="https://scorecard.dev/viewer/?uri=github.com/TrustSource/ts-scan"><img alt="OpenSSF Scorecard" src="https://api.scorecard.dev/projects/github.com/TrustSource/ts-scan/badge" /></a> <a href="https://www.bestpractices.dev/projects/10358"><img alt="OpenSSF Best Practices" src="https://www.bestpractices.dev/projects/10358/badge" /></a> <img alt="License" src="https://img.shields.io/badge/License-Apache--2.0-green" /></p>
+<h1 id="introduction">Introduction</h1>
+<p><strong><em>ts-scan</em></strong> is the ultimate scanner resulting from several years of experience with scanning code for license information, vulnerabilities or malware across a plethora of sources, be it plain text files, packages, docker images or even binaries across as many environments as possible.</p>
+<p>Thus, we strive to provide a sort of a suiss army knife for scanning in the most comprehensive and comfortable way. And since we were not educated to do all day long this sort of work, we designed it to support automation.</p>
+<p>This help has been designed to support you in making the best use of it. To get a quick entry we outline different use cases and describe how to achieve the particular goal. A general article will give you an overview of the design and another article explains how to use <strong><em>ts-scan</em></strong> together with the <strong><em>TrustSource</em></strong> platform. However, ts-scan is standalone and can be used with every backend.</p>
+<p>To get a quick intro, jump to any of the following use cases:</p>
+<ul>
+<li><a href="/ts-scan/architecture">Architecture Overview &amp; supported Ecosystems</a></li>
+<li>Capabilities<ul>
+<li><a href="/ts-scan/sbom">Scanning for dependencies</a> (creating SBOMs)</li>
+<li><a href="/ts-scan/licenses">Scanning for licenses</a></li>
+<li><a href="/ts-scan/encryption">Scanning for encryption</a></li>
+<li><a href="/ts-scan/vulns">Scan for Known Vulnerabilities</a></li>
+<li><a href="/ts-scan/malware">Scan for malware</a></li>
+<li><a href="/ts-scan/snippets">Scan for known software snippets</a></li>
+</ul>
+</li>
+<li>Operations<ul>
+<li><a href="/ts-scan/multiscan">Scanning different artefacts</a></li>
+<li><a href="/ts-scan/convert">Storing and exporting scan results or converting between different formats</a></li>
+<li><a href="/ts-scan/uc02-SBOM2Git">Automate SBOM generation</a></li>
+<li><a href="/ts-scan/uc03-check">Prevent vulnerable dependencies to be checked in</a></li>
+</ul>
+</li>
+</ul>
+<h1 id="overview-of-capabilities">Overview of Capabilities</h1>
+<p>Typically each tool designer has a specific use case in mind, when starting his work. This also applies to <strong>ts-scan</strong>. We aimed to provide a tool, that can be used inside any automated CI/CD tool chain with a maximum of flexibility.  This is why we have split the processing into several steps, allowing to handle interim results. </p>
+<p>For abtter guidance, following will describe the meaning of the verbs:   </p>
+<ol>
+<li>
+<p><strong>SCAN</strong>
+  Use this to determine an SBOM for a particular build artefact. It allows to assess a target - may be a folder, a docker image or a supported build file - for dependencies. The result will be a file written to disk. You may select between different output formats (ts, spdx, CycloneDX). See <code>ts-scan scan --help</code> for details on the CLI or <a href="/ts-scan/sbom">creating SBOMs</a>. </p>
+</li>
+<li>
+<p><strong>ANALYSE</strong>
+    This action allows to assess the identified dependencies in detail. It will take the scan and pull for each identified dependency the sources from either the package management system or your local repository and assess file by file for information. Often this is bound into the first action. Bu we decided to separate this action for performance reasons. While it makes sense to verify the contents of a package when it enters the solution the first time, this activity must not be executed upon every commit. This will help you save time and resources.
+    <strong>ts-scan</strong> uses <a href="https://github.com/trustsource/ts-deepscan">ts-deepscan</a> to assess components. It will be installed automatically during the ts-scan setup. It supports the following types of analysis: </p>
+<ol>
+<li>Copyright,</li>
+<li>License identification,</li>
+<li>Crypto-algorithms,</li>
+<li>SCANOSS fingerprints (and SBOM decoration)</li>
+<li>Yara rules</li>
+</ol>
+<p>By default all scans but yara are enabled. You may disable then using flags. See the corresponding scan section for details. </p>
+</li>
+<li>
+<p><strong>CHECK</strong>
+  Allows to evaluate the identified findings against the project specific policies. This has been introduced to allow breaking builds or deployments depending on the findings. You may use CHECK to assess for:</p>
+</li>
+<li>
+<p>Vulnerabilities</p>
+</li>
+<li>Licenses &amp; OSADL compatibility matrix</li>
+<li>
+<p>Weak encryption
+  Today <strong>ts-scan</strong> takes the findings and transfers them to the <strong>TrustSource</strong> platform. There policies and assessments against these policies are organised and a result is returned. Read our <a href="/ts-scan/uc03-check">use case #03</a> to learn how to drive your CI/CD using <strong>ts-scan</strong>.
+  To achieve this, a <em><a href="https://trustsource.github.io/app-docs/keymgmt">TrustSource API-Key</a></em> will be required. However, we plan to provide an option, to add a local policy file for local evaulation.</p>
+</li>
+<li>
+<p><strong>IMPORT</strong>
+  The IMPORT allows to transfer any 3rd party SBOM to the <strong>TrustSource</strong> platform. You may use this, to create new modules in  a project or update an existing module with this data. The IMPORT command will use the IMPORT function of the <strong>TrustSource ** API. Thus, the conversion of the file will take place on the platform.</strong></p>
+</li>
+<li>
+<p><strong>UPLOAD</strong>
+  This verb will become relevant, if you want to upload you scan or analysis results to the <strong>TrustSource</strong> platform. It allows to take any TrustSource result and push it in to the Platform for further management.</p>
+</li>
+<li>
+<p><strong>CONVERT</strong>
+Allows to convert SBOM elements from one format to another. You may see the <a href="/ts-scan/convert">CONVERT</a>-section for more specifics on the different file formats and the obstacles for sound conversions.</p>
+</li>
+</ol>
+<p>In our daily work this split has turned out to be very useful. We hope it is not too confusing. So feel free to leave us a note how you like it.</p>
+<h2 id="1-executing-a-scan">1. Executing a Scan</h2>
+<p>You select your scan target and decide upon the desired outcome. Do you want to </p>
+<p>The <strong>scan</strong> command searches for package dependencies in your project. By providing a path, ts-scan automatically detects supported package management systems and extracts a full dependency tree. The scan results can be stored in a file using either the internal TS format or one of the supported SBOM formats: SPDX or CycloneDX.</p>
+<p>To execute a scan and store results into a file, use:</p>
+<pre><code>ts-scan scan -o &lt;path to the output file&gt; [-f &lt;output format&gt;] &lt;path to the project directory&gt;
+</code></pre>
+<p>The <code>-f &lt;output format&gt;</code> option controls the output format and can be:</p>
+<ul>
+<li><code>ts</code> - the TrustSource internal format (default)</li>
+<li><code>spdx-[tag|json|yaml|xml]</code> - One of the SPDX formtas, e.g. <code>spdx-json</code></li>
+<li><code>cyclonedx-[json|xml]</code> - One of the CycloneDX formats, e.g. <code>cyclonedx-json</code></li>
+</ul>
+<h3 id="options">Options</h3>
+<p><strong>ts-scan</strong> contains some general options as well as options that only apply while scanning specific package types. The package specific options are prefixed by the type of the package management system. We use the <a href="https://github.com/package-url/purl-spec/blob/master/PURL-TYPES.rst">Package URL Type</a> as a prefix. The following options are valid for most supported package management system:</p>
+<ul>
+<li><code>--[maven|npm|nuget|pypi]:ignore</code> - Disable scanning dependencies of the type</li>
+<li><code>--[maven|npm|nuget]:executable</code> - Specify a path to the PM executable</li>
+<li><code>--[maven|npm|nuget]:forward</code> - Forward arguments to the PM's executable</li>
+</ul>
+<p>The full list of options including PM specific options can be printed using:</p>
+<pre><code>ts-scan scan --help
+</code></pre>
+<h4 id="scanner-executable-path">Scanner executable path</h4>
+<p>While scanning for Maven, Node and NuGet dependencies, <strong><em>ts-scan</em></strong> calls corresponding package manager executables. For example, in order to specify a path to the Maven excutable use the following option</p>
+<pre><code>ts-scan scan --maven:executable /opt/local/bin/mvn &lt;PATH&gt;
+</code></pre>
+<h4 id="forward-custom-parameters-to-a-scanner-executable">Forward custom parameters to a scanner executable</h4>
+<p>There are also options to forward parameters to a package manager executable. For example, in order to pass a settings file to Maven, one can use the following combination:</p>
+<pre><code>ts-scan scan --maven:foward --settings,customSettings.xml &lt;PATH&gt;
+</code></pre>
+<h4 id="configuring-private-repositories-as-source">Configuring private Repositories as source</h4>
+<p>It is possible to pass arguments or complete configurations to the package manager. This may be useful in case you want it to use a private registry instead the public one, for example. The <code>--[maven|npm|nuget]:forward</code> - option allows to pass arguments to the package manager's executable.</p>
+<h3 id="other-options">Other options</h3>
+<ul>
+<li><code>--verbose</code> - Enables verbose mode (including output from PM executables, useful for debugging)</li>
+<li><code>--tag &lt;TAG&gt;</code> - Stores the SCM tag <code>&lt;TAG&gt;</code> in the scan</li>
+<li><code>--branch &lt;BRANCH&gt;</code> - Stores the SCM branch <code>&lt;BRANCH&gt;</code> in the scan</li>
+</ul>
+<h3 id="scan-with-syft-as-a-backend">Scan with Syft as a backend</h3>
+<p><strong>ts-scan</strong> can use <a href="https://github.com/anchore/syft">Syft</a> scanner as a backend for dependencies scanning. We added this to enable a comprehensive docker image processing. It is not active by default, to enable the Syft scanner, use the following option:</p>
+<pre><code>ts-scan scan --use-syft &lt;SOURCE&gt;
+</code></pre>
+<p>As SOURCE you can specify any type of sources accepted by Syft, for example a local filesystem path or a docker image. For more details on supported formats please refer to <a href="https://github.com/anchore/syft/wiki/supported-sources">Syft Supported Sources</a>.</p>
+<p>Before calling Syft, <strong>ts-scan</strong> tries to find the Syft executable in default locations, in order to specify a custom location use the following option:</p>
+<pre><code>ts-scan scan --use-syft --syft-path &lt;syft executable&gt; &lt;SOURCE&gt;
+</code></pre>
+<p>To pass custom parameters directly to Syft:</p>
+<pre><code>ts-scan scan --use-syft --Xsyft &lt;option&gt;,&lt;value&gt; &lt;SOURCE&gt;
+</code></pre>
+<h4 id="scan-docker-images-with-syft">Scan Docker images with Syft</h4>
+<p>Syft supports many different input types, and one of them is Docker images. To scan a local docker image, use the following command:</p>
+<pre><code>ts-scan scan --use-syft -o &lt;OUTPUT&gt; docker:&lt;DOCKER IMAGE&gt;
+</code></pre>
+<h2 id="2-analysing-a-scan">2. Analysing a Scan</h2>
+<p>The in-depth dependency analysis is performed using the <strong>analyse</strong> command, which takes a scan file as input in one of the supported formats: the internal TS format, SPDX, or CycloneDX. Depending on the dependency package, the tool locates its files and scans each one using <a href="https://github.com/TrustSource/ts-deepscan">ts-deepscan</a>. Additionally, it uses <a href="https://www.scanoss.com/">SCANOSS</a> to improve and enrich the collected in-depth scanning results. The <strong>analyse</strong> command can also take a directory as input to directly scan files inside it.</p>
+<p>To analyse a scan or a directory and store results into a file, use:</p>
+<pre><code>ts-scan analyse [-f &lt;input format&gt;] [-o &lt;output&gt;] &lt;path to the scan file or directory&gt;
+</code></pre>
+<p>The <code>-f &lt;input format&gt;</code> option specifies the input format of the scan to be checked (if a scan file is provided as input) and accepts the same values as the <code>&lt;output format&gt;</code> of the <a href="https://github.com/TrustSource/ts-scan#scan">scan</a> command.</p>
+<p>By default, the <strong>analyse</strong>, command applies <a href="https://github.com/TrustSource/ts-deepscan">ts-deepscan</a> using its default configuration and extends the analysis results with data from SCANOSS API.</p>
+<p>To disable or fine-tune specific analysis steps, you can use additional options.</p>
+<h3 id="options_1">Options</h3>
+<ul>
+<li><code>--disable-deepscan</code> - Disables analysis using DeepScan.</li>
+<li><code>--disable-scanoss</code> - Disables extending DeepScan results with SCANOSS data.</li>
+<li><code>--Xdeepscan &lt;OPTION&gt;,&lt;VALUE&gt;</code> - Forwards to the DeepScan <strong>scan</strong> command.</li>
+</ul>
+<p>The <code>--Xdeepscan</code>can be used to configure the DeepScan analysers. For example, to analyse a scan while setting a timeout (in seconds) per file, use:</p>
+<pre><code>ts-scan analyse --Xdeepscan timeout,30 &lt;path to the scan file or directory&gt;
+</code></pre>
+<p>For more details on available options for DeepScan, please refer to <a href="https://github.com/TrustSource/ts-deepscan">ts-deepscan documentation</a>. </p>
+<blockquote>
+<p>[!NOTE]</p>
+<p>To allow the processing of even large or very large SBOMs in reasonable time, <strong>ts-deepscan</strong> is developed to scale. However, the TrustSource platform is cloud hosted and provides a DeepScan-Scaleout that leverages the massive parallel processing capabilities of deepscan. You may define the hardware you want to use and it will automatically ramp up all hardware, initaite and perform the scans, transfer the findings to TrustSource or your own target and ramp down all infrastructure afterwards. This can happen in your own or our data center.  The <strong><em>DeepScan Scaleout</em></strong> has been designed to scan thousands of repositories at a snap.</p>
+</blockquote>
+<h2 id="3-verify-state-against-policies">3. Verify State against Policies</h2>
+<p>The <strong>ts-scan check</strong> command verifies project dependencies for legal issues and known vulnerabilities against project specific policies. It performs these checks using the TrustSource API - where the settings are stored. It supports two modes:</p>
+<ol>
+<li>A full check based on the corresponding TrustSource project settings (a TrustSource project is required; refer to <a href="https://www.trustsource.io/">TrustSource</a> for more details).</li>
+<li>A single component check against the TrustSource vulnerability database.</li>
+</ol>
+<p>By default, the <strong>check</strong> command performs a full check. To check only for vulnerabilities, use the <code>--vulns-only</code>option.</p>
+<p>In addition to vulnerability checks, the full mode also detects potential legal issues, such as license incompatibilities between dependencies or conflicts with the planned distribution model.</p>
+<p>Both modes support exiting with a non-zero error code (1) if vulnerabilities or legal issues are found, making it highly useful for integration into CI/CD workflows.</p>
+<h3 id="full-scan-check">Full scan check</h3>
+<p>To execute a full check, use the following command:</p>
+<pre><code>ts-scan check --project-name &lt;TrustSource project name&gt; --api-key &lt;TrustSource API key&gt; [-f &lt;input format&gt;] [-o &lt;output&gt;] &lt;path to the scan file&gt;
+</code></pre>
+<p>The options <code>--project-name &lt;TrustSource project name&gt;</code>and <code>--api-key &lt;TrustSource API key&gt;</code>are required for the full scan.</p>
+<blockquote>
+<p>[!NOTE]</p>
+<p>Before executing a full check, you need to create a project in the TrustSource application and <a href="https://github.com/TrustSource/ts-scan#upload">upload</a> the scan into the application. To learn more on <strong>TrustSource</strong>, please refer to <strong><a href="https://app.trustsource.io/">TrustSource App</a></strong></p>
+</blockquote>
+<p>The <code>-f &lt;input format&gt;</code> option specifies the input format of the scan to be checked and accepts the same values as the <code>&lt;output format&gt;</code> of the <a href="https://github.com/TrustSource/ts-scan#scan">scan</a> command.</p>
+<p>Optionally, using the <code>-o &lt;output&gt;</code> option, you can store the check results into a JSON file.</p>
+<h3 id="vulnerabilities-only-check">Vulnerabilities-Only check</h3>
+<p>A vulnerabilities check can be performed by adding a <code>--vulns-only</code> option to the <strong>check</strong> command:</p>
+<pre><code>ts-scan check --vulns-only --api-key &lt;TrustSource API key&gt; [-f &lt;input format&gt;] [-o &lt;output&gt;] [--vulns-confidence low|medium|high] &lt;path to the scan file&gt;
+</code></pre>
+<p>A vulnerabilities-only check does not require creation of the project and uploading the scan before running the check.</p>
+<p>The <code>--vulns-confidence &lt;level&gt;</code> option allows you to control the confidence level for matching components with affected products listed in security bulletins, such as product/vendor tuples in CVEs. The default value is <code>high</code>, minimizing false positives as much as possible.</p>
+<h3 id="further-options">Further Options</h3>
+<p>There are several useful options available for both modes, making it easier to integrate the <strong>check</strong> command into CI/CD pipelines:</p>
+<ul>
+<li><code>--exit-on-legal</code> - Exit with a non-zero (1) exit code if legal violations are found (default: <code>on</code>)</li>
+<li><code>--exit-on-vulns</code> - Exit with a non-zero (1) exit code if vulnerabilities are found (default: <code>on</code>)</li>
+<li><code>--Werror</code> - Treat vulnerability/legal warnings as errors</li>
+</ul>
+<h2 id="4-import-3rd-party-sboms-to-trustsource">4. Import 3rd Party SBOMs to TrustSource</h2>
+<p>Sometimes you may want to import existing scans and assess these further. Whether your suppliers provided you with SBOMs, they stem from a purchased 3rd party product or you just created them with a another scanner does not matter. Every SBOM in SPDX v2.2 or v2.3 or any CycloneDX in v1.4 or v1.6 can be imported to TrustSource for further surveillance and treatment.</p>
+<p>You may directly send the file to the TrustSource API, see the <a href="https://trustsource.github.io/api-docs">API-docs</a> for more information or use <strong>ts-scan</strong>. Supported import formats:</p>
+<ul>
+<li>SPDX RDF (spdx-rdf)</li>
+<li>SPDX JSON (spdx-json)</li>
+<li>CycloneDX (cyclonedx)</li>
+</ul>
+<p>To import a 3rd party SBOM, use</p>
+<pre><code>ts-scan import -f &lt;SBOM format&gt; -v &lt;SBOM format version&gt; --module &lt;SBOM module name&gt; --module-id &lt;SBOM module id&gt; --project-name &lt;TrustSource project name&gt; --api-key &lt;TrustSource API key&gt; &lt;path to the SBOM file&gt;
+</code></pre>
+<h2 id="5-upload-data-to-trustsource">5. Upload data to TrustSource</h2>
+<p>Our understanding is that you do not want to produce SBOMs for the sake of SBOMs or because some legal directive requires you to do so. we want the SBOMs to become an integral part of your development efforts and software life-cycle management activities. It builds a relevant piece of information that - when automatically created throughout our software lifecycle - will contain relevant information for the management of the product.</p>
+<p>With TrustSource, we have made the SBOM the essential piece of truth, which is guiding the Risk Management, the Vulnerability handling and reporting the complete Release Management. Therefor the SBOM should not only be pushed into a repostory. It should be activated and used as the binding element between the management and the development, ensuring a valid picture for every manager. To learn more, see the <a href="https://ww.trustsource.io">TrustSource website</a>.</p>
+<p>The <strong>upload</strong> command is used to upload scans to the <a href="https://www.trustsource.io/">TrustSource App</a> use:</p>
+<pre><code>ts-scan upload --project-name &lt;TrustSource project name&gt; --api-key &lt;TrustSource API key&gt; &lt;path to the scan JSON file&gt;
+</code></pre>
+<p>Get more options, e.g. dirceting to a specific enpoint etc. from the help: </p>
+<pre><code>ts-scan upload --help
+</code></pre>
+<h1 id="getting-support">Getting Support</h1>
+<p><strong><em>ts-scan</em></strong> is open source and supported through this repository. As a TrustSource subscriber, you may contact <a href="mailto:support@trustsource.io">TrustSource support</a> for help. As a community user, please <a href="https://github.com/trustsource/ts-scan/issues">file a ticket with the repo</a>.  </p>
+<p>You may also find additional information and learning materials on specific scanning issues/topics in our open <a href="https://support.trustsource.io">TrustSource Knowledgebase</a>.</p>
+<h1 id="reporting-vulnerabilities">Reporting Vulnerabilities</h1>
+<p>TrustSource supports a coordinated vulnerability disclosure procedure for its platform. <strong><em>ts-scan</em></strong> follows that schema and vulnerabilities identified should follow this procedure. Please find all details in our <a href="../security.md">Security</a> Policy.</p>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2024 <a href="https://www.eacg.de/editorial">EACG GmbH</a>
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://linkedin.com/company/trustsource" target="_blank" rel="noopener" title="TrustSource @ Linkedin" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3M135.4 416H69V202.2h66.5V416zM102.2 96a38.5 38.5 0 1 1 0 77 38.5 38.5 0 1 1 0-77m282.1 320h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+    <a href="mailto:support@trustsource.io" target="_blank" rel="noopener" title="" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M536.4-26.3c9.8-3.5 20.6-1 28 6.3s9.8 18.2 6.3 28l-178 496.9c-5 13.9-18.1 23.1-32.8 23.1-14.2 0-27-8.6-32.3-21.7l-64.2-158c-4.5-11-2.5-23.6 5.2-32.6l94.5-112.4c5.1-6.1 4.7-15-.9-20.6s-14.6-6-20.6-.9l-112.4 94.3c-9.1 7.6-21.6 9.6-32.6 5.2L38.1 216.8c-13.1-5.3-21.7-18.1-21.7-32.3 0-14.7 9.2-27.8 23.1-32.8z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+      <div class="md-consent" data-md-component="consent" id="__consent" hidden>
+        <div class="md-consent__overlay"></div>
+        <aside class="md-consent__inner">
+          <form class="md-consent__form md-grid md-typeset" name="consent">
+            
+
+
+
+<h4>Cookie consent</h4>
+<p>We use cookies to recognize your repeated visits and preferences, as well as to measure the effectiveness of our documentation and whether users find what they're searching for. With your consent, you're helping us to make our documentation better. </p>
+<input class="md-toggle" type="checkbox" id="__settings" >
+<div class="md-consent__settings">
+  <ul class="task-list">
+    
+    
+    
+      
+        
+  
+  
+    
+    
+  
+  <li class="task-list-item">
+    <label class="task-list-control">
+      <input type="checkbox" name="github" checked>
+      <span class="task-list-indicator"></span>
+      GitHub
+    </label>
+  </li>
+
+      
+    
+    
+      
+        
+  
+  
+    
+    
+  
+  <li class="task-list-item">
+    <label class="task-list-control">
+      <input type="checkbox" name="analytics" >
+      <span class="task-list-indicator"></span>
+      Google Analytics
+    </label>
+  </li>
+
+      
+    
+  </ul>
+</div>
+<div class="md-consent__controls">
+  
+    
+      <button class="md-button md-button--primary">Accept</button>
+    
+    
+    
+  
+    
+    
+    
+      <label class="md-button" for="__settings">Manage settings</label>
+    
+  
+    
+    
+      <button type="reset" class="md-button md-button--primary">Reject</button>
+    
+    
+  
+</div>
+          </form>
+        </aside>
+      </div>
+      <script>var consent=__md_get("__consent");if(consent)for(var input of document.forms.consent.elements)input.name&&(input.checked=consent[input.name]||!1);else"file:"!==location.protocol&&setTimeout((function(){document.querySelector("[data-md-component=consent]").hidden=!1}),250);var form=document.forms.consent;for(var action of["submit","reset"])form.addEventListener(action,(function(e){if(e.preventDefault(),"reset"===e.type)for(var n of document.forms.consent.elements)n.name&&(n.checked=!1);__md_set("__consent",Object.fromEntries(Array.from(new FormData(form).keys()).map((function(e){return[e,!0]})))),location.hash="",location.reload()}))</script>
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.indexes", "navigation.sections", "navigation.tabs", "navigation.top", "navigation.tracking", "announce.dismiss", "content.action.edit", "content.action.view", "content.code.annotate", "content.code.copy", "content.tooltips", "header.autohide", "search.highlight", "search.share", "search.suggest", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../assets/feedback.js"></script>
+      
+    
+  </body>
+</html>
