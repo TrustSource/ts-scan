@@ -2,7 +2,7 @@
 
 ***ts-scan*** is a commandline utility developed in python to simplify all code compliance related tasks and unify the handling across different environments. For DevOps this means, you may use the same command set across different environments, whether you are building Java, Go or Python.
 
-![ArchitectureOverview](/ts-scan/assets/tsScanArchitecture.001.png)
+![ArchitectureOverview](assets/tsScanArchitecture.001.png)
 
 With ***ts-scan*** you will be able to perform all sorts of scans. Whether you want to compose a Software Bill of Materials (SBOM), check a repository for hidden license information, check for malware or just scan a Docker file. All can be done using the same tool. 
 
@@ -21,7 +21,7 @@ Besides these cool tools we also provide a few capabilities to the party:
 * **ts-scan**: Is not only the orchestrator but has the ability to identify the build environment, execute the corresponding package manager and pull all transitive packages, if required. These packages then will assessed using 
 * **ts-deepscan**: The repo/file scanner, we provided. [ts-deepcan](https://github.com/trustsource/ts-deepscan) combines all the file based scanning capabilities described above. Its origin is license identification. **DeepScan** has the ability to discover known text fragments, allowing to identify licenses, even when they are slightly transformed or changed using similarity search.  
 
- [ts-scan](https://github.com/trustsource/ts-scan) can write its results either into a local file using the *TrustSource*, *SPDX* or *CycloneDX* formats or transfer the results to the [**TrustSource** platform](https://app.trustsource.io/) for further treatment using the [UPLOAD](/ts-scan/index) verb..
+ [ts-scan](https://github.com/trustsource/ts-scan) can write its results either into a local file using the *TrustSource*, *SPDX* or *CycloneDX* formats or transfer the results to the [**TrustSource** platform](https://app.trustsource.io/) for further treatment using the [UPLOAD](index) verb..
 
 ## Package Managers
 
@@ -35,7 +35,7 @@ Please see the Setup for inofrmation on how to install the corresponding ecosyst
 
 #### Is there a preconfigured image with all eco-systems setup?
 
-We currently do not provide such an image. It would be quiet large and we do not want to maintain it. However, we do provide a [Docker image](https://github.com/TrustSource/ts-scan/blob/main/Dockerfile) for operating **ts-scan**, but without any added environments. This would be a good starting point, if you plan to  there are environment specific images available at DockerHub. Alternatively you might want to use the preconfigured image from [OSS Review Toolkit](https://oss-review-toolkit.org/) (ORT), which does scanning the same way. ORT has a TrustSource format reporter included and thus, these findings can be uploaded to [TrustSource](https://app.trustsource.io) as well. 
+We currently do not provide such an image. It would be quiet large and we do not want to maintain it. However, we do provide a [Docker image](https://hub.docker.com/r/trustsource/ts-scan) for operating **ts-scan**, but without any added environments. This would be a good starting point, if you plan to  there are environment specific images available at DockerHub. Alternatively you might want to use the preconfigured image from [OSS Review Toolkit](https://oss-review-toolkit.org/) (ORT), which does scanning the same way. ORT has a TrustSource format reporter included and thus, these findings can be uploaded to [TrustSource](https://app.trustsource.io) as well. 
 
 
 
