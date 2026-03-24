@@ -175,7 +175,7 @@ ts-scan scan --maven:executable /opt/local/bin/mvn <PATH>
 There are also options to forward parameters to a package manager executable. For example, in order to pass a settings file to Maven, one can use the following combination:
 
 ```shell
-ts-scan scan --maven:foward --settings,customSettings.xml <PATH>
+ts-scan scan --maven:forward --settings,customSettings.xml <PATH>
 ```
 
 ### Other options
