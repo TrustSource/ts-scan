@@ -34,14 +34,15 @@ class PypiScanner(PackageManagerScanner):
         return path.is_dir() and any((path / pkg_file).exists() for pkg_file in _supported_pkg_files)
 
     def scan(self, path: Path) -> t.Optional[DependencyScan]:
-        metadata = build.util.project_wheel_metadata(path, isolated=False)
+        metadata = _project_wheel_metadata(path)
 
-        if dep := self._create_dep_from_metadata(metadata):
+        if dep := self._create_dep_from_metadata(metadata, project_path=path):
             return DependencyScan.from_dep(dep)
         else:
             return None
 
-    def _create_dep_from_metadata(self, metadata: PackageMetadata) -> Dependency:
+    def _create_dep_from_metadata(self, metadata: PackageMetadata,
+                                  project_path: t.Optional[Path] = None) -> Dependency:
         """
         Creates a dependency from the dist package metadate
         :param metadata: PackageMetadata
@@ -76,20 +77,21 @@ class PypiScanner(PackageManagerScanner):
                 dep.repoUrl = metadata.get('Download-URL', '')
                 dep.homepageUrl = metadata.get('Home-page', '')
 
-            dist = distribution(name)
+            dist = _find_distribution(name)
             dist_path = None
             dist_editable_path = None
 
-            # noinspection PyTypeChecker
-            site_packages = Path(dist.locate_file(''))
-            for file in dist.files:
-                if file.name == 'METADATA' and file.parent.name.endswith('.dist-info'):
-                    dist_path = site_packages / file.parent
+            if dist is not None:
+                # noinspection PyTypeChecker
+                site_packages = Path(dist.locate_file(''))
+                for file in dist.files or []:
+                    if file.name == 'METADATA' and file.parent.name.endswith('.dist-info'):
+                        dist_path = site_packages / file.parent
 
-                if file.name.startswith('__editable__') and file.name.endswith('.pth'):
-                    # Open manually as dist.read_text() does not work here
-                    with (site_packages / file.name).open() as fp:
-                        dist_editable_path = fp.read().strip()
+                    if file.name.startswith('__editable__') and file.name.endswith('.pth'):
+                        # Open manually as dist.read_text() does not work here
+                        with (site_packages / file.name).open() as fp:
+                            dist_editable_path = fp.read().strip()
 
             # Collect license information
             lic_file = None
@@ -109,6 +111,8 @@ class PypiScanner(PackageManagerScanner):
                     lic_file_path = dist_path / lic_file
                     if lic_file_path.exists():
                         dep.license_file = str(lic_file_path)
+            elif project_path and (lic_file_path := _find_project_license_file(project_path, lic_file_info)):
+                dep.license_file = str(lic_file_path)
 
             if lic := metadata.get('License-Expression'):
                 dep.licenses.append(License(name=lic))
@@ -122,10 +126,12 @@ class PypiScanner(PackageManagerScanner):
             # Collect package files
             if dist_editable_path:
                 dep.package_files.append(dist_editable_path)
-            elif top_level := dist.read_text('top_level.txt'):
+            elif dist and (top_level := dist.read_text('top_level.txt')):
                 # noinspection PyTypeChecker
                 files = (Path(dist.locate_file(f)).resolve() for f in top_level.split('\n') if f)
                 dep.package_files.extend(str(f) for f in files if f.exists())
+            elif project_path:
+                dep.package_files.append(str(project_path.resolve()))
 
             # Collect dependencies
 
@@ -142,19 +148,17 @@ class PypiScanner(PackageManagerScanner):
             #                     dep.package_files.append(url)
 
             # reqs = metadata.get_all('Requires-Dist', [])
-            if reqs := dist.requires:
+            if reqs := metadata.get_all('Requires-Dist', []):
                 req_pkgs = list(_extract_required_pkgs(reqs))
                 dep.dependencies = [d for pkg in req_pkgs if (d := self._create_dep(pkg))]
 
         return dep
 
     def _create_dep(self, pkg: str) -> t.Optional[Dependency]:
-        try:
-            pkg_info = distribution(pkg)
-        except PackageNotFoundError:
-            return None
+        if pkg_info := _find_distribution(pkg):
+            return self._create_dep_from_metadata(pkg_info.metadata)
 
-        return self._create_dep_from_metadata(pkg_info.metadata)
+        return Dependency(key=f'pypi:{pkg.lower()}', name=pkg, type='pypi')
 
 
 _import_statement_regex = re.compile(r'(?:from|import) ([A-Z0-9_]+).*', flags=re.IGNORECASE)
@@ -172,6 +176,34 @@ def _extract_imported_pkgs(path: Path) -> t.List[str]:
 def _extract_required_pkgs(reqs: t.List[str]) -> t.Iterable[str]:
     reqs, _ = parse_requirements(reqs)
     return {req.name for req in reqs}
+
+
+def _find_distribution(name: str):
+    try:
+        return distribution(name)
+    except PackageNotFoundError:
+        return None
+
+
+def _project_wheel_metadata(path: Path) -> PackageMetadata:
+    try:
+        return build.util.project_wheel_metadata(path, isolated=True)
+    except Exception:
+        return build.util.project_wheel_metadata(path, isolated=False)
+
+
+def _find_project_license_file(path: Path, metadata_license_files: t.Iterable[str]) -> t.Optional[Path]:
+    for lic_file in metadata_license_files:
+        for lic_path in (path / 'licenses' / lic_file, path / lic_file):
+            if lic_path.exists():
+                return lic_path
+
+    for lic_name in ('LICENSE', 'LICENSE.txt', 'LICENSE.md', 'COPYING', 'COPYING.txt'):
+        lic_path = path / lic_name
+        if lic_path.exists():
+            return lic_path
+
+    return None
 
 
 def _normalize_label(label: str) -> str:
