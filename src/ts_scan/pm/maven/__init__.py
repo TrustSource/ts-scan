@@ -88,7 +88,7 @@ class MavenScanner(PackageManagerScanner):
                 version = self._evaluate('project.version', temp_dir)
 
                 scan = DependencyScan(module=name,
-                                      moduleId=f'mvn:{groupId}:{artifactId}',
+                                      moduleId=f'maven:{groupId}:{artifactId}',
                                       dependencies=deps)
 
             return scan
@@ -214,7 +214,7 @@ class MavenDependency(Dependency):
                  local_repo: t.Optional[Path] = None,
                  **kwargs):
 
-        super().__init__(key=f'mvn:{group_id}:{artifact_id}',
+        super().__init__(key=f'maven:{group_id}:{artifact_id}',
                          name=artifact_id,
                          versions=[version],
                          type='maven',

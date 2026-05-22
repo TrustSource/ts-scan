@@ -125,7 +125,7 @@ class GradleDependency(Dependency):
                  **kwargs):
 
         # TODO: analyse dependency source to identify pkg type more accurately
-        super().__init__(key=f'mvn:{group}:{name}',
+        super().__init__(key=f'maven:{group}:{name}',
                          name=name,
                          versions=[version],
                          type='maven',

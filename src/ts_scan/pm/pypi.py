@@ -48,7 +48,7 @@ class PypiScanner(PackageManagerScanner):
         :return:
         """
         name = metadata.get('Name', '')
-        key = 'pip:' + name.lower()
+        key = 'pypi:' + name.lower()
 
         dep = Dependency(key=key, name=name, type='pypi')
 

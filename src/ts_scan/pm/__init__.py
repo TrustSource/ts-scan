@@ -197,8 +197,8 @@ class Dependency:
 
         else:
             return None
-        
-        key = Dependency._map_purl_type(_purl.type)
+
+        key = _purl.type
         if _purl.namespace:
             key += ':' + _purl.namespace
         key += ':' + _purl.name
@@ -219,14 +219,6 @@ class Dependency:
         if next((a for a in self.crypto_algorithms if
                  a.algorithm == algorithm and a.strength == strength), None) is None:
             self.crypto_algorithms.append(CryptoAlgorithm(algorithm=algorithm, strength=strength))
-
-    @staticmethod
-    def _map_purl_type(ty: str):
-        # TrustSource key mapping
-        if ty == 'maven':
-            return 'mvn'
-        else:
-            return ty
 
 
 class LicenseKind(str, Enum):
