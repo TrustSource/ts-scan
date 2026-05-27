@@ -248,67 +248,59 @@ For more details on available options for DeepScan, please refer to [ts-deepscan
 
 ## Check
 
-The **ts-scan check** command verifies project dependencies for legal issues and known vulnerabilities. It performs these checks using the TrustSource API and supports two modes:
+The **ts-scan check** command verifies project dependencies against the TrustSource vulnerability database.
 
-1. A full check based on the corresponding TrustSource project settings (a TrustSource project is required; refer to [TrustSource](https://www.trustsource.io) for more details).
+The command can optionally exit with a non-zero error code (1) if vulnerabilities are found, making it suitable for CI/CD workflows.
 
-2. A single component check against the TrustSource vulnerability database.
-
-By default, the **check** command performs a full check. To check only for vulnerabilities, use the ```--vulns-only``` option.
-
-In addition to vulnerability checks, the full mode also detects potential legal issues, such as license incompatibilities between dependencies or conflicts with the planned distribution model.
-
-Both modes support exiting with a non-zero error code (1) if vulnerabilities or legal issues are found, making it highly useful for integration into CI/CD workflows.
-
-
-### Full scan check
-
-To execute a full check, use the following command:
+To execute a vulnerabilities check, use the following command:
 
 ```shell
-ts-scan check --project-name <TrustSource project name> --api-key <TrustSource API key> [-f <input format>] [-o <output>] <path to the scan file>
+ts-scan check --api-key <TrustSource API key> [-f <input format>] [-o <output>] [--exit-on-vulns/--no-exit-on-vulns] [--vulns-confidence low|medium|high] <path to the scan file>
 ```
 
-The options ```--project-name <TrustSource project name>```and ```--api-key <TrustSource API key>```are required for the full scan.
-
-> [!NOTE]
->
-> PLEASE NOTE: Before executing a full check, you need to create a project in the TrustSource application and [upload](#upload) the scan into the application. For more details, please refer to [TrustSource User Guide](https://www.trustsource.io) 
+The option ```--api-key <TrustSource API key>``` is required.
 
 The ```-f <input format>``` option specifies the input format of the scan to be checked and accepts the same values as the ```<output format>``` of the [scan](#scan) command.
 
 Optionally, using the ```-o <output>``` option, you can store the check results into a JSON file.
 
-### Vulnerabilities-Only check
+By default, the command prints or stores the findings and exits successfully. Use ```--exit-on-vulns``` if vulnerabilities should result in a non-zero error code (1).
 
-A vulnerabilities check can be performed by adding a ```--vulns-only``` option to the **check** command:
-
-```shell
-ts-scan check --vulns-only --api-key <TrustSource API key> [-f <input format>] [-o <output>] [--vulns-confidence low|medium|high] <path to the scan file>
-```
-
-A vulnerabilities-only check does not require creation of the project and uploading the scan before running the check.
-
-The ```--vulns-confidence <level>``` option allows you to control the confidence level for matching components with affected products listed in security bulletins, such as product/vendor tuples in CVEs. The default value is ```high```, minimizing false positives as much as possible.
+The ```--vulns-confidence <level>``` option allows you to control the confidence level for matching components with affected products listed in security bulletins, such as product/vendor tuples in CVEs. The default value is ```medium```.
 
 
 ### Options
 
-There are several useful options available for both modes, making it easier to integrate the **check** command into CI/CD pipelines:
+The main options available for the **check** command are:
 
-* ```--exit-on-legal``` - Exit with a non-zero (1) exit code if legal violations are found (default: ```on```)
-* ```--exit-on-vulns``` - Exit with a non-zero (1) exit code if vulnerabilities are found (default: ```on```)
-* ```--Werror``` - Treat vulnerability/legal warnings as errors
+* ```--exit-on-vulns``` - Exit with a non-zero (1) exit code if vulnerabilities are found (default: ```off```)
+* ```--vulns-confidence``` - Control the confidence level for vulnerability matches (default: ```medium```)
 
 
 ## Upload
 
-The **upload** command is used to upload scans to the [TrustSource App](https://www.trustsource.io) for the .... TBD:
+The **ts-scan upload** command transfers dependency scans to the TrustSource API.
 
 
 ```shell
-ts-scan upload --project-name <TrustSource project name> --api-key <TrustSource API key> <path to the scan JSON file>
+ts-scan upload --project-name <TrustSource project name> --api-key <TrustSource API key> [-f <input format>] [--wait-for-analysis] [--wait-timeout <seconds>] [--exit-on-legal/--no-exit-on-legal] [--exit-on-vulns/--no-exit-on-vulns] [--Werror] <path to the scan file>
 ```
+
+The options ```--project-name <TrustSource project name>``` and ```--api-key <TrustSource API key>``` are required.
+
+The ```-f <input format>``` option specifies the input format of the scan to be uploaded and accepts the same values as the ```<output format>``` of the [scan](#scan) command.
+
+During upload, embedded DeepScan results are transferred first when present, and the scan file is updated with the returned DeepScan identifiers and URLs.
+
+Use ```--wait-for-analysis``` if the command should wait until TrustSource finishes processing the uploaded scan. In that mode, ```--wait-timeout``` controls how long to wait, and the command prints a link to the resulting analysis when available.
+
+The policy exit flags only apply together with ```--wait-for-analysis```:
+
+* ```--exit-on-legal``` - Exit with a non-zero (1) exit code if the finished analysis reports legal policy violations or, with ```--Werror```, legal warnings
+* ```--exit-on-vulns``` - Exit with a non-zero (1) exit code if the finished analysis reports vulnerability policy violations or, with ```--Werror```, vulnerability warnings
+* ```--Werror``` - Treat analysis warnings as violations when evaluating the policy exit flags
+
+If ```--wait-for-analysis``` is not used, the command uploads the scan and returns immediately after the transfer completes.
 
 #### More info
 

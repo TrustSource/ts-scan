@@ -53,6 +53,21 @@ class TrustSourceAPI:
         else:
             raise TrustSourceAPI.Error(resp.text)
 
+    def _get(self, path: str, headers: t.Optional[dict] = None, params: t.Optional[dict] = None) -> dict:
+        _headers = copy(self.__headers)
+
+        if headers:
+            _headers.update(headers)
+
+        resp = requests.get(f'{self.__base_url}/{path}', 
+                            headers=_headers, 
+                            params=params)
+
+        if resp:
+            return resp.json()
+        else:
+            raise TrustSourceAPI.Error(resp.text)
+
     def upload_scan(self, data: dict) -> dict:
         return self._post('v2/core/scans', json_data=data)
 
@@ -71,3 +86,6 @@ class TrustSourceAPI:
     def import_sbom(self, sbom_path: Path, sbom_format: str, params: dict) -> dict:
         with sbom_path.open('r') as fp:
             return self._post(f'v2/core/imports/scan/{sbom_format}', data=fp.read(), params=params)
+
+    def get_analysis_results(self, scan_id: str) -> dict:
+        return self._get(f'v2/core/scans/{scan_id}')

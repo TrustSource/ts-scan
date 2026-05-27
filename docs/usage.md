@@ -46,12 +46,8 @@ For abtter guidance, following will describe the meaning of the verbs:
 	By default all scans but yara are enabled. You may disable then using flags. See the corresponding scan section for details. 
 	
 3. **CHECK**
-  Allows to evaluate the identified findings against the project specific policies. This has been introduced to allow breaking builds or deployments depending on the findings. You may use CHECK to assess for:
-
-  1. Vulnerabilities
-  2. Licenses & OSADL compatibility matrix
-  3. Weak encryption
-  Today **ts-scan** takes the findings and transfers them to the **TrustSource** platform. There policies and assessments against these policies are organised and a result is returned. Read our [use case #03](/ts-scan/uc03-check) to learn how to drive your CI/CD using **ts-scan**.
+	Allows to evaluate the identified findings for known vulnerabilities using the TrustSource vulnerability database. This has been introduced to allow breaking builds or deployments depending on the findings.
+	Today **ts-scan** uses the TrustSource API to check detected components against known vulnerabilities and returns the result. Read our [use case #03](/ts-scan/uc03-check) to learn how to drive your CI/CD using **ts-scan**.
   To achieve this, a *[TrustSource API-Key](https://trustsource.github.io/app-docs/keymgmt)* will be required. However, we plan to provide an option, to add a local policy file for local evaulation.
 
 4. **IMPORT**
@@ -187,56 +183,32 @@ For more details on available options for DeepScan, please refer to [ts-deepscan
 >
 > To allow the processing of even large or very large SBOMs in reasonable time, **ts-deepscan** is developed to scale. However, the TrustSource platform is cloud hosted and provides a DeepScan-Scaleout that leverages the massive parallel processing capabilities of deepscan. You may define the hardware you want to use and it will automatically ramp up all hardware, initaite and perform the scans, transfer the findings to TrustSource or your own target and ramp down all infrastructure afterwards. This can happen in your own or our data center.  The ***DeepScan Scaleout*** has been designed to scan thousands of repositories at a snap.
 
-## 3. Verify State against Policies
+## 3. Verify State against Known Vulnerabilities
 
-The **ts-scan check** command verifies project dependencies for legal issues and known vulnerabilities against project specific policies. It performs these checks using the TrustSource API - where the settings are stored. It supports two modes:
+The **ts-scan check** command verifies project dependencies against the TrustSource vulnerability database.
 
-1. A full check based on the corresponding TrustSource project settings (a TrustSource project is required; refer to [TrustSource](https://www.trustsource.io/) for more details).
-2. A single component check against the TrustSource vulnerability database.
+The command exits with a non-zero error code (1) if vulnerabilities are found, making it highly useful for integration into CI/CD workflows.
 
-By default, the **check** command performs a full check. To check only for vulnerabilities, use the `--vulns-only`option.
-
-In addition to vulnerability checks, the full mode also detects potential legal issues, such as license incompatibilities between dependencies or conflicts with the planned distribution model.
-
-Both modes support exiting with a non-zero error code (1) if vulnerabilities or legal issues are found, making it highly useful for integration into CI/CD workflows.
-
-### Full scan check
-
-To execute a full check, use the following command:
+To execute a vulnerabilities check, use the following command:
 
 ```
-ts-scan check --project-name <TrustSource project name> --api-key <TrustSource API key> [-f <input format>] [-o <output>] <path to the scan file>
+ts-scan check --api-key <TrustSource API key> [-f <input format>] [-o <output>] [--exit-on-vulns/--no-exit-on-vulns] [--vulns-confidence low|medium|high] <path to the scan file>
 ```
 
-The options `--project-name <TrustSource project name>`and `--api-key <TrustSource API key>`are required for the full scan.
-
-> [!NOTE]
->
-> Before executing a full check, you need to create a project in the TrustSource application and [upload](https://github.com/TrustSource/ts-scan#upload) the scan into the application. To learn more on **TrustSource**, please refer to **[TrustSource App](https://app.trustsource.io/)**
+The option `--api-key <TrustSource API key>` is required.
 
 The `-f <input format>` option specifies the input format of the scan to be checked and accepts the same values as the `<output format>` of the [scan](https://github.com/TrustSource/ts-scan#scan) command.
 
 Optionally, using the `-o <output>` option, you can store the check results into a JSON file.
 
-### Vulnerabilities-Only check
-
-A vulnerabilities check can be performed by adding a `--vulns-only` option to the **check** command:
-
-```
-ts-scan check --vulns-only --api-key <TrustSource API key> [-f <input format>] [-o <output>] [--vulns-confidence low|medium|high] <path to the scan file>
-```
-
-A vulnerabilities-only check does not require creation of the project and uploading the scan before running the check.
-
-The `--vulns-confidence <level>` option allows you to control the confidence level for matching components with affected products listed in security bulletins, such as product/vendor tuples in CVEs. The default value is `high`, minimizing false positives as much as possible.
+The `--vulns-confidence <level>` option allows you to control the confidence level for matching components with affected products listed in security bulletins, such as product/vendor tuples in CVEs. The default value is `medium`.
 
 ### Further Options
 
-There are several useful options available for both modes, making it easier to integrate the **check** command into CI/CD pipelines:
+The main options available for the **check** command are:
 
-- `--exit-on-legal` - Exit with a non-zero (1) exit code if legal violations are found (default: `on`)
-- `--exit-on-vulns` - Exit with a non-zero (1) exit code if vulnerabilities are found (default: `on`)
-- `--Werror` - Treat vulnerability/legal warnings as errors
+- `--exit-on-vulns` - Exit with a non-zero (1) exit code if vulnerabilities are found (default: `off`)
+- `--vulns-confidence` - Control the confidence level for vulnerability matches (default: `medium`)
 
 ## 4. Import 3rd Party SBOMs to TrustSource
 
