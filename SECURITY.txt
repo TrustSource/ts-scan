@@ -24,4 +24,4 @@ Policy: https://www.trustsource.io/security-policy
 Hiring: https://www.trustsource.io/security-jobs
 
 #CSAF links
-CSAF: https://p-csaf.dev.trustsource.io/.well-known/csaf/provider-metadata.json
+CSAF: https://trustsource.csaf.trustsource.io/.well-known/csaf/provider-metadata.json
