@@ -1,5 +1,5 @@
 #Contact information
-Contact: mailto:support@trustsource.ui
+Contact: mailto:support@trustsource.io
 Contact: https://www.trustsource.io/contact-security
 
 #expiry
