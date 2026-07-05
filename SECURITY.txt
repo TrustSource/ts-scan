@@ -6,10 +6,10 @@ Contact: https://www.trustsource.io/contact-security
 Expires: 2027-01-10T20:00:00.000Z
 
 #Our OpenPGP key
-Encryption: https://www.trustsource.io/security-policy
+Encryption: https://trustsource.csaf.trustsource.io/.well-known/csaf/openpgp/3D3200315F64A07C5E1BCD8C9792F94FAEB6B80B.asc
 
 #location where we attest our supporter's success
-Acknowledgments: https://www.trustsource.io/hall-of-fame
+Acknowledgments: https://www.trustsource.io/hof
 
 #languages
 Preferred-Languages: en, de
@@ -18,10 +18,10 @@ Preferred-Languages: en, de
 Canonical: https://raw.githubusercontent.com/TrustSource/ts-scan/refs/heads/main/SECURITY.txt
 
 #our security policy
-Policy: https://www.trustsource.io/security-policy
+Policy: https://www.trustsource.io/en/security-policy
 
 #our Security Job Openings
-Hiring: https://www.trustsource.io/security-jobs
+Hiring: https://www.trustsource.io/en/security-jobs
 
 #CSAF links
-CSAF: https://p-csaf.dev.trustsource.io/.well-known/csaf/provider-metadata.json
+CSAF: https://trustsource.csaf.trustsource.io/.well-known/csaf/provider-metadata.json
