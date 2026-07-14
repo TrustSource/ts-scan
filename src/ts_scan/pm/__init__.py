@@ -73,8 +73,10 @@ class Scanner(abc.ABC):
     def scan(self, src: t.Union[str, Path]) -> t.Optional['DependencyScan']:
         raise NotImplemented()
 
-    def _exec(self, *args, capture_output=False, **kwargs) -> subprocess.CompletedProcess:
-        exec_path = self.executable_path if self.executable_path else self.__class__.executable()
+    def _exec(self, *args, capture_output=False,
+              executable_override: t.Optional[str] = None,
+              **kwargs) -> subprocess.CompletedProcess:
+        exec_path = self.executable_path or executable_override or self.__class__.executable()
 
         if cmd := shutil.which(exec_path):
             return subprocess.run(
