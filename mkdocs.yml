@@ -38,6 +38,7 @@ nav:
       - Auto Scan on Commit: 'uc01-autoSoCommit.md'
       - Add SBOM 2 Git: 'uc02-SBOM2Git.md'
       - Check 4 Vulns before commit: 'uc03-check.md'
+      - Fail on upload failures: 'uc04-failOnUploadFailure.md'
   - Security: 'security.md'
   - About: 
     - 'about.md'
