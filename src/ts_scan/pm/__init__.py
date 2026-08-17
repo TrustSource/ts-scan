@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from dataclasses_json import config, dataclass_json
 from typing_extensions import TextIO
 
-from ts_deepscan.scanner import Scan as DSScan
+from ..analyse.deepscan import DSScan
 
 
 class ExecutableNotFoundError(Exception):
@@ -300,22 +300,7 @@ def load_scans(path: Path, fmt: str) -> t.List[DependencyScan]:
 
 
 def get_license_from_text(text: str, as_lic_text_only=True) -> t.Optional[t.Tuple[dict, t.List[str]]]:
-    import ts_deepscan.analyser.textutils
-    from ..analyse import get_ds_dataset
+    from ..analyse.deepscan import get_license_from_text as analyse_license_text
+    from ..cli import msg
 
-    dataset = get_ds_dataset()
-
-    if res := ts_deepscan.analyser.textutils.analyse_license_text(text,
-                                                                  dataset=dataset,
-                                                                  search_copyright=False):
-        if (key := res.get('key')) and (score := res.get('score', 0)) and score >= 0.9:
-            return res, [key]
-
-    if not as_lic_text_only and (res := ts_deepscan.analyser.textutils.analyse_text(text,
-                                                                                    timeout=10,
-                                                                                    dataset=dataset,
-                                                                                    search_copyright=False)):
-        if 'licenses' in res:
-            return res, res['licenses']
-
-    return None
+    return analyse_license_text(text, as_lic_text_only, reporter=msg.warn)

@@ -4,7 +4,7 @@ from scanoss.scanossapi import ScanossApi
 from scanoss.scanossgrpc import ScanossGrpc, DEFAULT_URL2
 
 from tqdm import tqdm
-from ts_deepscan import Scan as DSScan
+from .deepscan import DSScan
 
 from .. import __version__, msg
 from ..pm import DependencyScan

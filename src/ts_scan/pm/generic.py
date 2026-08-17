@@ -4,10 +4,6 @@ from pathlib import Path
 
 from . import PackageManagerScanner, DependencyScan, Dependency
 
-from ..analyse import analyse_path_with_ds
-from ..analyse.scanoss import analyse_scan as analyse_scan_with_scanoss
-
-
 class GenericScanner(PackageManagerScanner):
     @staticmethod
     def name() -> str:
@@ -21,11 +17,15 @@ class GenericScanner(PackageManagerScanner):
         return True
 
     def scan(self, src: t.Union[str, Path]) -> t.Optional[DependencyScan]:
+        from ..analyse.deepscan import analyse_path_with_ds
+
         path = Path(src)
         root = Dependency(name=path.name, type='unknown')
         scan = DependencyScan.from_dep(root)
 
         ds = analyse_path_with_ds(path, ds_args=["--include-scanoss-wfp"])
+        from ..analyse.scanoss import analyse_scan as analyse_scan_with_scanoss
+
         scan.deepscans[root.key] = ds
 
         analyse_scan_with_scanoss(scan, api_key=None)

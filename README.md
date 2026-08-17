@@ -23,6 +23,13 @@ The **ts-scan** can be seamlessly integrated into CI/CD pipelines, enabling auto
 pip install ts-scan
 ```
 
+This installs the dependency and SBOM scanner without the optional in-depth file analysis stack. To enable the
+`analyse` command and generic file analysis, install the `analyse` extra:
+
+```shell
+pip install "ts-scan[analyse]"
+```
+
 ### Installation from a local folder
 
 ```shell
@@ -218,6 +225,8 @@ ts-scan scan --use-syft -o <OUTPUT> docker:<DOCKER IMAGE>
 ## Analyse
 
 The in-depth dependency analysis is performed using the **analyse** command, which takes a scan file as input in one of the supported formats: the internal TS format, SPDX, or CycloneDX. Depending on the dependency package, the tool locates its files and scans each one using [ts-deepscan](https://github.com/TrustSource/ts-deepscan). Additionally, it uses [SCANOSS](https://www.scanoss.com) to improve and enrich the collected in-depth scanning results. The **analyse** command can also take a directory as input to directly scan files inside it.      
+
+The command requires the optional `analyse` extra (`pip install "ts-scan[analyse]"`). Without it, the command remains visible in `--help` and reports how to enable it when invoked.
 
 To analyse a scan or a directory and store results into a file, use:
 

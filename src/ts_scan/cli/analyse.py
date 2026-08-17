@@ -1,18 +1,20 @@
 import click
 import typing as t
-import ts_deepscan
 
 from pathlib import Path
 
 from . import cli, load_scans_from_file
 from .scan import output_scans
 from .. import DependencyScan
+from ..analyse.deepscan import (DeepScanNotInstalledError, analyse_path_with_ds,
+                                analyse_scan_with_ds, deepscan_feature_help,
+                                require_deepscan)
 
-from ..analyse import analyse_scan_with_ds, analyse_path_with_ds
-from ..analyse.scanoss import analyse_scan as analyse_scan_with_scanoss
+
+_analyse_help = deepscan_feature_help('Analyze scanned dependencies or folder contents')
 
 
-@cli.command('analyse', help='Analyze scanned dependencies or folder contents')
+@cli.command('analyse', help=_analyse_help)
 @cli.inout_default_options(_in=True, _out=True, _fmt=True)
 @click.option('--disable-deepscan', default=False, is_flag=True,
               help='Disable scanning of the package\'s sources if available using TrustSource Deepscan')
@@ -28,6 +30,12 @@ def analyse_scan(path: Path,
                  disable_scanoss: bool,
                  scanoss_api_key: t.Optional[str],
                  xdeepscan: tuple[str, ...]):
+    try:
+        require_deepscan()
+    except DeepScanNotInstalledError as err:
+        raise click.ClickException(str(err)) from err
+
+    from ..analyse.scanoss import analyse_scan as analyse_scan_with_scanoss
 
     deepscan_args = list(xdeepscan)
 
@@ -62,5 +70,3 @@ def analyse_scan(path: Path,
             analysed_scans.append(s)
 
     output_scans(analysed_scans, output_path)
-
-
