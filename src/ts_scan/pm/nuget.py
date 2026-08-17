@@ -181,8 +181,15 @@ class NugetScanner(PackageManagerScanner):
                         dep_id = dep.key + ":" + dep_version
 
                     elif dep_type == "project":
-                        # dependency folder should be on the same level as project folder (i.e. sibling folder)
-                        candidates = [d for d in lockfile.parent.parent.glob('*') if d.name.lower() == dep_name.lower()]
+                        candidates = self._find_project_reference_candidates(lockfile, dep_name)
+
+                        if not candidates:
+                            # Retain compatibility with projects whose generated lock file has no
+                            # corresponding ProjectReference in the project file.
+                            candidates = [
+                                d for d in lockfile.parent.parent.glob('*')
+                                if d.name.casefold() == dep_name.casefold()
+                            ]
 
                         dep_id = dep.key
 
@@ -204,6 +211,54 @@ class NugetScanner(PackageManagerScanner):
                     deps.append(dep)
 
         return deps
+
+    @staticmethod
+    def _project_names(project_file: Path) -> t.Set[str]:
+        names = {project_file.stem.casefold()}
+        tree = ElementTree.parse(project_file)
+
+        for element in tree.iter():
+            if element.tag.rsplit('}', 1)[-1] in ('AssemblyName', 'Name') and element.text:
+                names.add(element.text.strip().casefold())
+
+        return names
+
+    def _find_project_reference_candidates(self, lockfile: Path, dep_name: str) -> t.List[Path]:
+        """Locate a project dependency using ProjectReference paths from the owning project."""
+        dependency_name = dep_name.casefold()
+        candidates = []
+
+        for project_file in lockfile.parent.glob('*.*proj'):
+            tree = ElementTree.parse(project_file)
+
+            for reference in tree.iter():
+                if reference.tag.rsplit('}', 1)[-1] != 'ProjectReference':
+                    continue
+
+                include = reference.get('Include')
+                if not include or '$(' in include:
+                    continue
+
+                relative_path = Path(PureWindowsPath(include).as_posix())
+                reference_file = (
+                    relative_path if relative_path.is_absolute()
+                    else project_file.parent / relative_path
+                ).resolve()
+
+                if not reference_file.is_file():
+                    continue
+
+                names = self._project_names(reference_file)
+                names.update(
+                    child.text.strip().casefold()
+                    for child in reference
+                    if child.tag.rsplit('}', 1)[-1] == 'Name' and child.text
+                )
+
+                if dependency_name in names and reference_file.parent not in candidates:
+                    candidates.append(reference_file.parent)
+
+        return candidates
 
     def _create_deps_from_nuspec(self, nuspec: Path, depth: int = 0) -> t.List[Dependency]:
         ns = {"nuget": "http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd"}
@@ -274,11 +329,15 @@ class NugetScanner(PackageManagerScanner):
 
         if self.__global_packages_dir is None:
             return []
-        candidates = self.__global_packages_dir.glob('*/*')
-        candidates = [Path(str(d).lower()) for d in candidates]
-        candidates = [d for d in candidates if d.parts[-2] == name.lower() and d.parts[-1] == version.lower()]
 
-        return candidates
+        package_name = name.casefold()
+        package_version = version.casefold()
+        return [
+            candidate
+            for candidate in self.__global_packages_dir.glob('*/*')
+            if candidate.parent.name.casefold() == package_name
+            and candidate.name.casefold() == package_version
+        ]
 
     @staticmethod
     def _metadata_from_nuspec(nuspec: Path) -> t.Dict:
