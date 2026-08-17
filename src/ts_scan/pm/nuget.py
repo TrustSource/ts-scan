@@ -4,7 +4,6 @@ import typing as t
 import re
 
 from pathlib import Path, PureWindowsPath
-from tempfile import TemporaryDirectory
 from enum import Enum
 
 from defusedxml import ElementTree
@@ -44,10 +43,7 @@ class NugetScanner(PackageManagerScanner):
 
     def scan(self, src: t.Union[str, Path]) -> t.Optional[DependencyScan]:
         path = Path(src)
-        executable = self.executable()
-        if not self.executable_path and executable is not None and not shutil.which(executable):
-            self.executable_path = shutil.which('dotnet')
-            self.__using_dotnet_sdk = True
+        self._select_executable(path)
 
         self.__path = path
         self.__global_packages_dir = self._find_global_packages_dir()
@@ -56,6 +52,36 @@ class NugetScanner(PackageManagerScanner):
             return DependencyScan(module='unknown', moduleId='nuget:unknown', dependencies=deps)
         else:
             return None
+
+    def _select_executable(self, path: Path) -> None:
+        if self.executable_path is not None:
+            self.__using_dotnet_sdk = Path(self.executable_path).name.casefold() in (
+                'dotnet', 'dotnet.exe'
+            )
+            return
+
+        project_type = self._determine_project_type(path)
+        requires_nuget = (
+            project_type is not None and project_type[0] is ProjectType.PACKAGES_CONFIG
+        ) or (
+            path.is_dir() and (path / 'packages.config').is_file()
+        ) or (
+            path.is_file()
+            and path.suffix in ('.csproj', '.vbproj', '.fsproj', '.proj')
+            and (path.parent / 'packages.config').is_file()
+        )
+        dotnet = shutil.which('dotnet')
+        nuget = shutil.which('nuget')
+
+        if dotnet and not requires_nuget:
+            self.executable_path = Path(dotnet)
+            self.__using_dotnet_sdk = True
+        elif nuget:
+            self.executable_path = Path(nuget)
+            self.__using_dotnet_sdk = False
+        elif dotnet:
+            self.executable_path = Path(dotnet)
+            self.__using_dotnet_sdk = True
 
     def _process_package(self, path: Path, depth: int = 0) -> t.List[Dependency]:
         deps = []
@@ -138,13 +164,17 @@ class NugetScanner(PackageManagerScanner):
 
     def _process_with_lock_file(self, project_file: Path, depth: int = 0) -> t.List[Dependency]:
         assert self.__path is not None
+        assert self.__global_packages_dir is not None
         working_dir = self.__path if self.__path.is_dir() else self.__path.parent
 
-        with TemporaryDirectory() as temp_dir:
-            _ = self._exec("restore", str(project_file),
-                           "--use-lock-file" if self.__using_dotnet_sdk else "-UseLockFile",
-                           "--packages" if self.__using_dotnet_sdk else "-PackagesDirectory", temp_dir,
-                           cwd=working_dir)
+        _ = self._exec(
+            "restore",
+            str(project_file),
+            "--use-lock-file" if self.__using_dotnet_sdk else "-UseLockFile",
+            "--packages" if self.__using_dotnet_sdk else "-PackagesDirectory",
+            str(self.__global_packages_dir),
+            cwd=working_dir,
+        )
 
         lockfile = project_file.parent / "packages.lock.json"
 

@@ -38,7 +38,7 @@ WORKDIR /tmp/ts-scan
 COPY ./src ./src
 COPY ./pyproject.toml ./LICENSE ./
 
-RUN pip install ./
+RUN pip install '.[analyse]'
 
 ENTRYPOINT ["ts-scan"]
 CMD []
