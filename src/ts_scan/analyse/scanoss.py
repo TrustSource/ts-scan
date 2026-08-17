@@ -25,8 +25,10 @@ def get_scanoss_api() -> ScanossApi:
 
 
 def extend_ds(ds: DSScan, api_key: t.Optional[str]):
+    result = t.cast(t.MutableMapping[str, t.Any], ds.result)
+    summary = t.cast(t.MutableMapping[str, t.Any], ds.summary)
     wfps = []
-    for res in ds.result.values():
+    for res in result.values():
         if (scanoss := res.get('scanoss')) and (wfp := scanoss.get('wfp')):
             wfps.append(wfp)
 
@@ -40,7 +42,9 @@ def extend_ds(ds: DSScan, api_key: t.Optional[str]):
 
         for i in range(0, len(wfps), wfps_chunk_size):
             try:
-                wfps_results.update(api.scan('\n'.join(wfps[i:i + wfps_chunk_size])))
+                scan_result = api.scan('\n'.join(wfps[i:i + wfps_chunk_size]))
+                if isinstance(scan_result, t.Mapping):
+                    wfps_results.update(scan_result)
             except:
                 continue
 
@@ -68,14 +72,14 @@ def extend_ds(ds: DSScan, api_key: t.Optional[str]):
                         links.append(link)
 
                 if links:
-                    ds.result[path]['links'] = links
+                    result[path]['links'] = links
 
-    ds.summary['links'] = {purl: list(vers) for purl, vers in linked_comps.items()}
+    summary['links'] = {purl: list(vers) for purl, vers in linked_comps.items()}
 
 
 def analyse_scan(scan: DependencyScan, api_key: t.Optional[str]):
     for comp, ds in tqdm(scan.deepscans.items(), desc="Requesting fingerprints information from SCANOSS"):
-        if 'links' not in ds.summary:
+        if 'links' not in t.cast(t.Mapping[str, t.Any], ds.summary):
             extend_ds(ds, api_key)
 
     scan_purls = scan.as_purls_dict()
@@ -96,4 +100,3 @@ def analyse_scan(scan: DependencyScan, api_key: t.Optional[str]):
                     if dep := scan_purls.get(purl):
                         for alg in algorithms:
                             dep.add_crypto_algorithm(algorithm=alg['algorithm'], strength=alg['strength'])
-

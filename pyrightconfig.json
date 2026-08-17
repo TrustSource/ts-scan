@@ -1,0 +1,21 @@
+{
+    "include": [
+        "src",
+        "tests"
+    ],
+    "exclude": [
+        "**/__pycache__",
+        "build",
+        "dist",
+        "tmp"
+    ],
+    "extraPaths": [
+        "src",
+        "src/ts_scan_core"
+    ],
+    "venvPath": "..",
+    "venv": "venv",
+    "pythonVersion": "3.10",
+    "reportIncompatibleMethodOverride": "error",
+    "typeCheckingMode": "basic"
+}

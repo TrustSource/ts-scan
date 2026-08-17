@@ -42,8 +42,10 @@ class NugetScanner(PackageManagerScanner):
     def accepts(self, path: Path) -> bool:
         return self._determine_project_type(path) is not None
 
-    def scan(self, path: Path) -> t.Optional[DependencyScan]:
-        if not self.executable_path and not shutil.which(self.executable()):
+    def scan(self, src: t.Union[str, Path]) -> t.Optional[DependencyScan]:
+        path = Path(src)
+        executable = self.executable()
+        if not self.executable_path and executable is not None and not shutil.which(executable):
             self.executable_path = shutil.which('dotnet')
             self.__using_dotnet_sdk = True
 
@@ -135,6 +137,7 @@ class NugetScanner(PackageManagerScanner):
         return deps
 
     def _process_with_lock_file(self, project_file: Path, depth: int = 0) -> t.List[Dependency]:
+        assert self.__path is not None
         working_dir = self.__path if self.__path.is_dir() else self.__path.parent
 
         with TemporaryDirectory() as temp_dir:
@@ -214,6 +217,8 @@ class NugetScanner(PackageManagerScanner):
             for xml_dep in xml_target.findall("nuget:dependency", namespaces=ns):
                 name = xml_dep.get("id")
                 version = xml_dep.get("version")
+                if name is None or version is None:
+                    continue
 
                 dep_key = "nuget:" + name
                 dep_id = dep_key + ":" + version
@@ -250,6 +255,7 @@ class NugetScanner(PackageManagerScanner):
         return deps
 
     def _find_global_packages_dir(self) -> Path:
+        assert self.__path is not None
         working_dir = self.__path if self.__path.is_dir() else self.__path.parent
 
         args = ['nuget'] if self.__using_dotnet_sdk else []
@@ -266,6 +272,8 @@ class NugetScanner(PackageManagerScanner):
     def _find_in_global_packages(self, name: str, version: str) -> t.List[Path]:
         """Finds all subfolders of the global-packages directory that match <name>/<version>/ (case in-sensitive)."""
 
+        if self.__global_packages_dir is None:
+            return []
         candidates = self.__global_packages_dir.glob('*/*')
         candidates = [Path(str(d).lower()) for d in candidates]
         candidates = [d for d in candidates if d.parts[-2] == name.lower() and d.parts[-1] == version.lower()]

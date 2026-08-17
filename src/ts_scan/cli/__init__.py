@@ -6,7 +6,7 @@ import click
 import typing as t
 import toml
 
-from wasabi import Printer
+from wasabi.printer import Printer
 from pathlib import Path
 
 from ..pm import DependencyScan, load_scans
@@ -29,6 +29,10 @@ def start():
 
 
 class CLI(click.Group):
+    scanner_options: t.Callable[..., t.Any]
+    api_default_options: t.Callable[..., t.Any]
+    inout_default_options: t.Callable[..., t.Any]
+
     def invoke(self, ctx):
         ctx.obj = {
             'args': ctx.args
@@ -72,7 +76,7 @@ def cli(ctx, config: Path, profile: str):
                 try:
                     scans = load_scans(path, ctx.params.get('scan_format', scan_format_default))
                     # Read the 'param' iff. there is only one scan
-                    if len(scans) == 1:
+                    if len(scans) == 1 and scans[0].source:
                         path = Path(scans[0].source)
                 except:
                     pass
@@ -180,7 +184,7 @@ def load_scans_from_file(path: Path, scan_format: str) -> t.List[DependencyScan]
 
 
 def param_default_value(param: click.Parameter, ctx: click.Context):
-    if param.name in ctx.default_map:
+    if param.name is not None and ctx.default_map is not None and param.name in ctx.default_map:
         return ctx.default_map[param.name]
     else:
         return param.default

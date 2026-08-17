@@ -8,7 +8,6 @@ import typing as t
 
 from pathlib import Path
 from importlib.metadata import distribution, PackageNotFoundError
-from importlib.metadata._meta import PackageMetadata
 from shippinglabel.requirements import parse_requirements
 
 from . import PackageManagerScanner, DependencyScan, Dependency, License, get_license_from_text
@@ -33,7 +32,8 @@ class PypiScanner(PackageManagerScanner):
     def accepts(self, path: Path) -> bool:
         return path.is_dir() and any((path / pkg_file).exists() for pkg_file in _supported_pkg_files)
 
-    def scan(self, path: Path) -> t.Optional[DependencyScan]:
+    def scan(self, src: t.Union[str, Path]) -> t.Optional[DependencyScan]:
+        path = Path(src)
         metadata = _project_wheel_metadata(path)
 
         if dep := self._create_dep_from_metadata(metadata, project_path=path):
@@ -41,7 +41,7 @@ class PypiScanner(PackageManagerScanner):
         else:
             return None
 
-    def _create_dep_from_metadata(self, metadata: PackageMetadata,
+    def _create_dep_from_metadata(self, metadata: t.Any,
                                   project_path: t.Optional[Path] = None) -> Dependency:
         """
         Creates a dependency from the dist package metadate
@@ -69,7 +69,7 @@ class PypiScanner(PackageManagerScanner):
                     url = proj_url[1].strip()
 
                     if lbl in ('source', 'sources', 'repository', 'sourcecode', 'github'):
-                        dep.sourceUrl = url
+                        dep.repoUrl = url
                     elif lbl == 'homepage':
                         dep.homepageUrl = url
             else:
@@ -83,7 +83,7 @@ class PypiScanner(PackageManagerScanner):
 
             if dist is not None:
                 # noinspection PyTypeChecker
-                site_packages = Path(dist.locate_file(''))
+                site_packages = Path(str(dist.locate_file('')))
                 for file in dist.files or []:
                     if file.name == 'METADATA' and file.parent.name.endswith('.dist-info'):
                         dist_path = site_packages / file.parent
@@ -128,7 +128,7 @@ class PypiScanner(PackageManagerScanner):
                 dep.package_files.append(dist_editable_path)
             elif dist and (top_level := dist.read_text('top_level.txt')):
                 # noinspection PyTypeChecker
-                files = (Path(dist.locate_file(f)).resolve() for f in top_level.split('\n') if f)
+                files = (Path(str(dist.locate_file(f))).resolve() for f in top_level.split('\n') if f)
                 dep.package_files.extend(str(f) for f in files if f.exists())
             elif project_path:
                 dep.package_files.append(str(project_path.resolve()))
@@ -174,8 +174,8 @@ def _extract_imported_pkgs(path: Path) -> t.List[str]:
 
 
 def _extract_required_pkgs(reqs: t.List[str]) -> t.Iterable[str]:
-    reqs, _ = parse_requirements(reqs)
-    return {req.name for req in reqs}
+    parsed_reqs, _ = parse_requirements(reqs)
+    return {req.name for req in parsed_reqs}
 
 
 def _find_distribution(name: str):
@@ -185,7 +185,7 @@ def _find_distribution(name: str):
         return None
 
 
-def _project_wheel_metadata(path: Path) -> PackageMetadata:
+def _project_wheel_metadata(path: Path) -> t.Any:
     try:
         return build.util.project_wheel_metadata(path, isolated=True)
     except Exception:

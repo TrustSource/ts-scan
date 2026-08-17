@@ -78,7 +78,7 @@ class Scanner(abc.ABC):
               **kwargs) -> subprocess.CompletedProcess:
         exec_path = self.executable_path or executable_override or self.__class__.executable()
 
-        if cmd := shutil.which(exec_path):
+        if exec_path is not None and (cmd := shutil.which(str(exec_path))):
             return subprocess.run(
                 [cmd] + list(args) + self.__forward,
                 shell=(platform == 'win32'),
@@ -118,6 +118,12 @@ class DependencyScan:
     branch: t.Optional[str] = field(default=None, metadata=config(exclude=lambda f: f is None))
 
     deepscans: t.Dict[str, DSScan] = field(default_factory=lambda: {})
+
+    if t.TYPE_CHECKING:
+        def to_dict(self) -> t.Dict[str, t.Any]: ...
+
+        @classmethod
+        def from_dict(cls, value: t.Mapping[str, t.Any]) -> 'DependencyScan': ...
 
     @staticmethod
     def from_dep(dep: 'Dependency') -> 'DependencyScan':
@@ -252,9 +258,9 @@ def dump_scans(scans: t.List[DependencyScan], fp: TextIO, fmt: str):
 
     if fmt == 'ts':
         # noinspection PyUnresolvedReferences
-        scans = [s.to_dict() for s in scans]
+        scan_data = [s.to_dict() for s in scans]
         # noinspection PyTypeChecker
-        json.dump(scans, fp, cls=_ExtendedEncoder, indent=2)
+        json.dump(scan_data, fp, cls=_ExtendedEncoder, indent=2)
 
     elif fmt in ['spdx-tag', 'spdx-json', 'spdx-yaml', 'spdx-xml']:
         from ..spdx import export_scan
@@ -281,11 +287,13 @@ def load_scans(path: Path, fmt: str) -> t.List[DependencyScan]:
 
     elif fmt in ['spdx-tag', 'spdx-json', 'spdx-yaml', 'spdx-xml']:
         from ..spdx import import_scan
-        return [import_scan(path, fmt)]
+        scan = import_scan(path, fmt)
+        return [scan] if scan is not None else []
 
     elif fmt in ['cyclonedx-json', 'cyclonedx-xml']:
         from ..cyclonedx import import_scan
-        return [import_scan(path, fmt)]
+        scan = import_scan(path, fmt)
+        return [scan] if scan is not None else []
 
     else:
         raise ValueError(f'Unsupported input format: {fmt}')

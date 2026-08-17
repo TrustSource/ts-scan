@@ -38,7 +38,8 @@ class CargoScanner(PackageManagerScanner):
     def accepts(self, path: Path) -> bool:
         return path.is_dir() and (path / 'Cargo.toml').exists()
 
-    def scan(self, path: Path) -> t.Optional[DependencyScan]:
+    def scan(self, src: t.Union[str, Path]) -> t.Optional[DependencyScan]:
+        path = Path(src)
         if root := CargoDependency.load_from_package(path):
 
             args = ['generate-lockfile']
@@ -72,6 +73,9 @@ class CargoScanner(PackageManagerScanner):
         elif v := pkg.version:
             pkg_lock = pkg_lock.get(v)
         else:
+            return
+
+        if pkg_lock is None:
             return
 
         pkg_key = f"{pkg_lock['name']}:{pkg_lock['version']}"

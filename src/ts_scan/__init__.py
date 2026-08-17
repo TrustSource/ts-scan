@@ -70,7 +70,7 @@ def scanner_options(f):
 cli.scanner_options = scanner_options
 
 
-def create_scanners(scanner_classes: t.Iterable[t.Type[Scanner]], **kwargs) -> t.Iterable[Scanner]:
+def create_scanners(scanner_classes: t.Iterable[t.Type[Scanner]], **kwargs) -> t.List[Scanner]:
     scanner_args = {cls.name().lower(): {} for cls in scanner_classes}
     other_args = {}
 
