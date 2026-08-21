@@ -40,6 +40,8 @@ class Tree:
                     new_indent = 0
 
                 rest = re.search(r'[a-zA-Z].*', line)
+                if rest is None:
+                    continue
 
                 new_vertex = Tree()
                 new_vertex.__data = line[rest.start(): rest.end()].strip()
@@ -59,8 +61,12 @@ class Tree:
                 elif new_indent == prev_indent:
                     # case 2, line has the same indent as last line:
                     # new vertex is a sibling of the previous vertex
-                    new_vertex.__parent = prev_vertex.__parent
-                    prev_vertex.__parent.children.append(new_vertex)
+                    parent = prev_vertex.__parent
+                    if parent is None:
+                        root_nodes.append(new_vertex)
+                    else:
+                        new_vertex.__parent = parent
+                        parent.children.append(new_vertex)
 
                 else:
                     # case 3, line has less indent than last line:
@@ -70,10 +76,14 @@ class Tree:
                     parent = prev_vertex.__parent
 
                     for _ in range(diff):
-                        parent = parent.parent
+                        if parent is not None:
+                            parent = parent.parent
 
-                    new_vertex.__parent = parent
-                    parent.children.append(new_vertex)
+                    if parent is None:
+                        root_nodes.append(new_vertex)
+                    else:
+                        new_vertex.__parent = parent
+                        parent.children.append(new_vertex)
 
                 prev_vertex = new_vertex
                 prev_indent = new_indent

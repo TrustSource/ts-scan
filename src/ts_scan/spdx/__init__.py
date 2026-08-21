@@ -8,9 +8,11 @@ from pathlib import Path
 
 from packageurl import PackageURL
 from license_expression import Licensing, LicenseExpression, ExpressionError, combine_expressions
-from spdx_tools.spdx.model import (Package, Document, CreationInfo, Actor, ActorType,
-                                   ExternalPackageRef, ExternalPackageRefCategory, SpdxNone,
-                                   Relationship, RelationshipType)
+from spdx_tools.spdx.model.actor import Actor, ActorType
+from spdx_tools.spdx.model.document import CreationInfo, Document
+from spdx_tools.spdx.model.package import ExternalPackageRef, ExternalPackageRefCategory, Package
+from spdx_tools.spdx.model.relationship import Relationship, RelationshipType
+from spdx_tools.spdx.model.spdx_none import SpdxNone
 from spdx_tools.spdx.formats import FileFormat, file_name_to_format
 
 from ..pm import Dependency, DependencyScan, License
@@ -86,7 +88,9 @@ def _create_pkg(dep: Dependency, ref_id: int) -> Package:
 
     for lic in dep.licenses:
         try:
-            lic_exprs.append(licensing.parse(lic.name, simple=True))
+            lic_expr = licensing.parse(lic.name, simple=True)
+            if lic_expr is not None:
+                lic_exprs.append(lic_expr)
         except ExpressionError:
             msg.warn(f'Could not parse license expression "{lic.name}" of the dependency "{dep.key}"')
 
@@ -170,10 +174,10 @@ def _create_dep(pkg: Package) -> t.Optional[Dependency]:
         if pkg.version and purl and (dep := Dependency.create_from_purl(purl)):
             dep.versions.append(pkg.version)
 
-    if dep and pkg.license_declared:
-        if lic_expr := pkg.license_declared:
-            if isinstance(lic_expr, LicenseExpression):
-                dep.licenses = [License(name=str(s)) for s in lic_expr.symbols]
+    if dep is not None and pkg.license_declared is not None:
+        lic_expr = pkg.license_declared
+        if isinstance(lic_expr, LicenseExpression):
+            dep.licenses = [License(name=str(s)) for s in t.cast(t.Any, lic_expr).symbols]
 
     return dep
 

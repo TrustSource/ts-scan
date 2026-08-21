@@ -9,19 +9,19 @@ from .. import License
 
 class Pom:
     def __init__(self):
-        self.__tree: ET = None
+        self.__tree: t.Any = None
         self.__namespaces = {'xmlns': 'http://maven.apache.org/POM/4.0.0'}
 
     @cached_property
     def url(self) -> str:
         if node := self.__tree.find("/xmlns:url", namespaces=self.__namespaces):
-            return node.text
+            return node.text or ''
         return ''
 
     @cached_property
     def description(self) -> str:
         if node := self.__tree.find("/xmlns:description", namespaces=self.__namespaces):
-            return node.text
+            return node.text or ''
         return ''
 
     @cached_property
@@ -29,13 +29,15 @@ class Pom:
         names = self.__tree.findall("/xmlns:licenses/xmlns:license/xmlns:name", namespaces=self.__namespaces)
         urls = self.__tree.findall("/xmlns:licenses/xmlns:license/xmlns:url", namespaces=self.__namespaces)
 
-        return [License(n.text.strip(), u.text.strip()) for n, u in zip(names, urls)]
+        return [License(n.text.strip(), u.text.strip()) for n, u in zip(names, urls)
+                if n.text is not None and u.text is not None]
 
     @cached_property
     def repositories(self) -> t.Dict[str, str]:
         ids = self.__tree.findall("/xmlns:repositories/xmlns:repository/xmlns:id", namespaces=self.__namespaces)
         urls = self.__tree.findall("/xmlns:repositories/xmlns:repository/xmlns:url", namespaces=self.__namespaces)
-        return {n.text.strip(): u.text.strip() for n, u in zip(ids, urls)}
+        return {n.text.strip(): u.text.strip() for n, u in zip(ids, urls)
+                if n.text is not None and u.text is not None}
 
     @classmethod
     def from_file(cls, path: Path) -> t.Optional['Pom']:
@@ -56,4 +58,3 @@ class Pom:
             return pom
         except:
             return None
-

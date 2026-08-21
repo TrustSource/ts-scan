@@ -70,7 +70,7 @@ def scanner_options(f):
 cli.scanner_options = scanner_options
 
 
-def create_scanners(scanner_classes: t.Iterable[t.Type[Scanner]], **kwargs) -> t.Iterable[Scanner]:
+def create_scanners(scanner_classes: t.Iterable[t.Type[Scanner]], **kwargs) -> t.List[Scanner]:
     scanner_args = {cls.name().lower(): {} for cls in scanner_classes}
     other_args = {}
 
@@ -112,7 +112,7 @@ def do_scan(paths: t.List[Path], **kwargs) -> t.Iterable[DependencyScan]:
     for p in paths:
         p = p.resolve()
 
-        msg.info(f'Running dependency scan for {p}.')
+        msg.info(f'Running dependency scan...')
         scanned_at_least_once = False
 
         for scanner in scanners:
@@ -128,14 +128,20 @@ def do_scan(paths: t.List[Path], **kwargs) -> t.Iterable[DependencyScan]:
         if scanned_at_least_once:
             msg.good(f'Dependency scan completed.')
         else:
-            from .pm.generic import GenericScanner
-            
-            if generic_scanner := next(iter(create_scanners([GenericScanner], **kwargs)), None) :
-                _, scan = apply_scanner(generic_scanner, p)
-                if scan:
-                    yield scan
+            from .analyse.deepscan import is_deepscan_installed, report_deepscan_unavailable
+
+            if is_deepscan_installed():
+                from .pm.generic import GenericScanner
+
+                if generic_scanner := next(iter(create_scanners([GenericScanner], **kwargs)), None):
+                    _, scan = apply_scanner(generic_scanner, p)
+                    if scan:
+                        yield scan
+                else:
+                    msg.warn('No supported projects found.')
             else:
-                msg.warn(f'No supported projects found.')
+                msg.warn('No supported projects found.')
+                report_deepscan_unavailable('generic file analysis', msg.warn)
 
 
 def do_scan_with_syft(sources: t.List[t.Union[Path, str]], **kwargs) -> t.Iterable[DependencyScan]:

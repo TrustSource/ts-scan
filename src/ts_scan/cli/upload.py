@@ -1,7 +1,6 @@
 import click
 import time
 import typing as t
-import ts_deepscan
 from urllib.parse import urlsplit, urlunsplit
 
 from tqdm import tqdm
@@ -10,6 +9,8 @@ from pathlib import Path
 from . import cli, msg, load_scans_from_file
 from ..pm import DependencyScan, dump_scans
 from ..api import TrustSourceAPI
+from ..analyse.deepscan import (DeepScanNotInstalledError, require_deepscan,
+                                upload_scan as upload_deepscan)
 
 
 @cli.command('upload', help='Transfers scan and analyse results to TrustSource API')
@@ -58,14 +59,21 @@ def upload_scan(path: Path,
 
 def _upload_deepscans(scan: DependencyScan, ds_base_url: str, api_key: str, store_scans):
     uploaded = {}
-    deepscans = {k: ds for k, ds in scan.deepscans.items() if ds.stats['total'] > 0}
+    if not scan.deepscans:
+        return
 
+    try:
+        require_deepscan()
+    except DeepScanNotInstalledError as err:
+        raise click.ClickException(str(err)) from err
+
+    deepscans = {k: ds for k, ds in scan.deepscans.items() if ds.stats['total'] > 0}
     if not deepscans:
         return
 
     # Upload Deepscan (if not already uploaded)
     for k, ds in tqdm(deepscans.items(), desc='Uploading deepscans'):
-        if ds.uid or ts_deepscan.upload_scan(ds, module_name=k, api_key=api_key, base_url=ds_base_url):
+        if ds.uid or upload_deepscan(ds, module_name=k, api_key=api_key, base_url=ds_base_url):
             uploaded[k] = ds
             store_scans()
 

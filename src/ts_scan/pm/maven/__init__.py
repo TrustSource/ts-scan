@@ -48,7 +48,8 @@ class MavenScanner(PackageManagerScanner):
         return ((path.is_dir() and (path / 'pom.xml').exists()) or
                 (path.is_file() and path.name == 'pom.xml'))
 
-    def scan(self, path: Path) -> t.Optional[DependencyScan]:
+    def scan(self, src: t.Union[str, Path]) -> t.Optional[DependencyScan]:
+        path = Path(src)
         return self._execute(path)
 
     def _execute(self, path: Path) -> t.Optional['DependencyScan']:
@@ -87,7 +88,7 @@ class MavenScanner(PackageManagerScanner):
                 artifactId = self._evaluate('project.artifactId', temp_dir)
                 version = self._evaluate('project.version', temp_dir)
 
-                scan = DependencyScan(module=name,
+                scan = DependencyScan(module=name or 'unknown',
                                       moduleId=f'maven:{groupId}:{artifactId}',
                                       dependencies=deps)
 
@@ -109,6 +110,8 @@ class MavenScanner(PackageManagerScanner):
         # example coordinates: org.tmatesoft.svnkit:svnkit:jar:1.8.7:provided
 
         try:
+            if node.data is None:
+                return None
             group_id, artifact_id, _, version, *other = node.data.split(":")
 
             if len(other) > 0:
@@ -135,8 +138,9 @@ class MavenScanner(PackageManagerScanner):
 
                     dep.package_files.append(str(pkg))
 
-                    download_url = f'{repo}/{pkg.relative_to(self.__local_repo)}'
-                    sources_meta = {
+                    relative_pkg = pkg.relative_to(self.__local_repo) if self.__local_repo else pkg.name
+                    download_url = f'{repo}/{relative_pkg}'
+                    sources_meta: t.Dict[str, t.Any] = {
                         'url': download_url
                     }
 
@@ -162,7 +166,7 @@ class MavenScanner(PackageManagerScanner):
     def _get_project_modules(self, workdir: Path) -> t.List[str]:
         if res := self._evaluate('project.modules', workdir):
             try:
-                return [node.text for node in ET.fromstring(res)]
+                return [node.text for node in ET.fromstring(res) if node.text is not None]
             except:
                 pass
 
@@ -223,6 +227,7 @@ class MavenDependency(Dependency):
 
         self.__remote_repos = remote_repos
 
+        self.__local_repo_path: t.Optional[Path] = None
         if local_repo:
             local_repo_path = local_repo / Path(*group_id.split('.')) / Path(*artifact_id.split('.')) / version
             if local_repo_path.exists():
@@ -273,14 +278,16 @@ class MavenDependency(Dependency):
 
                     repo = m.group(2) if m.group(2) else 'central'
                     if repo_url := self.__remote_repos.get(repo, None):
-                        checksum = (f for f in self.__local_repo_path.glob(f'{fname}.*')
-                                    if any(f.suffix.startswith(a) for a in ['.sha', '.md5']))
+                        checksum_files = (f for f in self.__local_repo_path.glob(f'{fname}.*')
+                                          if any(f.suffix.startswith(a) for a in ['.sha', '.md5']))
+                        checksum_result: t.Optional[t.Tuple[str, str]] = None
 
-                        if checksum := next(checksum, None):
-                            alg = checksum.suffix[1:]
-                            with checksum.open('r') as checksum_fp:
-                                checksum = alg, next(checksum_fp, None)
+                        if checksum_file := next(checksum_files, None):
+                            alg = checksum_file.suffix[1:]
+                            with checksum_file.open('r') as checksum_fp:
+                                checksum_value = next(checksum_fp, '').strip()
+                                checksum_result = (alg, checksum_value) if checksum_value else None
 
-                        return repo_url, self.__local_repo_path / fname, checksum
+                        return repo_url, self.__local_repo_path / fname, checksum_result
 
         return None

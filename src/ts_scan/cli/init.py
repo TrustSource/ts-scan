@@ -20,6 +20,8 @@ def init_project(ctx, path: Path, **kwargs):
         proj_cfg = {}
         for param in ctx.command.params:
             if isinstance(param, click.Option):
+                if param.name is None:
+                    continue
                 value = kwargs.get(param.name)
                 if value is not None and value != param_default_value(param, ctx):
                     proj_cfg[param.name] = value

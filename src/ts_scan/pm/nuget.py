@@ -4,7 +4,6 @@ import typing as t
 import re
 
 from pathlib import Path, PureWindowsPath
-from tempfile import TemporaryDirectory
 from enum import Enum
 
 from defusedxml import ElementTree
@@ -42,10 +41,9 @@ class NugetScanner(PackageManagerScanner):
     def accepts(self, path: Path) -> bool:
         return self._determine_project_type(path) is not None
 
-    def scan(self, path: Path) -> t.Optional[DependencyScan]:
-        if not self.executable_path and not shutil.which(self.executable()):
-            self.executable_path = shutil.which('dotnet')
-            self.__using_dotnet_sdk = True
+    def scan(self, src: t.Union[str, Path]) -> t.Optional[DependencyScan]:
+        path = Path(src)
+        self._select_executable(path)
 
         self.__path = path
         self.__global_packages_dir = self._find_global_packages_dir()
@@ -54,6 +52,36 @@ class NugetScanner(PackageManagerScanner):
             return DependencyScan(module='unknown', moduleId='nuget:unknown', dependencies=deps)
         else:
             return None
+
+    def _select_executable(self, path: Path) -> None:
+        if self.executable_path is not None:
+            self.__using_dotnet_sdk = Path(self.executable_path).name.casefold() in (
+                'dotnet', 'dotnet.exe'
+            )
+            return
+
+        project_type = self._determine_project_type(path)
+        requires_nuget = (
+            project_type is not None and project_type[0] is ProjectType.PACKAGES_CONFIG
+        ) or (
+            path.is_dir() and (path / 'packages.config').is_file()
+        ) or (
+            path.is_file()
+            and path.suffix in ('.csproj', '.vbproj', '.fsproj', '.proj')
+            and (path.parent / 'packages.config').is_file()
+        )
+        dotnet = shutil.which('dotnet')
+        nuget = shutil.which('nuget')
+
+        if dotnet and not requires_nuget:
+            self.executable_path = Path(dotnet)
+            self.__using_dotnet_sdk = True
+        elif nuget:
+            self.executable_path = Path(nuget)
+            self.__using_dotnet_sdk = False
+        elif dotnet:
+            self.executable_path = Path(dotnet)
+            self.__using_dotnet_sdk = True
 
     def _process_package(self, path: Path, depth: int = 0) -> t.List[Dependency]:
         deps = []
@@ -135,13 +163,18 @@ class NugetScanner(PackageManagerScanner):
         return deps
 
     def _process_with_lock_file(self, project_file: Path, depth: int = 0) -> t.List[Dependency]:
+        assert self.__path is not None
+        assert self.__global_packages_dir is not None
         working_dir = self.__path if self.__path.is_dir() else self.__path.parent
 
-        with TemporaryDirectory() as temp_dir:
-            _ = self._exec("restore", str(project_file),
-                           "--use-lock-file" if self.__using_dotnet_sdk else "-UseLockFile",
-                           "--packages" if self.__using_dotnet_sdk else "-PackagesDirectory", temp_dir,
-                           cwd=working_dir)
+        _ = self._exec(
+            "restore",
+            str(project_file),
+            "--use-lock-file" if self.__using_dotnet_sdk else "-UseLockFile",
+            "--packages" if self.__using_dotnet_sdk else "-PackagesDirectory",
+            str(self.__global_packages_dir),
+            cwd=working_dir,
+        )
 
         lockfile = project_file.parent / "packages.lock.json"
 
@@ -178,8 +211,15 @@ class NugetScanner(PackageManagerScanner):
                         dep_id = dep.key + ":" + dep_version
 
                     elif dep_type == "project":
-                        # dependency folder should be on the same level as project folder (i.e. sibling folder)
-                        candidates = [d for d in lockfile.parent.parent.glob('*') if d.name.lower() == dep_name.lower()]
+                        candidates = self._find_project_reference_candidates(lockfile, dep_name)
+
+                        if not candidates:
+                            # Retain compatibility with projects whose generated lock file has no
+                            # corresponding ProjectReference in the project file.
+                            candidates = [
+                                d for d in lockfile.parent.parent.glob('*')
+                                if d.name.casefold() == dep_name.casefold()
+                            ]
 
                         dep_id = dep.key
 
@@ -202,6 +242,54 @@ class NugetScanner(PackageManagerScanner):
 
         return deps
 
+    @staticmethod
+    def _project_names(project_file: Path) -> t.Set[str]:
+        names = {project_file.stem.casefold()}
+        tree = ElementTree.parse(project_file)
+
+        for element in tree.iter():
+            if element.tag.rsplit('}', 1)[-1] in ('AssemblyName', 'Name') and element.text:
+                names.add(element.text.strip().casefold())
+
+        return names
+
+    def _find_project_reference_candidates(self, lockfile: Path, dep_name: str) -> t.List[Path]:
+        """Locate a project dependency using ProjectReference paths from the owning project."""
+        dependency_name = dep_name.casefold()
+        candidates = []
+
+        for project_file in lockfile.parent.glob('*.*proj'):
+            tree = ElementTree.parse(project_file)
+
+            for reference in tree.iter():
+                if reference.tag.rsplit('}', 1)[-1] != 'ProjectReference':
+                    continue
+
+                include = reference.get('Include')
+                if not include or '$(' in include:
+                    continue
+
+                relative_path = Path(PureWindowsPath(include).as_posix())
+                reference_file = (
+                    relative_path if relative_path.is_absolute()
+                    else project_file.parent / relative_path
+                ).resolve()
+
+                if not reference_file.is_file():
+                    continue
+
+                names = self._project_names(reference_file)
+                names.update(
+                    child.text.strip().casefold()
+                    for child in reference
+                    if child.tag.rsplit('}', 1)[-1] == 'Name' and child.text
+                )
+
+                if dependency_name in names and reference_file.parent not in candidates:
+                    candidates.append(reference_file.parent)
+
+        return candidates
+
     def _create_deps_from_nuspec(self, nuspec: Path, depth: int = 0) -> t.List[Dependency]:
         ns = {"nuget": "http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd"}
         tree = ElementTree.parse(nuspec)
@@ -214,6 +302,8 @@ class NugetScanner(PackageManagerScanner):
             for xml_dep in xml_target.findall("nuget:dependency", namespaces=ns):
                 name = xml_dep.get("id")
                 version = xml_dep.get("version")
+                if name is None or version is None:
+                    continue
 
                 dep_key = "nuget:" + name
                 dep_id = dep_key + ":" + version
@@ -250,6 +340,7 @@ class NugetScanner(PackageManagerScanner):
         return deps
 
     def _find_global_packages_dir(self) -> Path:
+        assert self.__path is not None
         working_dir = self.__path if self.__path.is_dir() else self.__path.parent
 
         args = ['nuget'] if self.__using_dotnet_sdk else []
@@ -266,11 +357,17 @@ class NugetScanner(PackageManagerScanner):
     def _find_in_global_packages(self, name: str, version: str) -> t.List[Path]:
         """Finds all subfolders of the global-packages directory that match <name>/<version>/ (case in-sensitive)."""
 
-        candidates = self.__global_packages_dir.glob('*/*')
-        candidates = [Path(str(d).lower()) for d in candidates]
-        candidates = [d for d in candidates if d.parts[-2] == name.lower() and d.parts[-1] == version.lower()]
+        if self.__global_packages_dir is None:
+            return []
 
-        return candidates
+        package_name = name.casefold()
+        package_version = version.casefold()
+        return [
+            candidate
+            for candidate in self.__global_packages_dir.glob('*/*')
+            if candidate.parent.name.casefold() == package_name
+            and candidate.name.casefold() == package_version
+        ]
 
     @staticmethod
     def _metadata_from_nuspec(nuspec: Path) -> t.Dict:

@@ -26,7 +26,8 @@ class GolangScanner(PackageManagerScanner):
     def accepts(self, path: Path) -> bool:
         return path.is_dir() and (path / 'go.mod').exists()
 
-    def scan(self, path: Path) -> t.Optional[DependencyScan]:
+    def scan(self, src: t.Union[str, Path]) -> t.Optional[DependencyScan]:
+        path = Path(src)
         if root := GoDependency.load_from_package(path):
 
             # Generate go.sum if it doesn't exist

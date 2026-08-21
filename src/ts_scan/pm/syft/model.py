@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import AwareDatetime, BaseModel, Field, RootModel, constr
+from pydantic import AwareDatetime, BaseModel, Field, RootModel
 
 
 class CConanFileEntry(BaseModel):
@@ -187,7 +187,7 @@ class JavaPomProperties(BaseModel):
     artifactId: str
     version: str
     scope: Optional[str] = None
-    extraFields: Optional[Dict[constr(pattern=r'.*'), str]] = None
+    extraFields: Optional[Dict[str, str]] = None
 
 
 class JavaVMRelease(BaseModel):
@@ -287,7 +287,7 @@ class Location(BaseModel):
     path: str
     layerID: Optional[str] = None
     accessPath: str
-    annotations: Optional[Dict[constr(pattern=r'.*'), str]] = None
+    annotations: Optional[Dict[str, str]] = None
 
 
 class LuarocksPackage(BaseModel):
@@ -297,7 +297,7 @@ class LuarocksPackage(BaseModel):
     homepage: str
     description: str
     url: str
-    dependencies: Dict[constr(pattern=r'.*'), str]
+    dependencies: Dict[str, str]
 
 
 class MicrosoftKbPatch(BaseModel):
@@ -339,12 +339,12 @@ class PhpComposerInstalledEntry(BaseModel):
     version: str
     source: PhpComposerExternalReference
     dist: PhpComposerExternalReference
-    require: Optional[Dict[constr(pattern=r'.*'), str]] = None
-    provide: Optional[Dict[constr(pattern=r'.*'), str]] = None
-    require_dev: Optional[Dict[constr(pattern=r'.*'), str]] = Field(
+    require: Optional[Dict[str, str]] = None
+    provide: Optional[Dict[str, str]] = None
+    require_dev: Optional[Dict[str, str]] = Field(
         None, alias='require-dev'
     )
-    suggest: Optional[Dict[constr(pattern=r'.*'), str]] = None
+    suggest: Optional[Dict[str, str]] = None
     license: Optional[List[str]] = None
     type: Optional[str] = None
     notification_url: Optional[str] = Field(None, alias='notification-url')
@@ -361,12 +361,12 @@ class PhpComposerLockEntry(BaseModel):
     version: str
     source: PhpComposerExternalReference
     dist: PhpComposerExternalReference
-    require: Optional[Dict[constr(pattern=r'.*'), str]] = None
-    provide: Optional[Dict[constr(pattern=r'.*'), str]] = None
-    require_dev: Optional[Dict[constr(pattern=r'.*'), str]] = Field(
+    require: Optional[Dict[str, str]] = None
+    provide: Optional[Dict[str, str]] = None
+    require_dev: Optional[Dict[str, str]] = Field(
         None, alias='require-dev'
     )
-    suggest: Optional[Dict[constr(pattern=r'.*'), str]] = None
+    suggest: Optional[Dict[str, str]] = None
     license: Optional[List[str]] = None
     type: Optional[str] = None
     notification_url: Optional[str] = Field(None, alias='notification-url')
@@ -633,7 +633,7 @@ class LinuxKernelModule(BaseModel):
     license: Optional[str] = None
     kernelVersion: Optional[str] = None
     versionMagic: Optional[str] = None
-    parameters: Optional[Dict[constr(pattern=r'.*'), LinuxKernelModuleParameter]] = None
+    parameters: Optional[Dict[str, LinuxKernelModuleParameter]] = None
 
 
 class PortageDbEntry(BaseModel):

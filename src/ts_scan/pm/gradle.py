@@ -38,7 +38,8 @@ class GradleScanner(PackageManagerScanner):
     def accepts(self, path: Path) -> bool:
         return path.is_dir() and (path / 'build.gradle').exists() or (path / 'build.gradle.kts').exists()
 
-    def scan(self, path: Path) -> t.Optional[DependencyScan]:
+    def scan(self, src: t.Union[str, Path]) -> t.Optional[DependencyScan]:
+        path = Path(src)
         res = self._exec('dependencies', f'--configuration={self.configuration}', '--console=plain',
                          cwd=path,
                          capture_output=True)
@@ -132,6 +133,7 @@ class GradleDependency(Dependency):
                          namespace=group,
                          **kwargs)
 
+        self.__local_repo_path: t.Optional[Path] = None
         if local_repo:
             local_repo_path = local_repo / Path(group) / Path(name) / version
             if local_repo_path.exists():
@@ -151,9 +153,13 @@ class GradleDependency(Dependency):
             self.licenses = pom.licenses
 
     @property
-    def package_data(self) -> t.Optional[t.Tuple[str, Path, t.Optional[t.Tuple[str, str]]]]:
+    def package_data(self) -> t.Optional[Path]:
+        if self.__local_repo_path is None:
+            return None
         return next(self.__local_repo_path.rglob('*.jar'), None)
 
     @property
     def sources_data(self) -> t.Optional[Path]:
+        if self.__local_repo_path is None:
+            return None
         return next(self.__local_repo_path.rglob('*-sources.jar'), None)

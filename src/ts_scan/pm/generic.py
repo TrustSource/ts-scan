@@ -4,10 +4,6 @@ from pathlib import Path
 
 from . import PackageManagerScanner, DependencyScan, Dependency
 
-from ..analyse import analyse_path_with_ds
-from ..analyse.scanoss import analyse_scan as analyse_scan_with_scanoss
-
-
 class GenericScanner(PackageManagerScanner):
     @staticmethod
     def name() -> str:
@@ -20,16 +16,22 @@ class GenericScanner(PackageManagerScanner):
     def accepts(self, path: Path) -> bool:
         return True
 
-    def scan(self, path: Path) -> t.Optional[DependencyScan]:
+    def scan(self, src: t.Union[str, Path]) -> t.Optional[DependencyScan]:
+        from ..analyse.deepscan import analyse_path_with_ds
+
+        path = Path(src)
         root = Dependency(name=path.name, type='unknown')
         scan = DependencyScan.from_dep(root)
 
         ds = analyse_path_with_ds(path, ds_args=["--include-scanoss-wfp"])
+        from ..analyse.scanoss import analyse_scan as analyse_scan_with_scanoss
+
         scan.deepscans[root.key] = ds
 
         analyse_scan_with_scanoss(scan, api_key=None)
 
-        root.dependencies = [Dependency.create_from_purl(purl, versions_override=versions)
-                             for purl, versions in ds.summary.get('links', {}).items()]
+        summary = t.cast(t.Mapping[str, t.Any], ds.summary)
+        root.dependencies = [dep for purl, versions in summary.get('links', {}).items()
+                             if (dep := Dependency.create_from_purl(purl, versions_override=versions))]
 
         return scan

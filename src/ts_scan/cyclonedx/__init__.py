@@ -15,18 +15,20 @@ from cyclonedx.output import make_outputter
 from ..pm import Dependency, DependencyScan, License
 
 _lic_factory = LicenseFactory()
+_bom_api = t.cast(t.Any, Bom)
+_component_factory = t.cast(t.Any, Component)
 
 
 def import_scan(path: Path, fmt: str) -> t.Optional[DependencyScan]:
     if fmt == 'cyclonedx-json':
         with path.open() as fp:
             bom_data = json.load(fp)
-            bom = Bom.from_json(bom_data)
+            bom = t.cast(Bom, _bom_api.from_json(bom_data))
 
     elif fmt == 'cyclonedx-xml':
         with path.open() as fp:
             bom_data = ElementTree.fromstring(fp.read())
-            bom = Bom.from_xml(bom_data)
+            bom = t.cast(Bom, _bom_api.from_xml(bom_data))
 
     else:
         raise ValueError(f'Unsupported CycloneDX input format: {fmt}')
@@ -49,47 +51,52 @@ def export_scan(scan: DependencyScan, output: t.TextIO, fmt: str):
 
 
 def _create_bom(scan: DependencyScan) -> Bom:
-    bom = Bom()
-    bom.metadata.tools.components.add(Component(
+    bom = t.cast(Bom, _bom_api())
+    bom_api = t.cast(t.Any, bom)
+    metadata = bom_api.metadata
+    metadata.tools.components.add(_component_factory(
         name='ts-scan',
         type=ComponentType.APPLICATION))
 
-    bom.metadata.component = root = Component(
+    metadata.component = root = _component_factory(
         name=scan.module
     )
 
     comps = [_create_component(dep, bom) for dep in scan.dependencies]
-    bom.register_dependency(root, comps)
+    bom_api.register_dependency(root, comps)
 
     return bom
 
 
 def _create_component(dep: Dependency, bom: Bom) -> Component:
-    comp = bom.get_component_by_purl(dep.purl)
+    bom_api = t.cast(t.Any, bom)
+    comp = t.cast(t.Optional[Component], bom_api.get_component_by_purl(dep.purl))
 
     if not comp:
-        comp = Component(
+        comp = t.cast(Component, _component_factory(
             name=dep.name,
             version=dep.version,
             licenses=[_lic_factory.make_from_string(lic.name) for lic in dep.licenses],
             purl=dep.purl
-        )
-        bom.components.add(comp)
+        ))
+        bom_api.components.add(comp)
 
-    bom.register_dependency(comp, [_create_component(d, bom) for d in dep.dependencies])
+    bom_api.register_dependency(comp, [_create_component(d, bom) for d in dep.dependencies])
     return comp
 
 
 def _create_scan(bom: Bom) -> DependencyScan:
+    bom_api = t.cast(t.Any, bom)
     deps = {}
     visited = {}
 
-    for comp in bom.components:
+    for comp in t.cast(t.Iterable[Component], bom_api.components):
         if dep := _create_dependency(comp):
-            deps[comp.bom_ref] = dep
+            deps[t.cast(t.Any, comp).bom_ref] = dep
 
-    for src_bom in bom.dependencies:
-        if bom.metadata.component and src_bom.ref == bom.metadata.component.bom_ref:
+    metadata = bom_api.metadata
+    for src_bom in t.cast(t.Iterable[t.Any], bom_api.dependencies):
+        if metadata.component and src_bom.ref == metadata.component.bom_ref:
             continue
 
         src = deps.get(src_bom.ref)
@@ -125,8 +132,8 @@ def _create_scan(bom: Bom) -> DependencyScan:
 
         cur.dependencies = cur_deps
 
-    if bom.metadata.component:
-        module = bom.metadata.component.name
+    if metadata.component:
+        module = metadata.component.name
     else:
         module = 'unknown'
 
@@ -134,15 +141,22 @@ def _create_scan(bom: Bom) -> DependencyScan:
 
 
 def _create_dependency(comp: Component) -> t.Optional[Dependency]:
-    if (purl := comp.purl) and (dep := Dependency.create_from_purl(purl)):
-        dep.versions.append(comp.version if comp.version else purl.version)
+    comp_api = t.cast(t.Any, comp)
+    if (purl := comp_api.purl) and (dep := Dependency.create_from_purl(purl)):
+        version = comp_api.version if comp_api.version else purl.version
+        if version:
+            dep.versions.append(version)
 
         lics = []
-        for lic in comp.licenses:
-            if type(lic) is DisjunctiveLicense and lic.id or lic.name:
-                lics.append(License(name=lic.id if lic.id else lic.name, url=lic.url))
-            elif type(lic) is LicenseExpression and lic.value:
-                lics.append(License(name=lic.value))
+        for lic in t.cast(t.Iterable[t.Any], comp_api.licenses):
+            lic_api = t.cast(t.Any, lic)
+            if isinstance(lic, DisjunctiveLicense) and (lic_api.id or lic_api.name):
+                lics.append(License(
+                    name=lic_api.id if lic_api.id else lic_api.name,
+                    url=str(lic_api.url) if lic_api.url else ''
+                ))
+            elif isinstance(lic, LicenseExpression) and lic_api.value:
+                lics.append(License(name=lic_api.value))
 
         dep.licenses = lics
 

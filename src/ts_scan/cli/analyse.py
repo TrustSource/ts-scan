@@ -1,18 +1,20 @@
 import click
 import typing as t
-import ts_deepscan
 
 from pathlib import Path
 
 from . import cli, load_scans_from_file
 from .scan import output_scans
 from .. import DependencyScan
+from ..analyse.deepscan import (DeepScanNotInstalledError, analyse_path_with_ds,
+                                analyse_scan_with_ds, deepscan_feature_help,
+                                require_deepscan)
 
-from ..analyse import analyse_scan_with_ds, analyse_path_with_ds
-from ..analyse.scanoss import analyse_scan as analyse_scan_with_scanoss
+
+_analyse_help = deepscan_feature_help('Analyze scanned dependencies or folder contents')
 
 
-@cli.command('analyse', help='Analyze scanned dependencies or folder contents')
+@cli.command('analyse', help=_analyse_help)
 @cli.inout_default_options(_in=True, _out=True, _fmt=True)
 @click.option('--disable-deepscan', default=False, is_flag=True,
               help='Disable scanning of the package\'s sources if available using TrustSource Deepscan')
@@ -27,19 +29,25 @@ def analyse_scan(path: Path,
                  disable_deepscan: bool,
                  disable_scanoss: bool,
                  scanoss_api_key: t.Optional[str],
-                 xdeepscan: tuple[str]):
+                 xdeepscan: tuple[str, ...]):
+    try:
+        require_deepscan()
+    except DeepScanNotInstalledError as err:
+        raise click.ClickException(str(err)) from err
 
-    xdeepscan = list(xdeepscan)
+    from ..analyse.scanoss import analyse_scan as analyse_scan_with_scanoss
+
+    deepscan_args = list(xdeepscan)
 
     if not disable_deepscan:
-        if not disable_scanoss and "--include-scanoss-wfp" not in xdeepscan:
-            xdeepscan.append("--include-scanoss-wfp")
+        if not disable_scanoss and "--include-scanoss-wfp" not in deepscan_args:
+            deepscan_args.append("--include-scanoss-wfp")
 
     analysed_scans = []
 
     if path.is_dir():
         if not disable_deepscan:
-            ds_scan = analyse_path_with_ds(path, ds_args=xdeepscan)
+            ds_scan = analyse_path_with_ds(path, ds_args=deepscan_args)
             scan = DependencyScan(module='unknown', moduleId='unknown')
             scan.deepscans['unknown'] = ds_scan
 
@@ -53,7 +61,7 @@ def analyse_scan(path: Path,
         for s in scans:
             # Apply DS analysis
             if not disable_deepscan:
-                analyse_scan_with_ds(s, ds_args=xdeepscan)
+                analyse_scan_with_ds(s, ds_args=deepscan_args)
 
             # Apply ScanOSS analysis
             if not disable_scanoss:
@@ -62,6 +70,3 @@ def analyse_scan(path: Path,
             analysed_scans.append(s)
 
     output_scans(analysed_scans, output_path)
-
-
-

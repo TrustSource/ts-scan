@@ -62,7 +62,8 @@ class NodeScanner(PackageManagerScanner):
     def accepts(self, path: Path) -> bool:
         return path.is_dir() and (path / 'package.json').exists()
 
-    def scan(self, path: Path) -> t.Optional[DependencyScan]:
+    def scan(self, src: t.Union[str, Path]) -> t.Optional[DependencyScan]:
+        path = Path(src)
         self.__path = path
         self.__abs_module_path = path.resolve().absolute()
 
@@ -152,6 +153,7 @@ class NodeScanner(PackageManagerScanner):
         if name + version not in self.__processed_deps:
             self.__processed_deps.add(name + version)
 
+            assert self.__abs_module_path is not None
             pkg_files_path = self.__abs_module_path / package_path
             dep.package_files.append(str(pkg_files_path))
 

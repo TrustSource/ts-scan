@@ -35,7 +35,7 @@ For abtter guidance, following will describe the meaning of the verbs:
 
 2. **ANALYSE**
 	This action allows to assess the identified dependencies in detail. It will take the scan and pull for each identified dependency the sources from either the package management system or your local repository and assess file by file for information. Often this is bound into the first action. Bu we decided to separate this action for performance reasons. While it makes sense to verify the contents of a package when it enters the solution the first time, this activity must not be executed upon every commit. This will help you save time and resources.
-	**ts-scan** uses [ts-deepscan](https://github.com/trustsource/ts-deepscan) to assess components. It will be installed automatically during the ts-scan setup. It supports the following types of analysis: 
+	**ts-scan** uses [ts-deepscan](https://github.com/trustsource/ts-deepscan) to assess components. It is available through the optional `analyse` extra (`pip install "ts-scan[analyse]"`). It supports the following types of analysis:
 	
 	1. Copyright,
 	2. License identification,
@@ -152,6 +152,8 @@ ts-scan scan --use-syft -o <OUTPUT> docker:<DOCKER IMAGE>
 ## 2. Analysing a Scan 
 
 The in-depth dependency analysis is performed using the **analyse** command, which takes a scan file as input in one of the supported formats: the internal TS format, SPDX, or CycloneDX. Depending on the dependency package, the tool locates its files and scans each one using [ts-deepscan](https://github.com/TrustSource/ts-deepscan). Additionally, it uses [SCANOSS](https://www.scanoss.com/) to improve and enrich the collected in-depth scanning results. The **analyse** command can also take a directory as input to directly scan files inside it.
+
+This command requires the optional `analyse` extra. Install it with `pip install "ts-scan[analyse]"`. The command remains listed in help when the extra is missing and prints this installation hint if invoked.
 
 To analyse a scan or a directory and store results into a file, use:
 

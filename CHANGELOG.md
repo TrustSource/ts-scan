@@ -3,6 +3,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-08-17
+
+### New Features
+    * Added dependency scanning for Dart and Flutter projects
+    * Made in-depth analysis optional through the `analyse` extra, keeping the command visible with installation guidance when unavailable
+    * Added a CI/CD guide for failing pipelines when scan-result uploads fail
+
+### Improvements
+    * Made the base installation self-contained and moved `ts-deepscan` and SCANOSS into the optional analysis dependency set
+    * Added Pyright configuration and corrected typing issues throughout the project
+    * Updated security policy links and contact information
+
+### Fixes
+    * Fixed NuGet project-reference resolution using project paths and assembly names
+    * Preserved actual path casing when locating packages in the global NuGet cache
+    * Preferred `dotnet` for SDK-style projects while retaining NuGet CLI support for legacy `packages.config` projects
+    * Restored NuGet dependencies into the same persistent cache used for package lookup
+    * Installed the complete analysis dependency set in the Docker image
+
 ## [1.1.0] - 2025-03-04
 
 ### New Features

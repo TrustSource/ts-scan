@@ -11,6 +11,12 @@ After pip is install you may install from the Pypi repo:
 pip install ts-scan
 ```
 
+The base installation does not include the optional in-depth file analyser. Install the `analyse` extra to enable it:
+
+```
+pip install "ts-scan[analyse]"
+```
+
 
 ### Installation from a local folder
 
