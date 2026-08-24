@@ -13,6 +13,10 @@ Once dependencies are collected, the **ts-scan** can be used to either upload re
 
 The **ts-scan** can be seamlessly integrated into CI/CD pipelines, enabling automated security and compliance checks continuously. It can be configured to break a build if vulnerabilities or legal issues are detected, ensuring compliance early in the development process. Additionally, it can be used alongside SCM hooks on developers' machines for pre-commit checks or execute long-running in-depth analyses remotely during release builds.
 
+## Not sure how to set this up for your repo?
+
+[**ts-scan-agent**](https://github.com/TrustSource/ts-scan-agent) is a companion open-source tool that looks at an arbitrary repository (including monorepos and container images) and proposes a concrete TrustSource scan concept: which parts should become TrustSource Modules, Infrastructure Modules or Linked Modules, and the exact `ts-scan` command to run for each. It's a separate, standalone project — worth a look before you work out module boundaries and CI wiring by hand.
+
 ## Installation
 
 **ts-scan** is available as a *PyPI* package. To install, you will require a recent *Python (>= 3.10)* version installed and *pip (>=22.0)*. Generally *pip* is already contained in your *Python* distribution but if not, follow pip's [installation instruction](https://pip.pypa.io/en/stable/installing/).

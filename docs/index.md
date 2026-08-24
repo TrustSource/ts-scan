@@ -27,7 +27,9 @@ To get a quick intro, jump to any of the following use cases:
   * [Prevent check-in of vulnerable dependencies](/ts-scan/uc03-check)
   * [Converting between different SBOM formats](/ts-scan/convert)
 
+## Not sure how to set this up for your repo?
 
+[**ts-scan-agent**](https://github.com/TrustSource/ts-scan-agent) is a companion open-source tool that looks at an arbitrary repository (including monorepos and container images) and proposes a concrete TrustSource scan concept: which parts should become TrustSource Modules, Infrastructure Modules or Linked Modules, and the exact ***ts-scan*** command to run for each. It's a separate, standalone project — worth a look before you work out module boundaries and CI wiring by hand.
 
 ## Getting Support
 
