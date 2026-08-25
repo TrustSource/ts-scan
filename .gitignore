@@ -1,6 +1,10 @@
 # IDE
 .idea
 tmp
+results
+videos
+.pre-commit-config.yaml
+ensureSBOM.sh
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
