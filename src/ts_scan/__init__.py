@@ -40,6 +40,7 @@ def __get_pm_scanner_classes() -> t.List[t.Type[Scanner]]:
     from .pm.cargo import CargoScanner
     from .pm.golang import GolangScanner
     from .pm.dart import DartScanner
+    from .pm.cocoapods import CocoaPodsScanner
     from .pm.vb6 import VB6Scanner
 
     return [
@@ -51,6 +52,7 @@ def __get_pm_scanner_classes() -> t.List[t.Type[Scanner]]:
         CargoScanner,
         GolangScanner,
         DartScanner,
+        CocoaPodsScanner,
         VB6Scanner,
     ]
 

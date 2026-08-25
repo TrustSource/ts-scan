@@ -159,7 +159,7 @@ The ```-f <output format>``` option controls the output format and can be:
 
 **ts-scan** contains some general options as well as options that only apply while scanning specific package types. The package specific options are prefixed by the type of the package management system. We use the [Package URL Type](https://github.com/package-url/purl-spec/blob/master/PURL-TYPES.rst) as a prefix. The following options are valid for most supported package management system:
 
-* ```--[maven|gradle|npm|nuget|pypi|dart|vb6]:ignore``` - Disable scanning dependencies of the type
+* ```--[maven|gradle|npm|nuget|pypi|dart|cocoapods|vb6]:ignore``` - Disable scanning dependencies of the type
 * ```--[maven|gradle|npm|nuget|dart]:executable``` - Specify a path to the PM executable
 * ```--[maven|gradle|npm|nuget|dart]:forward``` - Forward arguments to the PM's executable
 * ```--nuget:separateProjectScans``` - For a solution, create one scan per project using the project as the module
