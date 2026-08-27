@@ -256,6 +256,12 @@ def dump_scans(scans: t.List[DependencyScan], fp: TextIO, fmt: str):
     if not scans:
         return
 
+    if len(scans) > 1 and fmt != 'ts':
+        raise ValueError(
+            f"The '{fmt}' format supports one scan per document; "
+            "use the 'ts' format or write each scan to a separate file."
+        )
+
     if fmt == 'ts':
         # noinspection PyUnresolvedReferences
         scan_data = [s.to_dict() for s in scans]

@@ -1,8 +1,10 @@
 import json
 import shutil
+from io import StringIO
 from pathlib import Path
 
-from ts_scan.pm import Dependency
+import ts_scan
+from ts_scan.pm import Dependency, dump_scans
 from ts_scan.pm.nuget import NugetScanner
 
 EXAMPLE_SOLUTION = Path(__file__).parents[1] / 'examples' / 'nuget'
@@ -101,6 +103,86 @@ def test_solution_scan_preserves_projects_as_direct_dependencies(
         'Example.Core': ['Example.Shared'],
         'Example.Shared': [],
     }
+
+
+def test_solution_can_create_a_separate_scan_for_each_project(
+    tmp_path, monkeypatch
+):
+    solution = tmp_path / 'Example.sln'
+    solution.write_text('')
+    projects = [
+        Dependency(
+            key='nuget:Example.App',
+            name='Example.App',
+            type='nuget',
+            dependencies=[
+                Dependency(key='nuget:Example.Core', name='Example.Core', type='nuget')
+            ],
+        ),
+        Dependency(
+            key='nuget:Example.Core',
+            name='Example.Core',
+            type='nuget',
+        ),
+    ]
+
+    scanner = NugetScanner(separateProjectScans=True)
+    monkeypatch.setattr(scanner, '_select_executable', lambda path: None)
+    monkeypatch.setattr(scanner, '_find_global_packages_dir', lambda: tmp_path / 'cache')
+    monkeypatch.setattr(scanner, '_process_solution_file', lambda path: projects)
+
+    scans = list(scanner.scan(solution))
+
+    assert [scan.module for scan in scans] == ['Example.App', 'Example.Core']
+    assert [scan.moduleId for scan in scans] == [
+        'nuget:Example.App',
+        'nuget:Example.Core',
+    ]
+    assert [dep.name for dep in scans[0].dependencies] == ['Example.Core']
+    assert scans[1].dependencies == []
+
+
+def test_separate_project_scans_option_is_exposed():
+    option = NugetScanner.options()['separateProjectScans']
+
+    assert option['is_flag'] is True
+    assert option['default'] is False
+
+
+def test_do_scan_returns_all_solution_project_scans(tmp_path, monkeypatch):
+    solution = tmp_path / 'Example.sln'
+    solution.write_text('')
+    projects = [
+        Dependency(key='nuget:App', name='App', type='nuget'),
+        Dependency(key='nuget:Library', name='Library', type='nuget'),
+    ]
+
+    monkeypatch.setattr(ts_scan, '__get_pm_scanner_classes', lambda: [NugetScanner])
+    monkeypatch.setattr(NugetScanner, '_select_executable', lambda self, path: None)
+    monkeypatch.setattr(
+        NugetScanner,
+        '_find_global_packages_dir',
+        lambda self: tmp_path / 'cache',
+    )
+    monkeypatch.setattr(
+        NugetScanner,
+        '_process_solution_file',
+        lambda self, path: projects,
+    )
+
+    scans = list(ts_scan.do_scan(
+        [solution], nuget_separateProjectScans=True
+    ))
+
+    assert [scan.module for scan in scans] == ['App', 'Library']
+    assert [scan.source for scan in scans] == [str(solution), str(solution)]
+
+    output = StringIO()
+    dump_scans(scans, output, 'ts')
+    assert [entry['module'] for entry in json.loads(output.getvalue())] == [
+        'App',
+        'Library',
+    ]
 
 
 def test_single_project_scan_uses_nuget_project_name(tmp_path, monkeypatch):

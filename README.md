@@ -162,6 +162,7 @@ The ```-f <output format>``` option controls the output format and can be:
 * ```--[maven|gradle|npm|nuget|pypi|dart]:ignore``` - Disable scanning dependencies of the type
 * ```--[maven|gradle|npm|nuget|dart]:executable``` - Specify a path to the PM executable
 * ```--[maven|gradle|npm|nuget|dart]:forward``` - Forward arguments to the PM's executable
+* ```--nuget:separateProjectScans``` - For a solution, create one scan per project using the project as the module
 
 The full list of options including PM specific options can be printed using:
 

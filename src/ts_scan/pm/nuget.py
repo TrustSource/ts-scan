@@ -21,9 +21,10 @@ class ProjectType(Enum):
 
 
 class NugetScanner(PackageManagerScanner):
-    def __init__(self, **kwargs):
+    def __init__(self, separateProjectScans: bool = False, **kwargs):
         super().__init__(**kwargs)
 
+        self.separateProjectScans = separateProjectScans
         self.__path = None
         self.__processed_deps = set()
         self.__module = None
@@ -39,6 +40,16 @@ class NugetScanner(PackageManagerScanner):
     @staticmethod
     def executable() -> t.Optional[str]:
         return 'nuget'
+
+    @classmethod
+    def options(cls) -> PackageManagerScanner.OptionsType:
+        return super().options() | {
+            'separateProjectScans': {
+                'default': False,
+                'is_flag': True,
+                'help': 'Create a separate module scan for every project in a solution'
+            }
+        }
 
     def accepts(self, path: Path) -> bool:
         return self._determine_project_type(path) is not None
@@ -70,11 +81,26 @@ class NugetScanner(PackageManagerScanner):
             else:
                 module = source_file.parent.name
 
-        return [DependencyScan(
+        scan = DependencyScan(
             module=module,
             moduleId=f'nuget:{module}',
             dependencies=dependencies,
-        )]
+        )
+
+        if (
+            not self.separateProjectScans
+            or project_type[0] is not ProjectType.SOLUTION
+        ):
+            return [scan]
+
+        return [
+            DependencyScan(
+                module=project.name,
+                moduleId=project.key,
+                dependencies=project.dependencies,
+            )
+            for project in scan.dependencies
+        ]
 
     def _select_executable(self, path: Path) -> None:
         if self.executable_path is not None:

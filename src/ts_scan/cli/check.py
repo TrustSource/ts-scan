@@ -65,6 +65,10 @@ def eval_vulns(scan: DependencyScan, confidence: int, api: TrustSourceAPI) -> t.
     purls = [dep.purl.to_string() for dep in scan.iterdeps_once()]
     pbar = tqdm(desc="Checking vulnerabilities", total=len(purls))
 
+    if not purls:
+        pbar.close()
+        return vulns
+
     def _check_completed(_task):
         result = _task.result()
         for res in result:
@@ -88,13 +92,15 @@ def eval_vulns(scan: DependencyScan, confidence: int, api: TrustSourceAPI) -> t.
             return []
 
     tasks = []
-    pool = futures.ThreadPoolExecutor()
-    chunk_size = min(len(purls) // pool._max_workers, 20)
+    with futures.ThreadPoolExecutor() as pool:
+        chunk_size = max(1, min(len(purls) // pool._max_workers, 20))
 
-    for i in range(0, len(purls), chunk_size):
-        task = pool.submit(lambda _purls: _check_vulns(_purls, api), purls[i:i + chunk_size])
-        task.add_done_callback(_check_completed)
-        tasks.append(task)
+        for i in range(0, len(purls), chunk_size):
+            task = pool.submit(lambda _purls: _check_vulns(_purls, api), purls[i:i + chunk_size])
+            task.add_done_callback(_check_completed)
+            tasks.append(task)
 
-    futures.wait(tasks, return_when=futures.ALL_COMPLETED)
+        futures.wait(tasks, return_when=futures.ALL_COMPLETED)
+
+    pbar.close()
     return vulns

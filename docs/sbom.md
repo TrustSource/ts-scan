@@ -29,6 +29,7 @@ PLEASE NOTE: The ```<path to the project directory>``` may also point to the nam
 * ```--[maven|npm|nuget|pypi]:ignore``` - Disable scanning dependencies of the type   
 * ```--[maven|npm|nuget]:executable``` - Specify a path to the PM executable
 * ```--[maven|npm|nuget]:forward``` - Forward arguments to the PM's executable
+* ```--nuget:separateProjectScans``` - For a solution, create one scan per project using the project as the module
 
 The full list of options including PM specific options can be printed using:
 
@@ -93,7 +94,6 @@ ts-scan scan --use-syft -o <OUTPUT> docker:<DOCKER IMAGE>
 > [!NOTE] 
 >
 > Syft will be installed a part of ts-scan. You do not need to install it separately.
-
 
 
 
