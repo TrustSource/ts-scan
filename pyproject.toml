@@ -45,7 +45,17 @@ analyse = [
     "scanoss~=1.20.4"
 ]
 obom = [
-    "checkov>=3.3"
+    # Dependencies of the vendored graph-builder subset in
+    # analyse/_obom_vendor/checkov/ (ported and trimmed from
+    # jthDEV/checkov@feature/scan2graph-extraction -- NOT the checkov
+    # PyPI package, which conflicts with cyclonedx-python-lib/
+    # packageurl-python/importlib-metadata above). See obom.py's module
+    # docstring for why vendored instead of depended-on.
+    "bc-python-hcl2>=0.4",
+    "bc-jsonpath-ng>=1.6",
+    "networkx>=2.6",
+    "dpath>=2.1",
+    "asteval>=0.9",
 ]
 
 [project.urls]

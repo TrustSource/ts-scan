@@ -1,7 +1,9 @@
 """
 OBOM (Ownership Bill of Materials) -- extracts a generic access graph
 {principal, resource, actions[], effect, grantedVia} from IaC sources found
-in a scanned target, on top of Checkov's own resource graph builder.
+in a scanned target, on top of a trimmed, vendored copy of Checkov's own
+resource graph builder (checkov.cloudformation.graph_manager /
+checkov.terraform.graph_manager).
 
 This is evidence for real IAM-privilege-based trust boundaries in
 ts-tm-agent's threat modeling: without it, trust zones are inferred from
@@ -9,12 +11,47 @@ SBOM/dependency signals alone. See:
 https://github.com/eacg-gmbh/ts-tm-agent (CONCEPT.md, trust-boundary work)
 
 Ported from the scan2graph proof of concept
-(https://github.com/jthDEV/checkov, branch feature/scan2graph-extraction) --
-same extraction logic, adapted to ts-scan's optional-dependency conventions
-(mirrors analyse/deepscan.py: lazy import, a *NotInstalledError, an install
-hint). See that branch's scan2graph/README.md for the detailed scope notes
-(SAM policy template coverage, what's handled per IaC front-end, the
-abandoned cf2tf conversion attempt) -- not duplicated here in full.
+(https://github.com/jthDEV/checkov, branch feature/scan2graph-extraction).
+That branch's scan2graph/README.md has the detailed scope notes (SAM policy
+template coverage, what's handled per IaC front-end, the abandoned cf2tf
+conversion attempt) -- not duplicated here in full.
+
+## Why vendored, not `pip install checkov`
+
+The full `checkov` PyPI distribution pins three libraries ts-scan itself
+depends on -- importlib-metadata<8.0, cyclonedx-python-lib<8.0,
+packageurl-python<0.14 -- all newer in ts-scan. The latter two are core to
+ts-scan's own SBOM/PURL generation, not safely downgradable on a guess.
+
+Turned out unnecessary: graph-building code path only pulled in checkov's
+CVE-scanning/SBOM/reporting/platform-integration machinery (boto3,
+cloudsplaining, detect_secrets, aiohttp, ...) through a handful of *unused*
+import couplings (e.g. cfn_utils.py importing the whole check registry for
+one unrelated default-parameter value). None of it is on the path actually
+exercised by `build_graph_from_source_directory()`. _obom_vendor/checkov/
+is the graph-builder's real, unmodified source (from
+jthDEV/checkov@feature/scan2graph-extraction) plus:
+  - the ~25 files that real graph-building genuinely touches (found by
+    iteratively importing and copying in whatever was actually missing,
+    not by trusting static analysis alone -- see heal_imports.py in that
+    branch's history for the tool used)
+  - stub replacements (unittest.mock.MagicMock via module __getattr__, see
+    each stub's docstring) for check-registry/platform-integration/
+    reporting modules that are imported but never called on this path
+  - one small hand-edit (common/util/json_utils.py) where a stub broke a
+    genuinely-needed class (CustomJSONEncoder) -- replaced four
+    cross-subsystem isinstance() branches (Severity/ImageDetails/SAST
+    types/PotentialSecret) with local unreachable sentinel classes instead
+
+Verified byte-identical output against both scan2graph fixtures after
+trimming (ts-tm-agent's own template.yaml for CloudFormation/SAM: 15
+edges/3 unresolved; the hand-written Terraform fixture: 1 edge/1
+unresolved) -- not just "it imports without crashing".
+
+Resulting external dependency footprint: bc-python-hcl2, bc-jsonpath-ng,
+lark, ply, dpath, networkx, numpy, asteval, regex, packaging (plus
+requests/tqdm/typing-extensions/PyYAML, already in ts-scan's own
+requirements). None of these conflict with ts-scan's pins.
 
 Currently covers CloudFormation/SAM and Terraform. `extract(source_dir)`
 tries both and merges the results; each front-end's graph builder returns
@@ -26,43 +63,66 @@ from __future__ import annotations
 
 import importlib
 import importlib.util
+import sys
 import typing as t
 from dataclasses import dataclass, field, asdict
+from pathlib import Path
 from types import ModuleType
 
 OBOM_INSTALL_HINT = 'Install it with: pip install "ts-scan[obom]"'
+
+_VENDOR_DIR = Path(__file__).parent / '_obom_vendor'
 
 _checkov: t.Optional[ModuleType] = None
 
 
 class CheckovNotInstalledError(RuntimeError):
+    """Raised when the vendored graph-builder's own (lightweight) third-party
+    dependencies -- bc-python-hcl2, networkx, etc., declared under the
+    ts-scan "obom" extra -- aren't installed. Not about checkov itself: no
+    checkov install is used or needed, the graph-builder is vendored."""
     pass
 
 
 def is_checkov_installed() -> bool:
-    return importlib.util.find_spec('checkov') is not None
+    """Name kept for continuity with the pre-vendoring version of this
+    module; checks the vendored copy's own lightweight dependencies, not an
+    actual checkov install (there is none)."""
+    vendor_path = str(_VENDOR_DIR)
+    if vendor_path not in sys.path:
+        sys.path.insert(0, vendor_path)
+    return importlib.util.find_spec('hcl2') is not None and importlib.util.find_spec('networkx') is not None
 
 
 def obom_feature_help(description: str) -> str:
     if is_checkov_installed():
         return description
-    return f'{description} [Unavailable: checkov is not installed. {OBOM_INSTALL_HINT}]'
+    return f'{description} [Unavailable: obom dependencies are not installed. {OBOM_INSTALL_HINT}]'
 
 
 def require_checkov() -> ModuleType:
+    """Ensures the vendored checkov/ subset (_obom_vendor/checkov) is on
+    sys.path and importable, then returns it -- same call shape as the
+    pre-vendoring version so the rest of this module (and any external
+    caller) didn't need to change."""
     global _checkov
 
     if _checkov is not None:
         return _checkov
 
+    vendor_path = str(_VENDOR_DIR)
+    if vendor_path not in sys.path:
+        # Prepend, not append: if a real `checkov` also happens to be
+        # installed in this environment for an unrelated reason, our
+        # trimmed/patched copy must win -- it's the one actually tested.
+        sys.path.insert(0, vendor_path)
+
     try:
         _checkov = importlib.import_module('checkov')
         return _checkov
     except ModuleNotFoundError as err:
-        if err.name != 'checkov':
-            raise
         raise CheckovNotInstalledError(
-            f'checkov is required for OBOM extraction. {OBOM_INSTALL_HINT}'
+            f'obom dependencies are required for OBOM extraction. {OBOM_INSTALL_HINT}'
         ) from err
 
 
