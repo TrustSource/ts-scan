@@ -44,6 +44,9 @@ analyse = [
     "ts-deepscan~=2.3.0",
     "scanoss~=1.20.4"
 ]
+obom = [
+    "checkov>=3.3"
+]
 
 [project.urls]
 Homepage = 'https://github.com/trustsource/ts-scan.git'
