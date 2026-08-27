@@ -10,6 +10,8 @@ from defusedxml import ElementTree
 
 from . import PackageManagerScanner, Dependency, DependencyScan, License
 
+LockedDependency = t.Tuple[str, str, t.AbstractSet[str]]
+
 
 class ProjectType(Enum):
     NUSPEC = 1
@@ -48,10 +50,31 @@ class NugetScanner(PackageManagerScanner):
         self.__path = path
         self.__global_packages_dir = self._find_global_packages_dir()
 
-        if deps := self._process_package(self.__path):
-            return DependencyScan(module='unknown', moduleId='nuget:unknown', dependencies=deps)
-        else:
+        project_type = self._determine_project_type(path)
+        if project_type is None:
             return None
+
+        kind, files = project_type
+        source_file = files[0]
+        self.__processed_deps = set()
+
+        if kind is ProjectType.SOLUTION:
+            module = source_file.stem
+            dependencies = self._process_solution_file(source_file)
+        else:
+            dependencies = self._process_package(source_file)
+            if kind is ProjectType.PACKAGE_REFERENCE:
+                module = self._project_name(source_file)
+            elif kind is ProjectType.NUSPEC:
+                module = self._nuspec_name(source_file)
+            else:
+                module = source_file.parent.name
+
+        return DependencyScan(
+            module=module,
+            moduleId=f'nuget:{module}',
+            dependencies=dependencies,
+        )
 
     def _select_executable(self, path: Path) -> None:
         if self.executable_path is not None:
@@ -83,7 +106,14 @@ class NugetScanner(PackageManagerScanner):
             self.executable_path = Path(dotnet)
             self.__using_dotnet_sdk = True
 
-    def _process_package(self, path: Path, depth: int = 0) -> t.List[Dependency]:
+    def _process_package(
+        self,
+        path: Path,
+        depth: int = 0,
+        locked_dependencies: t.Optional[t.Mapping[str, LockedDependency]] = None,
+        dependency_names: t.Optional[t.AbstractSet[str]] = None,
+        recurse_projects: bool = True,
+    ) -> t.List[Dependency]:
         deps = []
 
         if pt := self._determine_project_type(path):
@@ -92,11 +122,18 @@ class NugetScanner(PackageManagerScanner):
 
             if ptype is ProjectType.PACKAGE_REFERENCE or ptype is ProjectType.PACKAGES_CONFIG:
                 # run nuget restore with option to create a lock file
-                deps = self._process_with_lock_file(files[0], depth=depth)
+                deps = self._process_with_lock_file(
+                    files[0], depth=depth, recurse_projects=recurse_projects
+                )
 
             elif ptype is ProjectType.NUSPEC:
                 # parse nuspec file
-                deps = self._create_deps_from_nuspec(files[0], depth=depth)
+                deps = self._create_deps_from_nuspec(
+                    files[0],
+                    depth=depth,
+                    locked_dependencies=locked_dependencies,
+                    dependency_names=dependency_names,
+                )
 
             elif ptype is ProjectType.SOLUTION:
                 # extract projects from solution file, process them recursively
@@ -153,16 +190,42 @@ class NugetScanner(PackageManagerScanner):
             if m.group(1).upper() not in self.SLN_FOLDER_TYPE_GUIDS
         ]
 
-        paths = [Path(PureWindowsPath(p[1]).as_posix()) for p in projects]
-
         deps = []
-        for path in paths:
-            if (solution.parent / path).is_file():
-                deps.extend(self._process_package(solution.parent / path, depth=depth))
+        for solution_project_name, project_path in projects:
+            relative_path = Path(PureWindowsPath(project_path).as_posix())
+            project_file = solution.parent / relative_path
+            if not project_file.is_file():
+                continue
+
+            # Each solution project is an independent graph root. Project references
+            # remain visible as direct edges, but are not recursively expanded here
+            # because every solution project is represented at the solution root.
+            self.__processed_deps = set()
+            project_dependencies = self._process_package(
+                project_file,
+                depth=depth + 1,
+                recurse_projects=False,
+            )
+            project_name = self._project_name(project_file)
+            project = Dependency(
+                key=f'nuget:{project_name}',
+                name=project_name,
+                type='nuget',
+                dependencies=project_dependencies,
+            )
+            project.package_files.append(str(project_file.parent.resolve()))
+            project.meta['dependency_type'] = 'project'
+            project.meta['solution project name'] = solution_project_name
+            deps.append(project)
 
         return deps
 
-    def _process_with_lock_file(self, project_file: Path, depth: int = 0) -> t.List[Dependency]:
+    def _process_with_lock_file(
+        self,
+        project_file: Path,
+        depth: int = 0,
+        recurse_projects: bool = True,
+    ) -> t.List[Dependency]:
         assert self.__path is not None
         assert self.__global_packages_dir is not None
         working_dir = self.__path if self.__path.is_dir() else self.__path.parent
@@ -181,28 +244,69 @@ class NugetScanner(PackageManagerScanner):
         if not lockfile.exists():
             raise FileNotFoundError("No lockfile was generated, something must have gone wrong")
 
-        return self._create_deps_from_lockfile(lockfile, depth=depth)
+        return self._create_deps_from_lockfile(
+            lockfile,
+            depth=depth,
+            project_file=project_file,
+            recurse_projects=recurse_projects,
+        )
 
-    def _create_deps_from_lockfile(self, lockfile: Path, depth: int = 0) -> t.List[Dependency]:
+    def _create_deps_from_lockfile(
+        self,
+        lockfile: Path,
+        depth: int = 0,
+        project_file: t.Optional[Path] = None,
+        recurse_projects: bool = True,
+    ) -> t.List[Dependency]:
         with open(lockfile, "r") as f:
             lock_dict = json.load(f)
 
         deps = []
+        direct_project_names = self._direct_project_names(lockfile, project_file)
 
         for net_target, net_target_dict in lock_dict["dependencies"].items():
+            locked_dependencies = {
+                name.casefold(): (
+                    name,
+                    dep["resolved"],
+                    frozenset(
+                        child_name.casefold()
+                        for child_name in dep.get("dependencies", {})
+                    ),
+                )
+                for name, dep in net_target_dict.items()
+                if isinstance(dep.get("resolved"), str)
+            }
+
             for dep_name, dep_dict in net_target_dict.items():
                 if (dep_type := dep_dict["type"].lower()) in ("direct", "project"):
 
-                    dep = Dependency(key=f"nuget:{dep_name}", name=dep_name, type='nuget')
+                    if (
+                        dep_type == 'project'
+                        and direct_project_names is not None
+                        and dep_name.casefold() not in direct_project_names
+                    ):
+                        continue
 
-                    dep.meta[".NET target"] = net_target
-                    dep.meta["dependency type"] = dep_type
+                    output_name = (
+                        self._project_dependency_name(
+                            lockfile, dep_name, project_file=project_file
+                        )
+                        if dep_type == 'project'
+                        else dep_name
+                    )
+                    dep = Dependency(
+                        key=f"nuget:{output_name}", name=output_name, type='nuget'
+                    )
+
+                    dep.meta["target"] = net_target
+                    dep.meta["dependency_type"] = dep_type
 
                     dep_id = None
                     candidates = []
 
                     if dep_type == "direct":
-                        dep_version = dep_dict["resolved"].lower()
+                        dep_version = dep_dict["resolved"]
                         dep.versions.append(dep_version)
 
                         # find package in global-packages
@@ -211,7 +315,9 @@ class NugetScanner(PackageManagerScanner):
                         dep_id = dep.key + ":" + dep_version
 
                     elif dep_type == "project":
-                        candidates = self._find_project_reference_candidates(lockfile, dep_name)
+                        candidates = self._find_project_reference_candidates(
+                            lockfile, dep_name, project_file=project_file
+                        )
 
                         if not candidates:
                             # Retain compatibility with projects whose generated lock file has no
@@ -231,7 +337,19 @@ class NugetScanner(PackageManagerScanner):
                             dep.package_files.append(str(dep_dir))
 
                             # recursively create dependencies of dependency
-                            dep.dependencies = self._process_package(dep_dir, depth=depth + 1)
+                            if dep_type == "direct":
+                                dep.dependencies = self._process_package(
+                                    dep_dir,
+                                    depth=depth + 1,
+                                    locked_dependencies=locked_dependencies,
+                                    dependency_names=locked_dependencies[
+                                        dep_name.casefold()
+                                    ][2],
+                                )
+                            elif recurse_projects:
+                                dep.dependencies = self._process_package(
+                                    dep_dir, depth=depth + 1
+                                )
 
                         else:
                             self.__n_fail += 1
@@ -248,13 +366,292 @@ class NugetScanner(PackageManagerScanner):
         tree = ElementTree.parse(project_file)
 
         for element in tree.iter():
-            if element.tag.rsplit('}', 1)[-1] in ('AssemblyName', 'Name') and element.text:
+            if (
+                element.tag.rsplit('}', 1)[-1]
+                in ('AssemblyName', 'PackageId', 'Name')
+                and element.text
+            ):
                 names.add(element.text.strip().casefold())
 
         return names
 
-    def _find_project_reference_candidates(self, lockfile: Path, dep_name: str) -> t.List[Path]:
-        """Locate a project dependency using ProjectReference paths from the owning project."""
+    def _project_name(self, project_file: Path) -> str:
+        lockfile = project_file.parent / 'packages.lock.json'
+        for assets_file in self._project_assets_files(lockfile, project_file):
+            loaded = self._load_project_assets(assets_file, project_file)
+            if loaded is None:
+                continue
+
+            assets, _ = loaded
+            project = assets.get('project', {})
+            restore = project.get('restore', {}) if isinstance(project, dict) else {}
+            name = restore.get('projectName') if isinstance(restore, dict) else None
+            if isinstance(name, str) and name.strip():
+                return name.strip()
+
+        tree = ElementTree.parse(project_file)
+        declared_names = {}
+        for element in tree.iter():
+            tag = element.tag.rsplit('}', 1)[-1]
+            if tag in ('PackageId', 'AssemblyName', 'Name') and element.text:
+                value = element.text.strip()
+                if value and '$(' not in value:
+                    declared_names.setdefault(tag, value)
+
+        for tag in ('PackageId', 'AssemblyName', 'Name'):
+            if name := declared_names.get(tag):
+                return name
+        return project_file.stem
+
+    @staticmethod
+    def _nuspec_name(nuspec: Path) -> str:
+        ns = {"nuget": "http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd"}
+        tree = ElementTree.parse(nuspec)
+        element = tree.find('*/nuget:id', namespaces=ns)
+        if element is not None and element.text and element.text.strip():
+            return element.text.strip()
+        return nuspec.stem
+
+    @staticmethod
+    def _path_from_msbuild(value: str) -> Path:
+        return Path(PureWindowsPath(value).as_posix())
+
+    @classmethod
+    def _resolve_msbuild_path(cls, value: str, project_dir: Path) -> Path:
+        path = cls._path_from_msbuild(value)
+        if not path.is_absolute():
+            path = project_dir / path
+        return path.resolve()
+
+    @classmethod
+    def _load_project_assets(
+        cls,
+        assets_file: Path,
+        project_file: t.Optional[Path],
+    ) -> t.Optional[t.Tuple[t.Dict, Path]]:
+        try:
+            with assets_file.open('r') as fp:
+                assets = json.load(fp)
+        except (OSError, ValueError):
+            return None
+
+        if not isinstance(assets, dict):
+            return None
+
+        project = assets.get('project', {})
+        if not isinstance(project, dict):
+            project = {}
+        restore = project.get('restore', {})
+        if not isinstance(restore, dict):
+            restore = {}
+        restore_project_path = restore.get('projectPath')
+        assets_project_file = None
+        if isinstance(restore_project_path, str):
+            assets_project_file = cls._path_from_msbuild(restore_project_path)
+            if not assets_project_file.is_absolute():
+                assets_project_file = assets_file.parent / assets_project_file
+            assets_project_file = assets_project_file.resolve()
+
+        if (
+            project_file is not None
+            and assets_project_file is not None
+            and assets_project_file != project_file.resolve()
+        ):
+            return None
+        if (
+            project_file is not None
+            and assets_project_file is None
+            and assets_file.resolve()
+            != (project_file.parent / 'obj' / 'project.assets.json').resolve()
+        ):
+            return None
+
+        project_dir = (
+            assets_project_file.parent
+            if assets_project_file is not None
+            else project_file.parent.resolve()
+            if project_file is not None
+            else assets_file.parent.parent
+        )
+        return assets, project_dir
+
+    @classmethod
+    def _project_assets_files(
+        cls,
+        lockfile: Path,
+        project_file: t.Optional[Path],
+    ) -> t.Iterable[Path]:
+        project_dir = project_file.parent if project_file is not None else lockfile.parent
+        default = project_dir / 'obj' / 'project.assets.json'
+        yielded = set()
+
+        if default.is_file():
+            yielded.add(default.resolve())
+            yield default
+
+        # BaseIntermediateOutputPath and MSBuildProjectExtensionsPath can relocate
+        # project.assets.json. Only search when the conventional location did not
+        # identify the dependency, and validate candidates against projectPath.
+        try:
+            candidates = project_dir.rglob('project.assets.json')
+            for candidate in candidates:
+                resolved = candidate.resolve()
+                if resolved not in yielded:
+                    yielded.add(resolved)
+                    yield candidate
+        except OSError:
+            return
+
+    @classmethod
+    def _find_project_in_assets(
+        cls,
+        lockfile: Path,
+        dep_name: str,
+        project_file: t.Optional[Path],
+    ) -> t.List[Path]:
+        dependency_name = dep_name.casefold()
+
+        for assets_file in cls._project_assets_files(lockfile, project_file):
+            loaded = cls._load_project_assets(assets_file, project_file)
+            if loaded is None:
+                continue
+
+            assets, project_dir = loaded
+            candidates = []
+            libraries = assets.get('libraries', {})
+            if not isinstance(libraries, dict):
+                continue
+
+            for identity, library in libraries.items():
+                if not isinstance(identity, str) or not isinstance(library, dict):
+                    continue
+                if str(library.get('type', '')).casefold() != 'project':
+                    continue
+
+                name = identity.rsplit('/', 1)[0]
+                if name.casefold() != dependency_name:
+                    continue
+
+                raw_path = library.get('msbuildProject') or library.get('path')
+                if not isinstance(raw_path, str):
+                    continue
+
+                reference_file = cls._path_from_msbuild(raw_path)
+                if not reference_file.is_absolute():
+                    reference_file = project_dir / reference_file
+                reference_file = reference_file.resolve()
+
+                if (
+                    reference_file.is_file()
+                    and reference_file.parent not in candidates
+                ):
+                    candidates.append(reference_file.parent)
+
+            if candidates:
+                return candidates
+
+        return []
+
+    @classmethod
+    def _project_dependency_name(
+        cls,
+        lockfile: Path,
+        dep_name: str,
+        project_file: t.Optional[Path],
+    ) -> str:
+        dependency_name = dep_name.casefold()
+        for assets_file in cls._project_assets_files(lockfile, project_file):
+            loaded = cls._load_project_assets(assets_file, project_file)
+            if loaded is None:
+                continue
+
+            assets, _ = loaded
+            libraries = assets.get('libraries', {})
+            if not isinstance(libraries, dict):
+                continue
+            for identity, library in libraries.items():
+                if not isinstance(identity, str) or not isinstance(library, dict):
+                    continue
+                if str(library.get('type', '')).casefold() != 'project':
+                    continue
+
+                name = identity.rsplit('/', 1)[0]
+                if name.casefold() == dependency_name:
+                    return name
+
+        return dep_name
+
+    @classmethod
+    def _direct_project_names(
+        cls,
+        lockfile: Path,
+        project_file: t.Optional[Path],
+    ) -> t.Optional[t.Set[str]]:
+        for assets_file in cls._project_assets_files(lockfile, project_file):
+            loaded = cls._load_project_assets(assets_file, project_file)
+            if loaded is None:
+                continue
+
+            assets, project_dir = loaded
+            project = assets.get('project', {})
+            restore = project.get('restore', {}) if isinstance(project, dict) else {}
+            frameworks = restore.get('frameworks') if isinstance(restore, dict) else None
+            if not isinstance(frameworks, dict):
+                return None
+
+            direct_project_files = set()
+            for framework in frameworks.values():
+                if not isinstance(framework, dict):
+                    continue
+                references = framework.get('projectReferences', {})
+                if not isinstance(references, dict):
+                    continue
+                for reference_path, reference in references.items():
+                    raw_path = (
+                        reference.get('projectPath')
+                        if isinstance(reference, dict)
+                        else None
+                    )
+                    if not isinstance(raw_path, str):
+                        raw_path = reference_path
+                    if isinstance(raw_path, str):
+                        direct_project_files.add(
+                            cls._resolve_msbuild_path(raw_path, project_dir)
+                        )
+
+            libraries = assets.get('libraries', {})
+            if not isinstance(libraries, dict):
+                return None
+
+            names = set()
+            for identity, library in libraries.items():
+                if not isinstance(identity, str) or not isinstance(library, dict):
+                    continue
+                if str(library.get('type', '')).casefold() != 'project':
+                    continue
+
+                raw_path = library.get('msbuildProject') or library.get('path')
+                if not isinstance(raw_path, str):
+                    continue
+                project_path = cls._resolve_msbuild_path(raw_path, project_dir)
+                if project_path in direct_project_files:
+                    names.add(identity.rsplit('/', 1)[0].casefold())
+
+            return names
+
+        return None
+
+    def _find_project_reference_candidates(
+        self,
+        lockfile: Path,
+        dep_name: str,
+        project_file: t.Optional[Path] = None,
+    ) -> t.List[Path]:
+        """Locate a project dependency using NuGet assets or ProjectReference paths."""
+        candidates = self._find_project_in_assets(lockfile, dep_name, project_file)
+        if candidates:
+            return candidates
+
         dependency_name = dep_name.casefold()
         candidates = []
 
@@ -290,7 +687,13 @@ class NugetScanner(PackageManagerScanner):
 
         return candidates
 
-    def _create_deps_from_nuspec(self, nuspec: Path, depth: int = 0) -> t.List[Dependency]:
+    def _create_deps_from_nuspec(
+        self,
+        nuspec: Path,
+        depth: int = 0,
+        locked_dependencies: t.Optional[t.Mapping[str, LockedDependency]] = None,
+        dependency_names: t.Optional[t.AbstractSet[str]] = None,
+    ) -> t.List[Dependency]:
         ns = {"nuget": "http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd"}
         tree = ElementTree.parse(nuspec)
 
@@ -305,6 +708,21 @@ class NugetScanner(PackageManagerScanner):
                 if name is None or version is None:
                     continue
 
+                child_dependency_names = None
+                if locked_dependencies is not None:
+                    normalized_name = name.casefold()
+                    if (
+                        dependency_names is not None
+                        and normalized_name not in dependency_names
+                    ):
+                        continue
+
+                    locked_dependency = locked_dependencies.get(normalized_name)
+                    if locked_dependency is None:
+                        continue
+
+                    name, version, child_dependency_names = locked_dependency
+
                 dep_key = "nuget:" + name
                 dep_id = dep_key + ":" + version
 
@@ -314,8 +732,8 @@ class NugetScanner(PackageManagerScanner):
                 if dep_id not in self.__processed_deps:
                     self.__processed_deps.add(dep_id)
 
-                    dep.meta[".NET Target"] = target
-                    dep.meta["dependency type"] = "direct"
+                    dep.meta["target"] = target
+                    dep.meta["dependency_type"] = "direct"
 
                     if candidates := self._find_in_global_packages(name, version):
                         dep_dir = candidates[0]
@@ -333,7 +751,12 @@ class NugetScanner(PackageManagerScanner):
                             dep.description = meta["description"]
                             dep.meta["copyright"] = meta["copyright"]
 
-                        dep.dependencies = self._process_package(dep_dir, depth=depth + 1)
+                        dep.dependencies = self._process_package(
+                            dep_dir,
+                            depth=depth + 1,
+                            locked_dependencies=locked_dependencies,
+                            dependency_names=child_dependency_names,
+                        )
 
                 deps.append(dep)
 
