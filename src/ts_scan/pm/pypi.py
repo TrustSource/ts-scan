@@ -32,14 +32,14 @@ class PypiScanner(PackageManagerScanner):
     def accepts(self, path: Path) -> bool:
         return path.is_dir() and any((path / pkg_file).exists() for pkg_file in _supported_pkg_files)
 
-    def scan(self, src: t.Union[str, Path]) -> t.Optional[DependencyScan]:
+    def scan(self, src: t.Union[str, Path]) -> t.Iterable[DependencyScan]:
         path = Path(src)
         metadata = _project_wheel_metadata(path)
 
         if dep := self._create_dep_from_metadata(metadata, project_path=path):
-            return DependencyScan.from_dep(dep)
+            return [DependencyScan.from_dep(dep)]
         else:
-            return None
+            return []
 
     def _create_dep_from_metadata(self, metadata: t.Any,
                                   project_path: t.Optional[Path] = None) -> Dependency:

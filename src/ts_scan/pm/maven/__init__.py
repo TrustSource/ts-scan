@@ -48,9 +48,10 @@ class MavenScanner(PackageManagerScanner):
         return ((path.is_dir() and (path / 'pom.xml').exists()) or
                 (path.is_file() and path.name == 'pom.xml'))
 
-    def scan(self, src: t.Union[str, Path]) -> t.Optional[DependencyScan]:
+    def scan(self, src: t.Union[str, Path]) -> t.Iterable[DependencyScan]:
         path = Path(src)
-        return self._execute(path)
+        scan = self._execute(path)
+        return [scan] if scan is not None else []
 
     def _execute(self, path: Path) -> t.Optional['DependencyScan']:
         self.__path = path

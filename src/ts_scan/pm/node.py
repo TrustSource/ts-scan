@@ -62,7 +62,7 @@ class NodeScanner(PackageManagerScanner):
     def accepts(self, path: Path) -> bool:
         return path.is_dir() and (path / 'package.json').exists()
 
-    def scan(self, src: t.Union[str, Path]) -> t.Optional[DependencyScan]:
+    def scan(self, src: t.Union[str, Path]) -> t.Iterable[DependencyScan]:
         path = Path(src)
         self.__path = path
         self.__abs_module_path = path.resolve().absolute()
@@ -79,7 +79,7 @@ class NodeScanner(PackageManagerScanner):
         lock_file = self.__path / "package-lock.json"
 
         if not lock_file.exists():
-            return None
+            return []
 
         with lock_file.open() as lockfile:
             self.__lockfile_content = json.load(lockfile)
@@ -111,10 +111,10 @@ class NodeScanner(PackageManagerScanner):
 
             dep.dependencies = deps
             
-            return  DependencyScan.from_dep(dep)
+            return [DependencyScan.from_dep(dep)]
         
         else:
-            return DependencyScan(module="unknown", moduleId="npm:unknown", dependencies=deps)
+            return [DependencyScan(module="unknown", moduleId="npm:unknown", dependencies=deps)]
 
 
     @staticmethod

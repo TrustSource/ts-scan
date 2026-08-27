@@ -38,7 +38,7 @@ class GradleScanner(PackageManagerScanner):
     def accepts(self, path: Path) -> bool:
         return path.is_dir() and (path / 'build.gradle').exists() or (path / 'build.gradle.kts').exists()
 
-    def scan(self, src: t.Union[str, Path]) -> t.Optional[DependencyScan]:
+    def scan(self, src: t.Union[str, Path]) -> t.Iterable[DependencyScan]:
         path = Path(src)
         res = self._exec('dependencies', f'--configuration={self.configuration}', '--console=plain',
                          cwd=path,
@@ -50,7 +50,7 @@ class GradleScanner(PackageManagerScanner):
         output = res.stdout.decode('utf-8')
         deps = self.extract_dependencies_from_output(output)
 
-        return DependencyScan(module='unknown', moduleId='gradle:unknown', dependencies=deps)
+        return [DependencyScan(module='unknown', moduleId='gradle:unknown', dependencies=deps)]
 
     def extract_dependencies_from_output(self, output: str) -> t.List[Dependency]:
         """

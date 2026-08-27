@@ -16,7 +16,7 @@ class GenericScanner(PackageManagerScanner):
     def accepts(self, path: Path) -> bool:
         return True
 
-    def scan(self, src: t.Union[str, Path]) -> t.Optional[DependencyScan]:
+    def scan(self, src: t.Union[str, Path]) -> t.Iterable[DependencyScan]:
         from ..analyse.deepscan import analyse_path_with_ds
 
         path = Path(src)
@@ -34,4 +34,4 @@ class GenericScanner(PackageManagerScanner):
         root.dependencies = [dep for purl, versions in summary.get('links', {}).items()
                              if (dep := Dependency.create_from_purl(purl, versions_override=versions))]
 
-        return scan
+        return [scan]

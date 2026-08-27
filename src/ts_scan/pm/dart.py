@@ -53,7 +53,7 @@ class DartScanner(PackageManagerScanner):
     def accepts(self, path: Path) -> bool:
         return path.is_dir() and (path / "pubspec.yaml").exists()
 
-    def scan(self, src: t.Union[str, Path]) -> t.Optional[DependencyScan]:
+    def scan(self, src: t.Union[str, Path]) -> t.Iterable[DependencyScan]:
         path = Path(src)
         args = ["pub", "deps", "--json"]
 
@@ -82,12 +82,13 @@ class DartScanner(PackageManagerScanner):
             )
         stdout = result.stdout
         if not stdout:
-            return None
+            return []
         if isinstance(stdout, bytes):
             stdout = stdout.decode("utf-8")
 
         data = t.cast(PubDeps, json.loads(stdout))
-        return self._scan_from_pub_deps(data, path, self.includeDevDependencies)
+        scan = self._scan_from_pub_deps(data, path, self.includeDevDependencies)
+        return [scan] if scan is not None else []
 
     @staticmethod
     def _uses_flutter(path: Path) -> bool:

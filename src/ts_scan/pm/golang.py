@@ -26,7 +26,7 @@ class GolangScanner(PackageManagerScanner):
     def accepts(self, path: Path) -> bool:
         return path.is_dir() and (path / 'go.mod').exists()
 
-    def scan(self, src: t.Union[str, Path]) -> t.Optional[DependencyScan]:
+    def scan(self, src: t.Union[str, Path]) -> t.Iterable[DependencyScan]:
         path = Path(src)
         if root := GoDependency.load_from_package(path):
 
@@ -95,9 +95,9 @@ class GolangScanner(PackageManagerScanner):
                     self.__processed_deps.add(dep.name)
                     dep.load_from_proxy()
 
-            return DependencyScan.from_dep(root)
+            return [DependencyScan.from_dep(root)]
 
-        return None
+        return []
 
     def _build_dependency_tree(self, packages: list, modules_map: dict, root: 'GoDependency'):
         """Build the dependency tree from go list -deps output"""

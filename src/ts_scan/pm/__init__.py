@@ -70,7 +70,7 @@ class Scanner(abc.ABC):
         raise NotImplemented()
 
     @abc.abstractmethod
-    def scan(self, src: t.Union[str, Path]) -> t.Optional['DependencyScan']:
+    def scan(self, src: t.Union[str, Path]) -> t.Iterable['DependencyScan']:
         raise NotImplemented()
 
     def _exec(self, *args, capture_output=False,

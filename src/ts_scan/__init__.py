@@ -94,17 +94,18 @@ def do_scan(paths: t.List[Path], **kwargs) -> t.Iterable[DependencyScan]:
     :return: An iterable over scan results
     """
 
-    def apply_scanner(s, p) -> t.Tuple[bool, t.Optional[DependencyScan]]:
+    def apply_scanner(s, p) -> t.Tuple[bool, t.List[DependencyScan]]:
         if s.accepts(p):
             msg.info(f'Found {s.name()} project. Scanning for dependencies...')
-            scan = _execute_scan(p, s)
-            if scan:
+            scans = list(_execute_scans(p, s))
+            for scan in scans:
                 scan.source = str(p)
+            if scans:
                 msg.good(f'{s.name()} scan is done!')
             
-            return True, scan
+            return True, scans
         
-        return False, None
+        return False, []
 
 
     scanners = [s for s in create_scanners(__get_pm_scanner_classes(), **kwargs) if not s.ignore]
@@ -116,13 +117,12 @@ def do_scan(paths: t.List[Path], **kwargs) -> t.Iterable[DependencyScan]:
         scanned_at_least_once = False
 
         for scanner in scanners:
-            accepted, scan = apply_scanner(scanner, p)
+            accepted, scans = apply_scanner(scanner, p)
             
             if accepted:
                 scanned_at_least_once = True
             
-            if scan:
-                yield scan
+            yield from scans
            
 
         if scanned_at_least_once:
@@ -134,9 +134,8 @@ def do_scan(paths: t.List[Path], **kwargs) -> t.Iterable[DependencyScan]:
                 from .pm.generic import GenericScanner
 
                 if generic_scanner := next(iter(create_scanners([GenericScanner], **kwargs)), None):
-                    _, scan = apply_scanner(generic_scanner, p)
-                    if scan:
-                        yield scan
+                    _, scans = apply_scanner(generic_scanner, p)
+                    yield from scans
                 else:
                     msg.warn('No supported projects found.')
             else:
@@ -152,19 +151,21 @@ def do_scan_with_syft(sources: t.List[t.Union[Path, str]], **kwargs) -> t.Iterab
 
             msg.info(f'Scanning for dependencies using Syft...')
 
-            if scan := _execute_scan(src, scanners[0]):
+            for scan in _execute_scans(src, scanners[0]):
                 scan.source = str(src)
                 yield scan
 
 
-def _execute_scan(src: t.Union[Path, str], scanner: Scanner) -> t.Optional[DependencyScan]:
+def _execute_scans(
+    src: t.Union[Path, str], scanner: Scanner
+) -> t.Iterable[DependencyScan]:
     try:
-        return scanner.scan(src)
+        yield from scanner.scan(src)
 
     except CalledProcessError as err:
         if scanner.verbose:
             if stdout := err.stdout:
-                print(stdout.decode('utf-8'))                
+                print(stdout.decode('utf-8'))
             if stderr := err.stderr:
                 print(stderr.decode('utf-8'))
 
@@ -179,8 +180,6 @@ def _execute_scan(src: t.Union[Path, str], scanner: Scanner) -> t.Optional[Depen
             msg.fail(err.args[1])
         else:
             msg.fail(err)
-
-        return None
 
 
 def process_scan(scan: DependencyScan) -> DependencyScan:

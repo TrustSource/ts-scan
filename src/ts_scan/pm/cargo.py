@@ -38,7 +38,7 @@ class CargoScanner(PackageManagerScanner):
     def accepts(self, path: Path) -> bool:
         return path.is_dir() and (path / 'Cargo.toml').exists()
 
-    def scan(self, src: t.Union[str, Path]) -> t.Optional[DependencyScan]:
+    def scan(self, src: t.Union[str, Path]) -> t.Iterable[DependencyScan]:
         path = Path(src)
         if root := CargoDependency.load_from_package(path):
 
@@ -57,9 +57,9 @@ class CargoScanner(PackageManagerScanner):
                 # Do not load metadata for the root package
                 self.load_from_lockfile(lockfile_map, root, load_metadata=False)
 
-            return DependencyScan.from_dep(root)
+            return [DependencyScan.from_dep(root)]
 
-        return None
+        return []
 
     def load_from_lockfile(self,
                            lockfile: t.Dict[str, dict],

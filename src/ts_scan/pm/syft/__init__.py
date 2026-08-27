@@ -25,7 +25,7 @@ class SyftScanner(Scanner):
     def accepts(self, path: Path) -> bool:
         return True
 
-    def scan(self, src: t.Union[str, Path]) -> t.Optional[DependencyScan]:
+    def scan(self, src: t.Union[str, Path]) -> t.Iterable[DependencyScan]:
         with tempfile.TemporaryDirectory() as tmpdir:
             output = Path(f'{tmpdir}/scan.json')
 
@@ -33,7 +33,7 @@ class SyftScanner(Scanner):
 
             if res.returncode != 0:
                 msg.fail(f'Syft failed to scan {str(src)}. Error code: {res.returncode}')
-                return None
+                return []
 
             if scan := self.__create_scan(output):
                 if isinstance(src, Path):
@@ -45,9 +45,9 @@ class SyftScanner(Scanner):
                     except ValueError:
                         pass
 
-                return scan
+                return [scan]
 
-            return None
+            return []
 
     @staticmethod
     def __create_scan(path: Path) -> t.Optional[DependencyScan]:

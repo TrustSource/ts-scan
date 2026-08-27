@@ -77,7 +77,7 @@ def test_solution_scan_preserves_projects_as_direct_dependencies(
     monkeypatch.setattr(scanner, '_find_global_packages_dir', lambda: tmp_path / 'cache')
     monkeypatch.setattr(scanner, '_exec', lambda *args, **kwargs: None)
 
-    scan = scanner.scan(example / 'ExampleSolution.sln')
+    scan = next(iter(scanner.scan(example / 'ExampleSolution.sln')), None)
 
     assert scan is not None
     assert scan.module == 'ExampleSolution'
@@ -129,7 +129,7 @@ def test_single_project_scan_uses_nuget_project_name(tmp_path, monkeypatch):
         ],
     )
 
-    scan = scanner.scan(project_file)
+    scan = next(iter(scanner.scan(project_file)), None)
 
     assert scan is not None
     assert scan.module == 'Jellyfin.Common'

@@ -43,7 +43,7 @@ class NugetScanner(PackageManagerScanner):
     def accepts(self, path: Path) -> bool:
         return self._determine_project_type(path) is not None
 
-    def scan(self, src: t.Union[str, Path]) -> t.Optional[DependencyScan]:
+    def scan(self, src: t.Union[str, Path]) -> t.Iterable[DependencyScan]:
         path = Path(src)
         self._select_executable(path)
 
@@ -52,7 +52,7 @@ class NugetScanner(PackageManagerScanner):
 
         project_type = self._determine_project_type(path)
         if project_type is None:
-            return None
+            return []
 
         kind, files = project_type
         source_file = files[0]
@@ -70,11 +70,11 @@ class NugetScanner(PackageManagerScanner):
             else:
                 module = source_file.parent.name
 
-        return DependencyScan(
+        return [DependencyScan(
             module=module,
             moduleId=f'nuget:{module}',
             dependencies=dependencies,
-        )
+        )]
 
     def _select_executable(self, path: Path) -> None:
         if self.executable_path is not None:
