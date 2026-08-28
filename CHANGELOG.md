@@ -3,6 +3,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.1] - 2026-08-28
+
+### Fixes
+    * Continued package-manager scans when dependency resolution produces no lockfile
+    * Used NuGet `project.assets.json` as a resolved dependency fallback, including solution scans
+    * Handled missing NuGet global-package-path output without failing the scan
+    * Added an NLog fallback example and regression coverage
+
 ## [1.9.0] - 2026-08-27
 
 ### New Features
