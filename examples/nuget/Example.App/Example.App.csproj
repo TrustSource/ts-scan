@@ -8,5 +8,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Legacy.Core\Legacy.Core.csproj" />
+    <PackageReference Include="NLog" Version="5.3.0" />
   </ItemGroup>
 </Project>

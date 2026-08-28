@@ -90,6 +90,35 @@ class Scanner(abc.ABC):
         else:
             raise ExecutableNotFoundError(f'Cannot find {exec_path} executable.')
 
+    def _report_missing_lockfile(self, lockfile: Path) -> None:
+        """Report the non-fatal fallback used when dependency resolution made no lockfile."""
+        from ..cli import msg
+
+        msg.info(
+            f'{self.name()} did not generate {lockfile.name}. '
+            'Continuing with a scan without resolved dependencies.'
+        )
+
+    def _exec_to_generate_lockfile(
+        self, lockfile: Path, *args, report_missing: bool = True, **kwargs
+    ) -> bool:
+        """Run a resolver and return whether it produced the expected lockfile."""
+        try:
+            self._exec(*args, **kwargs)
+        except subprocess.CalledProcessError:
+            if lockfile.exists():
+                raise
+            if report_missing:
+                self._report_missing_lockfile(lockfile)
+            return False
+
+        if lockfile.exists():
+            return True
+
+        if report_missing:
+            self._report_missing_lockfile(lockfile)
+        return False
+
 
 class PackageManagerScanner(Scanner, ABC):
     OptionsType = t.Dict[str, t.Dict[str, t.Any]]

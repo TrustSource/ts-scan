@@ -75,11 +75,10 @@ class NodeScanner(PackageManagerScanner):
         if not self.includeDevDependencies:
             args.append('--omit=dev')
 
-        self._exec(*args, cwd=self.__path)
         lock_file = self.__path / "package-lock.json"
 
-        if not lock_file.exists():
-            return []
+        if not self._exec_to_generate_lockfile(lock_file, *args, cwd=self.__path):
+            return [self._scan_from_package_json(path)]
 
         with lock_file.open() as lockfile:
             self.__lockfile_content = json.load(lockfile)
@@ -116,6 +115,18 @@ class NodeScanner(PackageManagerScanner):
         else:
             return [DependencyScan(module="unknown", moduleId="npm:unknown", dependencies=deps)]
 
+    @staticmethod
+    def _scan_from_package_json(path: Path) -> DependencyScan:
+        with (path / 'package.json').open() as package_file:
+            package = json.load(package_file)
+
+        module = package.get('name') or path.name or 'unknown'
+        root = NodeDependency(module)
+        if version := package.get('version'):
+            root.versions.append(version)
+        root.package_files.append(str(path))
+        root.load_from_package()
+        return DependencyScan.from_dep(root)
 
     @staticmethod
     def _dep_name_from_path(package_path: str) -> str:

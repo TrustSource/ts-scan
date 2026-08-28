@@ -1,4 +1,5 @@
 import json
+import os
 import shutil
 import typing as t
 import re
@@ -9,6 +10,7 @@ from enum import Enum
 from defusedxml import ElementTree
 
 from . import PackageManagerScanner, Dependency, DependencyScan, License
+from ..cli import msg
 
 LockedDependency = t.Tuple[str, str, t.AbstractSet[str]]
 
@@ -255,20 +257,28 @@ class NugetScanner(PackageManagerScanner):
         assert self.__path is not None
         assert self.__global_packages_dir is not None
         working_dir = self.__path if self.__path.is_dir() else self.__path.parent
+        lockfile = project_file.parent / "packages.lock.json"
 
-        _ = self._exec(
+        if not self._exec_to_generate_lockfile(
+            lockfile,
             "restore",
             str(project_file),
             "--use-lock-file" if self.__using_dotnet_sdk else "-UseLockFile",
             "--packages" if self.__using_dotnet_sdk else "-PackagesDirectory",
             str(self.__global_packages_dir),
             cwd=working_dir,
-        )
+            report_missing=False,
+        ):
+            assets_dependencies = self._create_deps_from_project_assets(
+                project_file,
+                depth=depth,
+                recurse_projects=recurse_projects,
+            )
+            if assets_dependencies is not None:
+                return assets_dependencies
 
-        lockfile = project_file.parent / "packages.lock.json"
-
-        if not lockfile.exists():
-            raise FileNotFoundError("No lockfile was generated, something must have gone wrong")
+            self._report_missing_lockfile(lockfile)
+            return []
 
         return self._create_deps_from_lockfile(
             lockfile,
@@ -287,10 +297,33 @@ class NugetScanner(PackageManagerScanner):
         with open(lockfile, "r") as f:
             lock_dict = json.load(f)
 
+        return self._create_deps_from_lock_data(
+            lock_dict,
+            lockfile,
+            depth=depth,
+            project_file=project_file,
+            recurse_projects=recurse_projects,
+        )
+
+    def _create_deps_from_lock_data(
+        self,
+        lock_dict: t.Mapping[str, t.Any],
+        lockfile: Path,
+        depth: int = 0,
+        project_file: t.Optional[Path] = None,
+        recurse_projects: bool = True,
+    ) -> t.List[Dependency]:
+
         deps = []
         direct_project_names = self._direct_project_names(lockfile, project_file)
 
-        for net_target, net_target_dict in lock_dict["dependencies"].items():
+        dependencies = lock_dict.get("dependencies", {})
+        if not isinstance(dependencies, dict):
+            return deps
+
+        for net_target, net_target_dict in dependencies.items():
+            if not isinstance(net_target_dict, dict):
+                continue
             locked_dependencies = {
                 name.casefold(): (
                     name,
@@ -385,6 +418,97 @@ class NugetScanner(PackageManagerScanner):
                     deps.append(dep)
 
         return deps
+
+    def _create_deps_from_project_assets(
+        self,
+        project_file: Path,
+        depth: int = 0,
+        recurse_projects: bool = True,
+    ) -> t.Optional[t.List[Dependency]]:
+        lockfile = project_file.parent / 'packages.lock.json'
+        for assets_file in self._project_assets_files(lockfile, project_file):
+            loaded = self._load_project_assets(assets_file, project_file)
+            if loaded is None:
+                continue
+
+            assets, _ = loaded
+            lock_data = self._lock_data_from_project_assets(assets)
+            if lock_data is None:
+                continue
+
+            msg.info(
+                f'NuGet did not generate {lockfile.name}. '
+                f'Using resolved dependencies from {assets_file}.'
+            )
+            return self._create_deps_from_lock_data(
+                lock_data,
+                lockfile,
+                depth=depth,
+                project_file=project_file,
+                recurse_projects=recurse_projects,
+            )
+
+        return None
+
+    @staticmethod
+    def _lock_data_from_project_assets(
+        assets: t.Mapping[str, t.Any],
+    ) -> t.Optional[t.Dict[str, t.Any]]:
+        targets = assets.get('targets')
+        if not isinstance(targets, dict):
+            return None
+
+        direct_package_names = set()
+        project = assets.get('project', {})
+        frameworks = project.get('frameworks', {}) if isinstance(project, dict) else {}
+        if isinstance(frameworks, dict):
+            for framework in frameworks.values():
+                declared = (
+                    framework.get('dependencies', {})
+                    if isinstance(framework, dict)
+                    else {}
+                )
+                if isinstance(declared, dict):
+                    direct_package_names.update(
+                        str(name).casefold() for name in declared
+                    )
+
+        dependencies = {}
+        for target_name, target in targets.items():
+            if not isinstance(target_name, str) or not isinstance(target, dict):
+                continue
+
+            target_dependencies = {}
+            for identity, target_entry in target.items():
+                if not isinstance(identity, str) or not isinstance(target_entry, dict):
+                    continue
+                if '/' not in identity:
+                    continue
+
+                name, version = identity.rsplit('/', 1)
+                dependency_type = str(target_entry.get('type', '')).casefold()
+                if dependency_type == 'project':
+                    lock_type = 'Project'
+                elif dependency_type == 'package':
+                    lock_type = (
+                        'Direct'
+                        if name.casefold() in direct_package_names
+                        else 'Transitive'
+                    )
+                else:
+                    continue
+
+                dependency = {
+                    'type': lock_type,
+                    'dependencies': target_entry.get('dependencies', {}),
+                }
+                if dependency_type == 'package':
+                    dependency['resolved'] = version
+                target_dependencies[name] = dependency
+
+            dependencies[target_name] = target_dependencies
+
+        return {'dependencies': dependencies}
 
     @staticmethod
     def _project_names(project_file: Path) -> t.Set[str]:
@@ -798,10 +922,23 @@ class NugetScanner(PackageManagerScanner):
 
         proc = self._exec(*args, capture_output=True, cwd=working_dir)
 
-        result = proc.stdout.decode("utf-8")
-        result = Path(result.split("global-packages: ")[1].strip())
+        stdout = proc.stdout or b''
+        result = (
+            stdout.decode('utf-8', errors='replace')
+            if isinstance(stdout, bytes)
+            else str(stdout)
+        )
+        match = re.search(r'^global-packages:\s*(.+)$', result, re.IGNORECASE | re.MULTILINE)
+        if match:
+            return Path(match.group(1).strip())
 
-        return result
+        configured = os.environ.get('NUGET_PACKAGES')
+        fallback = Path(configured) if configured else Path.home() / '.nuget' / 'packages'
+        msg.info(
+            'Could not determine the NuGet global-packages directory from the '
+            f'executable output. Using {fallback}.'
+        )
+        return fallback
 
     def _find_in_global_packages(self, name: str, version: str) -> t.List[Path]:
         """Finds all subfolders of the global-packages directory that match <name>/<version>/ (case in-sensitive)."""

@@ -43,10 +43,8 @@ class CargoScanner(PackageManagerScanner):
         if root := CargoDependency.load_from_package(path):
 
             args = ['generate-lockfile']
-            self._exec(*args, cwd=path)
-
             lockfile_path = path / "Cargo.lock"
-            if lockfile_path.exists():
+            if self._exec_to_generate_lockfile(lockfile_path, *args, cwd=path):
                 with lockfile_path.open() as fp:
                     lockfile = toml.load(fp)
 

@@ -37,6 +37,8 @@ class GolangScanner(PackageManagerScanner):
                     self._exec('mod', 'download', cwd=path)
                 except:
                     pass  # Continue even if download fails
+                if not go_sum_path.exists():
+                    self._report_missing_lockfile(go_sum_path)
 
             # Get all modules first
             modules_map = {}
