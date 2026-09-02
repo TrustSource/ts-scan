@@ -99,10 +99,18 @@ def test_solution_scan_preserves_projects_as_direct_dependencies(
         for dep in scan.dependencies
     }
     assert dependencies_by_project == {
-        'Example.App': ['Example.Core'],
+        'Example.App': ['Example.Core', 'Example.Native'],
         'Example.Core': ['Example.Shared'],
         'Example.Shared': [],
     }
+    native = next(
+        dep
+        for dep in scan.dependencies[0].dependencies
+        if dep.key == 'lib:dll:Example.Native'
+    )
+    assert native.versions == ['2.1.0.0']
+    assert native.meta['library_type'] == 'dll'
+    assert native.meta['copy_local'] == 'true'
 
 
 def test_solution_can_create_a_separate_scan_for_each_project(
@@ -217,6 +225,89 @@ def test_single_project_scan_uses_nuget_project_name(tmp_path, monkeypatch):
     assert scan.module == 'Jellyfin.Common'
     assert scan.moduleId == 'nuget:Jellyfin.Common'
     assert [dep.key for dep in scan.dependencies] == ['nuget:Example']
+
+
+def test_external_file_references_are_library_dependencies(tmp_path):
+    project_file = tmp_path / 'Example.csproj'
+    library_dir = tmp_path / 'vendor'
+    library_dir.mkdir()
+    library_file = library_dir / 'Contoso.Interop.dll'
+    library_file.write_bytes(b'not-a-real-assembly')
+    project_file.write_text(
+        '''<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Reference Include="Contoso.Interop, Version=3.2.1.0, Culture=neutral, PublicKeyToken=abcdef">
+      <HintPath>vendor\\Contoso.Interop.dll</HintPath>
+      <Private>False</Private>
+      <Aliases>global,contoso</Aliases>
+      <SpecificVersion>True</SpecificVersion>
+    </Reference>
+    <Reference Include="System.Xml" />
+    <ProjectReference Include="..\\Other\\Other.csproj" />
+  </ItemGroup>
+</Project>
+'''
+    )
+
+    dependencies = NugetScanner._create_deps_from_external_references(project_file)
+
+    assert len(dependencies) == 1
+    dependency = dependencies[0]
+    assert dependency.key == 'lib:dll:Contoso.Interop'
+    assert dependency.name == 'Contoso.Interop'
+    assert dependency.type == 'lib'
+    assert dependency.namespace == 'dll'
+    assert dependency.versions == ['3.2.1.0']
+    assert dependency.package_files == [str(library_file.resolve())]
+    assert dependency.meta == {
+        'dependency_type': 'library',
+        'reference_type': 'Reference',
+        'library_type': 'dll',
+        'include': (
+            'Contoso.Interop, Version=3.2.1.0, Culture=neutral, '
+            'PublicKeyToken=abcdef'
+        ),
+        'hint_path': 'vendor\\Contoso.Interop.dll',
+        'source_project': str(project_file.resolve()),
+        'assembly_identity': {
+            'Version': '3.2.1.0',
+            'Culture': 'neutral',
+            'PublicKeyToken': 'abcdef',
+        },
+        'aliases': 'global,contoso',
+        'copy_local': 'False',
+        'specific_version': 'True',
+        'resolved_path': str(library_file.resolve()),
+    }
+
+
+def test_external_reference_is_retained_without_nuget_lock_data(
+    tmp_path, monkeypatch
+):
+    project_file = tmp_path / 'Example.csproj'
+    project_file.write_text(
+        '''<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <Reference Include="native\\sqlite3.dll" />
+  </ItemGroup>
+</Project>
+'''
+    )
+
+    scanner = NugetScanner()
+    setattr(scanner, '_NugetScanner__path', project_file)
+    setattr(scanner, '_NugetScanner__global_packages_dir', tmp_path / 'packages')
+    monkeypatch.setattr(scanner, '_exec', lambda *args, **kwargs: None)
+    monkeypatch.setattr(scanner, '_project_assets_files', lambda *args: [])
+
+    dependencies = scanner._process_with_lock_file(project_file)
+
+    assert [dependency.key for dependency in dependencies] == [
+        'lib:dll:sqlite3'
+    ]
+    assert dependencies[0].meta['resolved_path'] == str(
+        (tmp_path / 'native' / 'sqlite3.dll').resolve()
+    )
 
 
 def test_lockfile_includes_only_direct_project_references(tmp_path, monkeypatch):

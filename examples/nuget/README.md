@@ -7,7 +7,8 @@ dependency from NuGet.org:
 ExampleSolution
 ├── Example.App
 │   ├── Example.Core
-│   └── NLog 5.3.0
+│   ├── NLog 5.3.0
+│   └── Example.Native 2.1.0.0 (`lib:dll:Example.Native`)
 ├── Example.Core
 │   └── Example.Shared
 └── Example.Shared
@@ -24,6 +25,11 @@ ts-scan scan examples/nuget/ExampleSolution.sln
 ```
 
 The resulting scan should contain `NLog` version `5.3.0` below `Example.App`.
+It also contains the file-backed MSBuild assembly reference as
+`lib:dll:Example.Native`, with its `HintPath`, assembly identity, source project,
+and copy-local setting in dependency metadata. The referenced DLL is
+intentionally not included in this source example; when the file exists, its
+resolved path is also added to `package_files`.
 
 Or scan one project:
 

@@ -6,6 +6,7 @@ import re
 
 from pathlib import Path, PureWindowsPath
 from enum import Enum
+from xml.etree.ElementTree import Element
 
 from defusedxml import ElementTree
 
@@ -23,6 +24,10 @@ class ProjectType(Enum):
 
 
 class NugetScanner(PackageManagerScanner):
+    LIBRARY_SUFFIXES = {
+        '.a', '.dll', '.dylib', '.exe', '.lib', '.ocx', '.so', '.tlb', '.winmd'
+    }
+
     def __init__(self, separateProjectScans: bool = False, **kwargs):
         super().__init__(**kwargs)
 
@@ -275,17 +280,178 @@ class NugetScanner(PackageManagerScanner):
                 recurse_projects=recurse_projects,
             )
             if assets_dependencies is not None:
-                return assets_dependencies
+                return self._with_external_references(
+                    assets_dependencies, project_file
+                )
 
             self._report_missing_lockfile(lockfile)
-            return []
+            return self._with_external_references([], project_file)
 
-        return self._create_deps_from_lockfile(
-            lockfile,
-            depth=depth,
-            project_file=project_file,
-            recurse_projects=recurse_projects,
+        return self._with_external_references(
+            self._create_deps_from_lockfile(
+                lockfile,
+                depth=depth,
+                project_file=project_file,
+                recurse_projects=recurse_projects,
+            ),
+            project_file,
         )
+
+    @staticmethod
+    def _xml_child_text(element: Element, name: str) -> t.Optional[str]:
+        for child in element:
+            if child.tag.rsplit('}', 1)[-1] == name and child.text:
+                value = child.text.strip()
+                if value:
+                    return value
+        return None
+
+    @classmethod
+    def _external_reference_path(
+        cls, reference: Element
+    ) -> t.Optional[str]:
+        hint_path = cls._xml_child_text(reference, 'HintPath')
+        if hint_path:
+            return hint_path
+
+        include = reference.get('Include', '').strip()
+        identity = include.split(',', 1)[0].strip()
+        identity_path = cls._path_from_msbuild(identity)
+        if (
+            '/' in identity
+            or '\\' in identity
+            or identity_path.suffix.casefold() in cls.LIBRARY_SUFFIXES
+        ):
+            return identity
+        return None
+
+    @classmethod
+    def _external_reference_name(
+        cls, reference: Element, reference_path: str
+    ) -> str:
+        include = reference.get('Include', '').strip()
+        identity = include.split(',', 1)[0].strip()
+        if identity:
+            identity_path = cls._path_from_msbuild(identity)
+            if (
+                '/' in identity
+                or '\\' in identity
+                or identity_path.suffix.casefold() in cls.LIBRARY_SUFFIXES
+            ):
+                return identity_path.stem
+            return identity
+
+        declared_name = cls._xml_child_text(reference, 'Name')
+        if declared_name:
+            return declared_name
+        return cls._path_from_msbuild(reference_path).stem
+
+    @classmethod
+    def _create_deps_from_external_references(
+        cls, project_file: Path
+    ) -> t.List[Dependency]:
+        """Create dependencies for file-backed MSBuild assembly references."""
+        tree = ElementTree.parse(project_file)
+        dependencies = []
+        seen = set()
+
+        for reference in tree.iter():
+            item_type = reference.tag.rsplit('}', 1)[-1]
+            if item_type not in ('Reference', 'NativeReference'):
+                continue
+
+            reference_path = cls._external_reference_path(reference)
+            if reference_path is None:
+                # References without a path are normally framework assemblies.
+                continue
+
+            path = cls._path_from_msbuild(reference_path)
+            library_type = path.suffix.lstrip('.').casefold()
+            name = cls._external_reference_name(reference, reference_path)
+            if not library_type or not name:
+                continue
+
+            key = f'lib:{library_type}:{name}'
+            if key.casefold() in seen:
+                continue
+            seen.add(key.casefold())
+
+            dependency = Dependency(
+                key=key,
+                name=name,
+                type='lib',
+                namespace=library_type,
+            )
+            dependency.meta.update({
+                'dependency_type': 'library',
+                'reference_type': item_type,
+                'library_type': library_type,
+                'include': reference.get('Include', '').strip(),
+                'hint_path': reference_path,
+                'source_project': str(project_file.resolve()),
+            })
+
+            include_parts = [
+                part.strip()
+                for part in reference.get('Include', '').split(',')[1:]
+            ]
+            assembly_identity = {}
+            for part in include_parts:
+                if '=' not in part:
+                    continue
+                identity_key, value = part.split('=', 1)
+                assembly_identity[identity_key.strip()] = value.strip()
+            if assembly_identity:
+                dependency.meta['assembly_identity'] = assembly_identity
+                version = next(
+                    (
+                        value
+                        for identity_key, value in assembly_identity.items()
+                        if identity_key.casefold() == 'version'
+                    ),
+                    None,
+                )
+                if version:
+                    dependency.versions.append(version)
+
+            metadata_names = {
+                'Aliases': 'aliases',
+                'EmbedInteropTypes': 'embed_interop_types',
+                'Private': 'copy_local',
+                'SpecificVersion': 'specific_version',
+            }
+            for xml_name, metadata_name in metadata_names.items():
+                value = cls._xml_child_text(reference, xml_name)
+                if value is not None:
+                    dependency.meta[metadata_name] = value
+
+            condition = reference.get('Condition')
+            if condition:
+                dependency.meta['condition'] = condition.strip()
+
+            if '$(' not in reference_path and '%(' not in reference_path:
+                resolved_path = cls._resolve_msbuild_path(
+                    reference_path, project_file.parent
+                )
+                dependency.meta['resolved_path'] = str(resolved_path)
+                if resolved_path.is_file():
+                    dependency.package_files.append(str(resolved_path))
+
+            dependencies.append(dependency)
+
+        return dependencies
+
+    @classmethod
+    def _with_external_references(
+        cls, dependencies: t.List[Dependency], project_file: Path
+    ) -> t.List[Dependency]:
+        existing_keys = {dependency.key.casefold() for dependency in dependencies}
+        dependencies.extend(
+            dependency
+            for dependency in cls._create_deps_from_external_references(project_file)
+            if dependency.key.casefold() not in existing_keys
+        )
+        return dependencies
 
     def _create_deps_from_lockfile(
         self,
