@@ -1,0 +1,9 @@
+Type=OleDll
+Module=InventoryService; InventoryService.bas
+Startup="(None)"
+Name="InventoryCore"
+Description="Shared inventory business logic"
+ExeName32="InventoryCore.dll"
+MajorVer=1
+MinorVer=2
+RevisionVer=0

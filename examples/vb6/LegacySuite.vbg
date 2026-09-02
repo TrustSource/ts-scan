@@ -1,0 +1,3 @@
+VBG=VBG
+Project=Inventory.Core\Inventory.Core.vbp
+StartupProject=Inventory.App\Inventory.App.vbp

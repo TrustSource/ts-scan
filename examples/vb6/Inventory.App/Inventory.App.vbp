@@ -1,0 +1,13 @@
+Type=Exe
+Reference=*\G{11111111-1111-4111-8111-111111111111}#1.2#0#..\Inventory.Core\InventoryCore.dll#Inventory Core
+Reference=*\G{22222222-2222-4222-8222-222222222222}#4.0#0#..\ExternalLibraries\LegacyReports.dll#Legacy Reports API
+Object={831FDD16-0C5C-11D2-A9FC-0000F8754DA1}#2.1#0; MSCOMCTL.OCX
+Form=Main.frm
+Module=NativeApi; NativeApi.bas
+Startup="Main"
+Name="InventoryApp"
+Title="Legacy Inventory"
+ExeName32="InventoryApp.exe"
+MajorVer=3
+MinorVer=0
+RevisionVer=5

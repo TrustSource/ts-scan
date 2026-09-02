@@ -7,7 +7,7 @@ The **ts-scan** scanner is a powerful command-line tool designed for scanning pa
 
 ## Description
 
-The **ts-scan** scans a project for dependencies and stores the results using either its internal format or one of the supported SBOM formats: SPDX or CycloneDX. It currently supports **PyPI**, **Maven**, **NuGet**, and **NPM** but can also utilize [Syft](https://github.com/anchore/syft) as a backend allowing it to scan Docker containers.
+The **ts-scan** scans a project for dependencies and stores the results using either its internal format or one of the supported SBOM formats: SPDX or CycloneDX. It currently supports **PyPI**, **Maven**, **NuGet**, **NPM**, and classic **Visual Basic 6** projects, among others, and can also utilize [Syft](https://github.com/anchore/syft) as a backend allowing it to scan Docker containers.
 
 Once dependencies are collected, the **ts-scan** can be used to either upload results to the [TrustSource](https://www.trustsource.io) application, perform security analysis of components by identifying known vulnerabilities, or conduct an in-depth analysis of each package. The goal of the in-depth analysis is to extract license and copyright information, detect cryptographic algorithms, identify code snippets, or detect malware by applying its own analyzers or integrating with external tools such as [scancode-toolkit](https://github.com/aboutcode-org/scancode-toolkit), [SCANOSS](https://www.scanoss.com), and [YARA](https://virustotal.github.io/yara/).
 
@@ -159,7 +159,7 @@ The ```-f <output format>``` option controls the output format and can be:
 
 **ts-scan** contains some general options as well as options that only apply while scanning specific package types. The package specific options are prefixed by the type of the package management system. We use the [Package URL Type](https://github.com/package-url/purl-spec/blob/master/PURL-TYPES.rst) as a prefix. The following options are valid for most supported package management system:
 
-* ```--[maven|gradle|npm|nuget|pypi|dart]:ignore``` - Disable scanning dependencies of the type
+* ```--[maven|gradle|npm|nuget|pypi|dart|vb6]:ignore``` - Disable scanning dependencies of the type
 * ```--[maven|gradle|npm|nuget|dart]:executable``` - Specify a path to the PM executable
 * ```--[maven|gradle|npm|nuget|dart]:forward``` - Forward arguments to the PM's executable
 * ```--nuget:separateProjectScans``` - For a solution, create one scan per project using the project as the module
