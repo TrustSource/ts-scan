@@ -3,6 +3,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### New Features
+    * Added a catalogue of well-known VB6 libraries (Microsoft ActiveX controls, ADO/DAO/MSXML type libraries, Windows system DLLs) that enriches VB6 scan results with vendor, title, life-cycle notes and known advisories
+    * Added the implicit Visual Basic 6 runtime (`MSVBVM60.DLL`) to VB6 project scans, switchable off with `--vb6:excludeRuntime`
+    * Added `contrib/devskim-vb6`, a DevSkim language definition and security rule pack producing SARIF findings for classic VB6 sources
+    * Added `examples/vb6-legacy-insecure`, a deliberately insecure VB6 sample application for demos and rule verification
+
+## [1.10.0] - 2026-09-02
+
+### New Features
+    * Added dependency scanning for classic Visual Basic 6 projects (`.vbp`) and project groups (`.vbg`), covering COM references, ActiveX controls, project references and native `Declare` libraries
+    * Added external library references to NuGet scans
+
 ## [1.9.1] - 2026-08-28
 
 ### Fixes

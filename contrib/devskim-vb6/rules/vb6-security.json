@@ -1,0 +1,983 @@
+[
+  {
+    "name": "SQL statement built by string concatenation",
+    "id": "TSVB6001",
+    "description": "A SQL statement is assembled from string literals and concatenated values. In VB6 this is the classic SQL injection pattern (ADODB/DAO Execute, Recordset.Open, CommandText).",
+    "recommendation": "Use ADODB.Command with Parameters (adCmdText/adCmdStoredProc) or validate and escape the concatenated values.",
+    "applies_to": [
+      "vb6"
+    ],
+    "tags": [
+      "Implementation.SQL.Injection"
+    ],
+    "confidence": "medium",
+    "severity": "important",
+    "patterns": [
+      {
+        "pattern": "\"[^\"\\r\\n]*\\b(select\\s+[^\"\\r\\n]+\\s+from\\s|insert\\s+into\\s|update\\s+\\w+\\s+set\\s|delete\\s+from\\s|exec(ute)?\\s+\\w+|where\\s+[\\w.\\[\\]]+\\s*(=|like|in|>|<))[^\"\\r\\n]*\"\\s*&",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      },
+      {
+        "pattern": "&\\s*\"[^\"\\r\\n]*(\\bwhere\\s+[\\w.\\[\\]]+\\s*(=|like|in|>|<)|\\s+and\\s+[\\w.\\[\\]]+\\s*=|\\s+or\\s+[\\w.\\[\\]]+\\s*=|\\bvalues\\s*\\()[^\"\\r\\n]*\"",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      }
+    ],
+    "must-match": [
+      "sql = \"SELECT UserId, Role FROM Users WHERE Login = '\" & txtUser.Text & \"'\"",
+      "gConn.Execute \"DELETE FROM Orders WHERE OrderNo = \" & orderNo",
+      "cmd.CommandText = \"EXEC sp_FindCustomer '\" & customerName & \"'\"",
+      "sql = sql & \" AND Pwd = '\" & txtPassword.Text & \"'\""
+    ],
+    "must-not-match": [
+      "MsgBox \"Delete order \" & txtOrderNo.Text & \"?\", vbYesNo",
+      "cmd.CommandText = \"SELECT UserId FROM Users WHERE Login = ?\"",
+      "lbl.Caption = \"Imported \" & Len(csv) & \" bytes.\""
+    ]
+  },
+  {
+    "name": "Shell command built from variables",
+    "id": "TSVB6002",
+    "description": "Shell() is called with a command line that is not a fixed string literal. If any part of it comes from user input, files or the database, arbitrary commands can be executed.",
+    "recommendation": "Avoid Shell for anything but fixed commands. Validate arguments against an allow-list and quote them; prefer ShellExecute with a fixed verb and a validated file path.",
+    "applies_to": [
+      "vb6"
+    ],
+    "tags": [
+      "Implementation.Process.Injection"
+    ],
+    "confidence": "high",
+    "severity": "important",
+    "patterns": [
+      {
+        "pattern": "\\bShell\\b(\\s*\\(\\s*|\\s+)(\"[^\"\\r\\n]*\"\\s*&|[^\"\\s,)])",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      }
+    ],
+    "must-match": [
+      "Shell \"cmd.exe /c print \" & reportFile, vbHide",
+      "Shell cmdLine, vbHide",
+      "ret = Shell(cmd$)"
+    ],
+    "must-not-match": [
+      "Shell \"hh.exe OrderDesk.chm\", vbNormalFocus",
+      "Set wsh = CreateObject(\"WScript.Shell\")",
+      "ShellExecute 0, \"open\", exportDir, vbNullString, vbNullString, 1",
+      "Shell(\"notepad.exe\")"
+    ]
+  },
+  {
+    "name": "Process execution through WScript.Shell, Shell.Application or ShellExecute",
+    "id": "TSVB6003",
+    "description": "The code starts external processes through Windows Script Host, the Shell automation object or the ShellExecute API. Paths and verbs derived from untrusted data lead to command or file execution.",
+    "recommendation": "Review every call site: fix the verb, validate the target path against an allow-list and never pass user controlled strings as the file or parameters argument.",
+    "applies_to": [
+      "vb6"
+    ],
+    "tags": [
+      "Implementation.Process.Execution"
+    ],
+    "confidence": "high",
+    "severity": "important",
+    "patterns": [
+      {
+        "pattern": "(?:CreateObject\\s*\\(\\s*\"(WScript\\.Shell|Shell\\.Application)\")|(?:\\bShellExecute(Ex)?\\b)",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      }
+    ],
+    "conditions": [
+      {
+        "pattern": {
+          "pattern": "\\bDeclare\\b",
+          "type": "regex",
+          "modifiers": [
+            "i"
+          ],
+          "scopes": [
+            "code"
+          ]
+        },
+        "search_in": "same-line",
+        "negate_finding": true
+      }
+    ],
+    "must-match": [
+      "Set wsh = CreateObject(\"WScript.Shell\")\nShellExecute 0, \"open\", exportDir, vbNullString, vbNullString, 1",
+      "Set wsh = CreateObject(\"WScript.Shell\")",
+      "ShellExecute 0, \"open\", exportDir, vbNullString, vbNullString, 1"
+    ],
+    "must-not-match": [
+      "Public Declare Function ShellExecute Lib \"shell32.dll\" Alias \"ShellExecuteA\" (ByVal hwnd As Long) As Long",
+      "Set fso = CreateObject(\"Scripting.FileSystemObject\")"
+    ]
+  },
+  {
+    "name": "Dynamic script execution through the Microsoft Script Control",
+    "id": "TSVB6004",
+    "description": "MSScriptControl evaluates or executes VBScript/JScript supplied at runtime. Script text that originates from users, files or database tables is executed with the privileges of the application.",
+    "recommendation": "Replace runtime script evaluation with a fixed expression parser or a whitelist of named rules; never execute script text from untrusted sources.",
+    "applies_to": [
+      "vb6"
+    ],
+    "tags": [
+      "Implementation.Code.Injection"
+    ],
+    "confidence": "high",
+    "severity": "important",
+    "patterns": [
+      {
+        "pattern": "\\.(Eval|ExecuteStatement|AddCode)(\\s*\\(\\s*|\\s+)(\"[^\"\\r\\n]*\"\\s*&|[^\"\\s,)])",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      },
+      {
+        "pattern": "\\bMSScriptControl\\.ScriptControl\\b|CreateObject\\s*\\(\\s*\"(MSScriptControl\\.ScriptControl|ScriptControl)\"",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      }
+    ],
+    "must-match": [
+      "EvaluateDiscountRule = sc.Eval(rule)",
+      "sc.ExecuteStatement scriptText",
+      "Dim sc As New MSScriptControl.ScriptControl"
+    ],
+    "must-not-match": [
+      "result = Evaluate(\"1+1\")",
+      "sc.Language = \"VBScript\"",
+      "sc.Eval(\"1+1\")"
+    ]
+  },
+  {
+    "name": "Hard-coded credential or secret",
+    "id": "TSVB6005",
+    "description": "A password, key or token is embedded as a constant or inside a connection string. VB6 binaries are trivially decompiled with string tools, so such secrets are effectively public.",
+    "recommendation": "Move secrets to a protected configuration store (DPAPI protected file, Windows Credential Manager) or use integrated Windows authentication for database connections.",
+    "applies_to": [
+      "vb6"
+    ],
+    "tags": [
+      "Authentication.Credential.Hardcoded"
+    ],
+    "confidence": "medium",
+    "severity": "critical",
+    "patterns": [
+      {
+        "pattern": "\\bConst\\s+\\w*(password|passwd|pwd|secret|apikey|api_key|token|licensekey|license_key|privatekey|private_key)\\w*\\s+As\\s+String\\s*=\\s*\"[^\"\\r\\n]+\"",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      },
+      {
+        "pattern": "\\b(Password|Pwd)=[^;\"\\s]+",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      }
+    ],
+    "must-match": [
+      "Private Const ADMIN_PASSWORD As String = \"Sup3rS3cret!\"",
+      "\"User ID=sa;Password=orderdesk2001;Persist Security Info=True\"",
+      "Private Const LICENSE_KEY As String = \"0D-4F-1A-77-C3-9B-22-E1\""
+    ],
+    "must-not-match": [
+      "Private Const PASSWORD_MIN_LENGTH As Long = 8",
+      "sql = \"... AND Pwd = '\" & txtPassword.Text & \"'\"",
+      "\"Provider=SQLOLEDB;Data Source=SRV;Integrated Security=SSPI\""
+    ]
+  },
+  {
+    "name": "Connection string keeps credentials in memory (Persist Security Info=True)",
+    "id": "TSVB6006",
+    "description": "With Persist Security Info=True the OLE DB provider keeps the password in the connection object, where it can be read back through ConnectionString and ends up in logs and crash dumps.",
+    "recommendation": "Set Persist Security Info=False (the default) or use integrated security.",
+    "applies_to": [
+      "vb6"
+    ],
+    "tags": [
+      "Authentication.Credential.Exposure"
+    ],
+    "confidence": "high",
+    "severity": "moderate",
+    "patterns": [
+      {
+        "pattern": "Persist\\s+Security\\s+Info\\s*=\\s*True",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      }
+    ],
+    "must-match": [
+      "\"User ID=sa;Password=x;Persist Security Info=True\""
+    ],
+    "must-not-match": [
+      "\"User ID=sa;Persist Security Info=False\""
+    ]
+  },
+  {
+    "name": "Broken or weak cryptographic algorithm",
+    "id": "TSVB6007",
+    "description": "Use of MD2/MD4/MD5, RC2/RC4, DES or a hand-rolled XOR cipher was found. These algorithms do not provide confidentiality or integrity against a current attacker.",
+    "recommendation": "Use CryptoAPI/CNG with AES (CALG_AES_256) and SHA-256 (CALG_SHA_256), or delegate cryptography to a maintained component. Never implement XOR 'encryption'.",
+    "applies_to": [
+      "vb6"
+    ],
+    "tags": [
+      "Cryptography.Symmetric.WeakOrBrokenAlgorithm",
+      "Cryptography.HashAlgorithm.Broken"
+    ],
+    "confidence": "high",
+    "severity": "important",
+    "patterns": [
+      {
+        "pattern": "\\bCALG_(MD2|MD4|MD5|RC2|RC4|DES)\\b",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      },
+      {
+        "pattern": "\\b\\w*Xor(Encrypt|Decrypt|Crypt|Cipher)\\w*\\b",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      },
+      {
+        "pattern": "\\b(RC4|MD5|DES)(Encrypt|Decrypt|Hash|Crypt)?\\s*\\(",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      }
+    ],
+    "must-match": [
+      "Private Const CALG_MD5 As Long = &H8003&",
+      "CryptDeriveKey hProv, CALG_RC4, hHash, 0, hKey",
+      "Public Function XorEncrypt(ByVal plainText As String, ByVal key As String) As String",
+      "hash = MD5(password)"
+    ],
+    "must-not-match": [
+      "Private Const CALG_AES_256 As Long = &H6610&",
+      "Private Const CALG_SHA_256 As Long = &H800C&",
+      "descr = GetDescription(id)"
+    ],
+    "overrides": [
+      "DS126858",
+      "DS106863"
+    ]
+  },
+  {
+    "name": "SHA-1 hash algorithm",
+    "id": "TSVB6008",
+    "description": "SHA-1 is no longer collision resistant and must not be used for signatures, certificates or password hashing.",
+    "recommendation": "Use CALG_SHA_256 or stronger.",
+    "applies_to": [
+      "vb6"
+    ],
+    "tags": [
+      "Cryptography.HashAlgorithm.Weak"
+    ],
+    "confidence": "high",
+    "severity": "moderate",
+    "patterns": [
+      {
+        "pattern": "\\bCALG_SHA1?\\b",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      }
+    ],
+    "must-match": [
+      "CryptCreateHash hProv, CALG_SHA1, 0, 0, hHash"
+    ],
+    "must-not-match": [
+      "CryptCreateHash hProv, CALG_SHA_256, 0, 0, hHash"
+    ]
+  },
+  {
+    "name": "Rnd() used for a security-relevant value",
+    "id": "TSVB6009",
+    "description": "The VB6 Rnd() generator is a predictable linear congruential generator seeded from the system clock. Tokens, passwords, salts or session identifiers derived from it can be guessed.",
+    "recommendation": "Use CryptGenRandom (advapi32) or BCryptGenRandom to generate security-relevant random values.",
+    "applies_to": [
+      "vb6"
+    ],
+    "tags": [
+      "Cryptography.PRNG.Weak"
+    ],
+    "confidence": "medium",
+    "severity": "important",
+    "patterns": [
+      {
+        "pattern": "\\bRnd\\b",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      }
+    ],
+    "conditions": [
+      {
+        "pattern": {
+          "pattern": "(token|password|passwd|secret|salt|nonce|session|otp|tan|pin|key)",
+          "type": "regex",
+          "modifiers": [
+            "i"
+          ],
+          "scopes": [
+            "code"
+          ]
+        },
+        "search_in": "finding-region(-3,3)",
+        "negate_finding": false
+      }
+    ],
+    "must-match": [
+      "Public Function NewSessionToken() As String\n    Randomize\n    NewSessionToken = Hex$(CLng(Rnd * 2147483647))\nEnd Function"
+    ],
+    "must-not-match": [
+      "dice = Int(Rnd * 6) + 1"
+    ]
+  },
+  {
+    "name": "SendKeys keystroke injection",
+    "id": "TSVB6010",
+    "description": "SendKeys types keystrokes into whichever window has the focus. It is unreliable, can leak credentials into the wrong application and is frequently used to script logins into other programs.",
+    "recommendation": "Use the target application's API or automation interface. Never transmit credentials through SendKeys.",
+    "applies_to": [
+      "vb6"
+    ],
+    "tags": [
+      "Implementation.UI.Automation"
+    ],
+    "confidence": "high",
+    "severity": "moderate",
+    "patterns": [
+      {
+        "pattern": "\\bSendKeys\\b",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      }
+    ],
+    "must-match": [
+      "SendKeys \"sa{TAB}orderdesk2001{ENTER}\", True"
+    ],
+    "must-not-match": [
+      "' SendKeys was removed in build 2.3"
+    ]
+  },
+  {
+    "name": "Errors silently ignored (On Error Resume Next)",
+    "id": "TSVB6011",
+    "description": "On Error Resume Next suppresses every runtime error in the procedure. Failed authentication checks, failed file operations and failed database calls continue as if they had succeeded.",
+    "recommendation": "Use structured On Error GoTo handlers and check Err.Number after calls that may fail; keep the Resume Next scope as small as possible.",
+    "applies_to": [
+      "vb6"
+    ],
+    "tags": [
+      "Implementation.ErrorHandling.Suppressed"
+    ],
+    "confidence": "high",
+    "severity": "moderate",
+    "patterns": [
+      {
+        "pattern": "^\\s*On\\s+Error\\s+Resume\\s+Next\\b",
+        "type": "regex",
+        "modifiers": [
+          "i",
+          "m"
+        ],
+        "scopes": [
+          "code"
+        ]
+      }
+    ],
+    "must-match": [
+      "    On Error Resume Next"
+    ],
+    "must-not-match": [
+      "    On Error GoTo ErrHandler"
+    ]
+  },
+  {
+    "name": "File system operation with a dynamic path",
+    "id": "TSVB6012",
+    "description": "Kill, FileCopy, RmDir, MkDir, ChDir or Open ... For Input/Output/Append/Binary is called with a path assembled at runtime. Path traversal ('..\\') or wildcard characters in user data can destroy or expose files outside the intended folder.",
+    "recommendation": "Canonicalise the path, reject '..' and wildcards, and confirm the result lies inside an allowed base directory before performing the operation.",
+    "applies_to": [
+      "vb6"
+    ],
+    "tags": [
+      "Implementation.FileSystem.PathTraversal"
+    ],
+    "confidence": "medium",
+    "severity": "moderate",
+    "patterns": [
+      {
+        "pattern": "\\b(Kill|FileCopy|RmDir|MkDir|ChDir)\\s+(\"[^\"\\r\\n]*\"\\s*&|[^\"\\s])",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      },
+      {
+        "pattern": "\\bOpen\\s+([^\"\\s][^\\r\\n]*|\"[^\"\\r\\n]*\"\\s*&[^\\r\\n]*)\\bFor\\s+(Input|Output|Append|Binary|Random)\\b",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      }
+    ],
+    "must-match": [
+      "Kill exportDir & \"\\*.tmp\"",
+      "Open m_logPath & \"\\\" & user & \".log\" For Append As #fh",
+      "FileCopy srcFile, App.Path & \"\\backup\\\" & name"
+    ],
+    "must-not-match": [
+      "Kill \"C:\\Temp\\orderdesk.tmp\"",
+      "http.Open \"GET\", url, False",
+      "Open \"C:\\Temp\\out.txt\" For Output As #1"
+    ]
+  },
+  {
+    "name": "TLS certificate errors ignored",
+    "id": "TSVB6013",
+    "description": "ServerXMLHTTP option 2 (SXH_OPTION_IGNORE_SERVER_SSL_CERT_ERROR_FLAGS) or WinHttpRequest option 4 (SslErrorIgnoreFlags) is set to ignore certificate errors. This disables server authentication and enables man-in-the-middle attacks.",
+    "recommendation": "Remove the option and install a trusted certificate on the server; fix the trust chain instead of ignoring it.",
+    "applies_to": [
+      "vb6"
+    ],
+    "tags": [
+      "Cryptography.TLS.CertificateValidationDisabled"
+    ],
+    "confidence": "high",
+    "severity": "critical",
+    "patterns": [
+      {
+        "pattern": "\\.setOption\\s*\\(?\\s*2\\s*,",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      },
+      {
+        "pattern": "\\bSXH_SERVER_CERT_IGNORE_ALL_SERVER_ERRORS\\b|\\b13056\\b",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      },
+      {
+        "pattern": "\\.Option\\s*\\(\\s*4\\s*\\)\\s*=\\s*(13056|&H3300)",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      }
+    ],
+    "must-match": [
+      "http.setOption 2, SXH_SERVER_CERT_IGNORE_ALL_SERVER_ERRORS",
+      "http.setOption(2, 13056)",
+      "req.Option(4) = 13056"
+    ],
+    "must-not-match": [
+      "http.setOption 3, \"MYCERT\"",
+      "http.Open \"GET\", url, False"
+    ]
+  },
+  {
+    "name": "XML parser resolves external entities",
+    "id": "TSVB6014",
+    "description": "MSXML is configured to resolve external entities or to allow DTDs. Attacker supplied XML can then read local files or reach internal network services (XXE).",
+    "recommendation": "Leave resolveExternals at False, set ProhibitDTD to True and prefer MSXML 6.0.",
+    "applies_to": [
+      "vb6"
+    ],
+    "tags": [
+      "Implementation.XML.XXE"
+    ],
+    "confidence": "high",
+    "severity": "important",
+    "patterns": [
+      {
+        "pattern": "\\.resolveExternals\\s*=\\s*True",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      },
+      {
+        "pattern": "\\.setProperty\\s*\\(?\\s*\"ProhibitDTD\"\\s*,\\s*False",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      }
+    ],
+    "must-match": [
+      "doc.resolveExternals = True",
+      "doc.setProperty \"ProhibitDTD\", False"
+    ],
+    "must-not-match": [
+      "doc.resolveExternals = False"
+    ]
+  },
+  {
+    "name": "Raw socket communication through the Winsock control",
+    "id": "TSVB6015",
+    "description": "The Microsoft Winsock control sends and receives data over plain TCP/UDP without transport encryption or peer authentication.",
+    "recommendation": "Tunnel the protocol through TLS (e.g. stunnel, a TLS-terminating proxy) or replace the control with WinHTTP over HTTPS.",
+    "applies_to": [
+      "vb6"
+    ],
+    "tags": [
+      "ThreatModel.Integration.Socket"
+    ],
+    "confidence": "medium",
+    "severity": "moderate",
+    "patterns": [
+      {
+        "pattern": "\\bMSWinsockLib\\.Winsock\\b|\\bMSWINSCK\\.OCX\\b",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      },
+      {
+        "pattern": "\\.SendData\\b",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      }
+    ],
+    "must-match": [
+      "Object={248DD890-BB45-11CF-9ABC-0080C7E7B78D}#1.0#0; MSWINSCK.OCX",
+      ".SendData payload & vbCrLf"
+    ],
+    "must-not-match": [
+      "http.send"
+    ]
+  },
+  {
+    "name": "Legacy Internet Transfer Control (MSINET) with a dynamic URL",
+    "id": "TSVB6016",
+    "description": "The Internet Transfer Control is a legacy HTTP/FTP client without configurable TLS and certificate validation. Passing runtime URLs to OpenURL/Execute additionally enables server-side request forgery.",
+    "recommendation": "Replace MSINET with WinHTTP over HTTPS and validate URLs against an allow-list of hosts.",
+    "applies_to": [
+      "vb6"
+    ],
+    "tags": [
+      "ThreatModel.Integration.HTTP",
+      "Implementation.SSRF"
+    ],
+    "confidence": "medium",
+    "severity": "moderate",
+    "patterns": [
+      {
+        "pattern": "\\bInetCtlsObjects\\.Inet\\b|\\bMSINET\\.OCX\\b",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      },
+      {
+        "pattern": "\\.OpenURL(\\s*\\(\\s*|\\s+)(\"[^\"\\r\\n]*\"\\s*&|[^\"\\s,)])",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      }
+    ],
+    "must-match": [
+      "Object={48E59290-9880-11CF-9754-00AA00C00908}#1.0#0; MSINET.OCX",
+      "LoadPriceList = frmMain.inetPrices.OpenURL(url)"
+    ],
+    "must-not-match": [
+      "data = inet.OpenURL(\"https://example.org/static.txt\")"
+    ]
+  },
+  {
+    "name": "Unsafe memory access (CopyMemory/RtlMoveMemory, VarPtr/StrPtr/ObjPtr)",
+    "id": "TSVB6017",
+    "description": "Direct memory copies and raw pointers bypass VB6's bounds checking. Wrong lengths or stale pointers corrupt memory and can be exploitable.",
+    "recommendation": "Review each call for correct buffer sizes and lifetimes; prefer typed VB6 constructs (arrays, LSet, user-defined types) where possible.",
+    "applies_to": [
+      "vb6"
+    ],
+    "tags": [
+      "Implementation.Memory.Unsafe"
+    ],
+    "confidence": "medium",
+    "severity": "moderate",
+    "patterns": [
+      {
+        "pattern": "(?:\\b(CopyMemory|RtlMoveMemory|MoveMemory|ZeroMemory)\\b)|(?:\\b(VarPtr|StrPtr|ObjPtr)\\s*\\()",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      }
+    ],
+    "conditions": [
+      {
+        "pattern": {
+          "pattern": "\\bDeclare\\b",
+          "type": "regex",
+          "modifiers": [
+            "i"
+          ],
+          "scopes": [
+            "code"
+          ]
+        },
+        "search_in": "same-line",
+        "negate_finding": true
+      }
+    ],
+    "must-match": [
+      "CopyMemory header, ByVal ptr, 4",
+      "addr = VarPtr(buffer(0))"
+    ],
+    "must-not-match": [
+      "Public Declare Sub CopyMemory Lib \"kernel32\" Alias \"RtlMoveMemory\" (Destination As Any, Source As Any, ByVal Length As Long)"
+    ]
+  },
+  {
+    "name": "Secret stored in or read from the registry in clear text",
+    "id": "TSVB6018",
+    "description": "SaveSetting/GetSetting store values unencrypted under HKEY_CURRENT_USER\\Software\\VB and VBA Program Settings. Passwords and tokens stored there are readable by any process running as the user.",
+    "recommendation": "Protect the value with DPAPI (CryptProtectData) before storing it, or use the Windows Credential Manager.",
+    "applies_to": [
+      "vb6"
+    ],
+    "tags": [
+      "Storage.Secret.Cleartext"
+    ],
+    "confidence": "medium",
+    "severity": "important",
+    "patterns": [
+      {
+        "pattern": "\\b(SaveSetting|GetSetting|RegSetValueEx|RegQueryValueEx)\\b",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      }
+    ],
+    "conditions": [
+      {
+        "pattern": {
+          "pattern": "(password|passwd|pwd|secret|token|apikey|api_key|license)",
+          "type": "regex",
+          "modifiers": [
+            "i"
+          ],
+          "scopes": [
+            "code"
+          ]
+        },
+        "search_in": "same-line",
+        "negate_finding": false
+      },
+      {
+        "pattern": {
+          "pattern": "\\bDeclare\\b",
+          "type": "regex",
+          "modifiers": [
+            "i"
+          ],
+          "scopes": [
+            "code"
+          ]
+        },
+        "search_in": "same-line",
+        "negate_finding": true
+      }
+    ],
+    "must-match": [
+      "SaveSetting \"OrderDesk\", \"Session\", \"LastPassword\", txtPassword.Text",
+      "txtPassword.Text = GetSetting(\"OrderDesk\", \"Session\", \"LastPassword\", \"\")"
+    ],
+    "must-not-match": [
+      "SaveSetting \"OrderDesk\", \"Window\", \"Left\", Me.Left",
+      "Public Declare Function RegSetValueEx Lib \"advapi32.dll\" Alias \"RegSetValueExA\" (ByVal hKey As Long, ByVal lpPassword As String) As Long"
+    ]
+  },
+  {
+    "name": "Untrusted input source (command line, environment, InputBox)",
+    "id": "TSVB6019",
+    "description": "Command$, Environ$ and InputBox return attacker influenced data. Track where the value flows: SQL statements, Shell commands, file paths and script evaluation are the critical sinks.",
+    "recommendation": "Validate the value immediately against the expected format and treat it as untrusted in every sink.",
+    "applies_to": [
+      "vb6"
+    ],
+    "tags": [
+      "ThreatModel.Input.Untrusted"
+    ],
+    "confidence": "medium",
+    "severity": "ManualReview",
+    "patterns": [
+      {
+        "pattern": "\\bCommand\\$|(?<![\\w.])Command\\s*\\(\\s*\\)|=\\s*Command\\s*$",
+        "type": "regex",
+        "modifiers": [
+          "i",
+          "m"
+        ],
+        "scopes": [
+          "code"
+        ]
+      },
+      {
+        "pattern": "\\b(Environ\\$?|InputBox)\\s*\\(",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      }
+    ],
+    "must-match": [
+      "CommandLineOrder = Command$",
+      "CommandLineOrder = Environ$(\"ORDERDESK_ORDER\")",
+      "name = InputBox(\"Customer name?\")"
+    ],
+    "must-not-match": [
+      "Dim cmd As New ADODB.Command",
+      "cmd.CommandText = \"SELECT 1\""
+    ]
+  },
+  {
+    "name": "LoadLibrary with a bare DLL name (DLL search order hijacking)",
+    "id": "TSVB6020",
+    "description": "LoadLibrary is called with a file name without a full path. Windows searches the application directory, the current directory and PATH, so a planted DLL of the same name gets loaded.",
+    "recommendation": "Pass a fully qualified path (App.Path based) and use LoadLibraryEx with LOAD_LIBRARY_SEARCH_* flags.",
+    "applies_to": [
+      "vb6"
+    ],
+    "tags": [
+      "Implementation.DLL.SearchOrderHijack"
+    ],
+    "confidence": "medium",
+    "severity": "moderate",
+    "patterns": [
+      {
+        "pattern": "\\bLoadLibrary(Ex)?\\s*\\(?\\s*\"[^\"\\\\:/\\r\\n]+\\.dll\"",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      }
+    ],
+    "conditions": [
+      {
+        "pattern": {
+          "pattern": "\\bDeclare\\b",
+          "type": "regex",
+          "modifiers": [
+            "i"
+          ],
+          "scopes": [
+            "code"
+          ]
+        },
+        "search_in": "same-line",
+        "negate_finding": true
+      }
+    ],
+    "must-match": [
+      "LoadLibrary \"PriceEngine.dll\""
+    ],
+    "must-not-match": [
+      "LoadLibrary App.Path & \"\\PriceEngine.dll\"",
+      "hMod = LoadLibrary(\"C:\\Program Files\\OrderDesk\\PriceEngine.dll\")"
+    ]
+  },
+  {
+    "name": "Reference to an out-of-support or superseded component",
+    "id": "TSVB6021",
+    "description": "The project references a Microsoft component that no longer receives security updates (MSXML 2.x/4.x/5, DAO 3.5, CAPICOM, VB5 runtime) or that has been superseded (Common Controls 5.0).",
+    "recommendation": "Migrate to the supported successor: MSXML 6.0, DAO 3.6/ACE, CNG instead of CAPICOM, MSCOMCTL.OCX (Common Controls 6.0 SP6).",
+    "applies_to": [
+      "vb6"
+    ],
+    "tags": [
+      "Dependency.OutOfSupport"
+    ],
+    "confidence": "high",
+    "severity": "moderate",
+    "patterns": [
+      {
+        "pattern": "\\b(msxml\\.dll|msxml2\\.dll|msxml4\\.dll|msxml5\\.dll|dao350\\.dll|capicom\\.dll|msvbvm50\\.dll|comctl32\\.ocx)\\b",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      },
+      {
+        "pattern": "MSXML2\\.(DOMDocument|ServerXMLHTTP|XMLHTTP|FreeThreadedDOMDocument)\\.(2|4|5)\\.0",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      }
+    ],
+    "must-match": [
+      "Reference=*\\G{F5078F18-C551-11D3-89B9-0000F81FE221}#4.0#0#C:\\WINDOWS\\system32\\msxml4.dll#Microsoft XML, v4.0",
+      "Set doc = CreateObject(\"MSXML2.DOMDocument.4.0\")"
+    ],
+    "must-not-match": [
+      "Set doc = CreateObject(\"MSXML2.DOMDocument.6.0\")",
+      "Object={831FDD16-0C5C-11D2-A9FC-0000F8754DA1}#2.0#0; MSCOMCTL.OCX"
+    ]
+  },
+  {
+    "name": "Internal error details shown to the user",
+    "id": "TSVB6022",
+    "description": "Err.Description is displayed in a message box. Provider error texts reveal SQL statements, table names, file paths and server names.",
+    "recommendation": "Log the technical details and show the user a generic message with a correlation id.",
+    "applies_to": [
+      "vb6"
+    ],
+    "tags": [
+      "Implementation.InformationDisclosure.ErrorMessage"
+    ],
+    "confidence": "medium",
+    "severity": "BestPractice",
+    "patterns": [
+      {
+        "pattern": "\\bMsgBox\\b[^\\r\\n]*\\bErr\\.Description\\b",
+        "type": "regex",
+        "modifiers": [
+          "i"
+        ],
+        "scopes": [
+          "code"
+        ]
+      }
+    ],
+    "must-match": [
+      "MsgBox \"Login failed: \" & Err.Description, vbExclamation"
+    ],
+    "must-not-match": [
+      "LogError Err.Number, Err.Description"
+    ]
+  }
+]

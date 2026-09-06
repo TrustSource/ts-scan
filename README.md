@@ -193,6 +193,23 @@ ts-scan scan --maven:forward --settings,customSettings.xml <PATH>
 * ```--branch <BRANCH>``` - Stores the SCM branch ```<BRANCH>``` in the scan  
 
 
+### Visual Basic 6 projects
+
+Classic VB6 projects have no package manager; their dependencies are COM type libraries, ActiveX controls and native DLLs. ***ts-scan*** reads `.vbp` project and `.vbg` project-group files directly and reports
+
+* `Reference=` and `Object=` entries as `lib:<tlb|ocx|dll>:<name>` components with the type library version and GUID
+* references to sibling VB6 projects as `vb:<project>` dependencies
+* native libraries used through `Declare Function ... Lib "..."` statements in the sources
+* the implicit Visual Basic 6 runtime (`MSVBVM60.DLL`), unless `--vb6:excludeRuntime` is given
+
+Well-known Microsoft components (Common Controls, Winsock, ADO, DAO, MSXML, the Windows system DLLs) are enriched with vendor, title, life-cycle notes and known advisories from a built-in catalogue. No Windows installation is required, the scan works on any platform:
+
+```shell
+ts-scan scan -o result.json path/to/Project.vbp
+```
+
+For security findings in VB6 source code see the DevSkim rule pack in [`contrib/devskim-vb6`](contrib/devskim-vb6/README.md) and the sample application in [`examples/vb6-legacy-insecure`](examples/vb6-legacy-insecure/README.md).
+
 ### Scan with Syft as a backend
 
 **ts-scan** can use [Syft](https://github.com/anchore/syft) scanner as a backend for dependencies scanning. To enable the Syft scanner, use the following option:

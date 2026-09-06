@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path, PureWindowsPath
 
 from . import Dependency, DependencyScan, PackageManagerScanner
+from .vb6_catalog import VB6_RUNTIME_FILE, VB6_RUNTIME_VERSION, lookup as catalog_lookup
 
 
 @dataclass
@@ -20,6 +21,9 @@ class VB6Project:
 
 class VB6Scanner(PackageManagerScanner):
     """Scan classic Visual Basic 6 project and project-group files."""
+
+    #: Project types whose output is executed by the VB6 runtime.
+    RUNTIME_PROJECT_TYPES = {'exe', 'oleexe', 'oledll', 'control'}
 
     SOURCE_KEYS = {
         'class',
@@ -47,9 +51,24 @@ class VB6Scanner(PackageManagerScanner):
         re.IGNORECASE | re.MULTILINE,
     )
 
+    def __init__(self, excludeRuntime: bool = False, **kwargs: t.Any):
+        super().__init__(**kwargs)
+        self.excludeRuntime = excludeRuntime
+
     @staticmethod
     def name() -> str:
         return 'VB6'
+
+    @classmethod
+    def options(cls) -> PackageManagerScanner.OptionsType:
+        return super().options() | {
+            'excludeRuntime': {
+                'default': False,
+                'is_flag': True,
+                'help': 'Do not add the implicit Visual Basic 6 runtime (MSVBVM60.DLL) '
+                        'to VB6 project scans',
+            }
+        }
 
     def accepts(self, path: Path) -> bool:
         if path.is_file():
@@ -209,17 +228,16 @@ class VB6Scanner(PackageManagerScanner):
                 projects.append(cls._load_project(resolved))
         return cls._project_index(projects)
 
-    @classmethod
-    def _scan_group(cls, group_file: Path) -> DependencyScan:
+    def _scan_group(self, group_file: Path) -> DependencyScan:
         projects = [
-            cls._load_project(project_file)
-            for project_file in cls._group_project_files(group_file)
+            self._load_project(project_file)
+            for project_file in self._group_project_files(group_file)
         ]
-        project_index = cls._project_index(projects)
+        project_index = self._project_index(projects)
         dependencies = [
-            cls._project_dependency(
+            self._project_dependency(
                 project,
-                cls._project_dependencies(project, project_index),
+                self._project_dependencies(project, project_index),
             )
             for project in projects
         ]
@@ -229,16 +247,15 @@ class VB6Scanner(PackageManagerScanner):
             dependencies=dependencies,
         )
 
-    @classmethod
     def _scan_project(
-        cls,
+        self,
         project: VB6Project,
         project_index: t.Mapping[str, VB6Project],
     ) -> DependencyScan:
         return DependencyScan(
             module=project.name,
             moduleId=f'vb:{project.name}',
-            dependencies=cls._project_dependencies(project, project_index),
+            dependencies=self._project_dependencies(project, project_index),
         )
 
     @classmethod
@@ -273,12 +290,12 @@ class VB6Scanner(PackageManagerScanner):
                 dependency.meta[metadata_key] = cls._unquote(value)
         return dependency
 
-    @classmethod
     def _project_dependencies(
-        cls,
+        self,
         project: VB6Project,
         project_index: t.Mapping[str, VB6Project],
     ) -> t.List[Dependency]:
+        cls = type(self)
         dependencies: t.Dict[str, Dependency] = {}
 
         for key, value in project.entries:
@@ -306,7 +323,33 @@ class VB6Scanner(PackageManagerScanner):
                     dependency = project_dependency
                 cls._add_dependency(dependencies, dependency)
 
+        if (
+            not self.excludeRuntime
+            and project.project_type.casefold() in cls.RUNTIME_PROJECT_TYPES
+        ):
+            cls._add_dependency(dependencies, cls._runtime_dependency(project))
+
         return list(dependencies.values())
+
+    @classmethod
+    def _runtime_dependency(cls, project: VB6Project) -> Dependency:
+        """The VB6 runtime is an implicit dependency of every compiled VB6 output."""
+        runtime_file = PureWindowsPath(VB6_RUNTIME_FILE)
+        dependency = cls._library_dependency(
+            runtime_file.stem.upper(),
+            runtime_file.suffix.lstrip('.'),
+            project,
+            {
+                'reference_type': 'runtime',
+                'path': VB6_RUNTIME_FILE,
+                'version': VB6_RUNTIME_VERSION,
+            },
+            VB6_RUNTIME_FILE,
+        )
+        dependency.meta['dependency_type'] = 'runtime'
+        dependency.meta['implicit'] = True
+        dependency.versions.append(VB6_RUNTIME_VERSION)
+        return dependency
 
     @staticmethod
     def _add_dependency(
@@ -429,6 +472,9 @@ class VB6Scanner(PackageManagerScanner):
             'source_project': str(project.path),
             'references': [usage],
         })
+        if catalog_entry := catalog_lookup(name, library_type):
+            dependency.description = catalog_entry['title']
+            dependency.meta['catalog'] = dict(catalog_entry)
         resolved_path = cls._resolve_library_path(raw_path, project.path.parent)
         if resolved_path is not None:
             dependency.meta['resolved_path'] = str(resolved_path)
