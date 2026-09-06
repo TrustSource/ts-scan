@@ -11,7 +11,7 @@ For information regarding the security of our solutions, you may
 - get an understanding of the service status at our [System Status Page](https://status.trustsource.io/)
 - understand your and our responsibilities by reading the [Shared Security Responsibility Model](https://trustsource.github.io/SSRM/)
 - follow our RSS feed on vulnerability disclosure at [Vulnerability Disclosure Feed](https://www.trustsource.io/en/tag/vdf/feed)
-- get the [Meta data](https://p-csaf.dev.trustsource.io/.well-known/csaf/provider-metadata.json) on our CSAF provider (beta)
+- get the [Meta data](https://trustsource.csaf.trustsource.io/.well-known/csaf/provider-metadata.json) on our CSAF provider
 - find tool or solution specific security information in the SECURITY.TXT provided in the root of each code repository
 
 PLEASE DO NOT REPORT SECURITY VULNERABILITIES DIRECTLY TO ANY OF THESE CONTACTS OR PAGES. USE THE INSTRUCTIONS BELOW FOR VULNERABILITY REPORTING TO ALLOW US A COORDINATED VULNERABILITY DISCLOSURE.
