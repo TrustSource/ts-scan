@@ -208,8 +208,6 @@ Well-known Microsoft components (Common Controls, Winsock, ADO, DAO, MSXML, the 
 ts-scan scan -o result.json path/to/Project.vbp
 ```
 
-For security findings in VB6 source code see the DevSkim rule pack in [`contrib/devskim-vb6`](contrib/devskim-vb6/README.md) and the sample application in [`examples/vb6-legacy-insecure`](examples/vb6-legacy-insecure/README.md).
-
 ### Scan with Syft as a backend
 
 **ts-scan** can use [Syft](https://github.com/anchore/syft) scanner as a backend for dependencies scanning. To enable the Syft scanner, use the following option:

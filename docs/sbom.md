@@ -68,8 +68,6 @@ Well-known Microsoft components (Common Controls, Winsock, ADO, DAO, MSXML, the 
 ts-scan scan -o result.json path/to/Project.vbp
 ```
 
-For security findings in VB6 source code see the DevSkim rule pack in [`contrib/devskim-vb6`](https://github.com/TrustSource/ts-scan/tree/main/contrib/devskim-vb6) and the sample application in [`examples/vb6-legacy-insecure`](https://github.com/TrustSource/ts-scan/tree/main/examples/vb6-legacy-insecure).
-
 ### Other options
 
 * ```--verbose``` - Enables verbose mode (including output from PM executables, useful for debugging)
