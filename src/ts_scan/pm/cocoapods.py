@@ -28,7 +28,7 @@ class CocoaPodsScanner(PackageManagerScanner):
     def accepts(self, path: Path) -> bool:
         return path.is_dir() and (path / 'Podfile.lock').exists()
 
-    def scan(self, src: t.Union[str, Path]) -> t.Optional[DependencyScan]:
+    def scan(self, src: t.Union[str, Path]) -> t.Iterable[DependencyScan]:
         path = Path(src)
         lockfile_path = path / 'Podfile.lock'
 
@@ -36,7 +36,7 @@ class CocoaPodsScanner(PackageManagerScanner):
             lockfile = yaml.safe_load(fp)
 
         if not lockfile:
-            return None
+            return []
 
         pods = self.__parse_pods(lockfile.get('PODS', []) or [])
         checksums = lockfile.get('SPEC CHECKSUMS', {}) or {}
@@ -49,7 +49,7 @@ class CocoaPodsScanner(PackageManagerScanner):
             for entry in (lockfile.get('DEPENDENCIES', []) or [])
         ]
 
-        return DependencyScan.from_dep(root)
+        return [DependencyScan.from_dep(root)]
 
     def __create_dep(self, name: str, pods: t.Dict[str, dict], checksums: t.Dict[str, str]) -> Dependency:
         key = f'cocoapods:{name}'

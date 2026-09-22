@@ -49,9 +49,11 @@ def test_scan_parses_dependency_tree_and_checksums(tmp_path):
     (project / 'Podfile.lock').write_text(PODFILE_LOCK)
 
     scanner = CocoaPodsScanner()
-    scan = scanner.scan(project)
+    scans = list(scanner.scan(project))
 
-    assert scan is not None
+    assert len(scans) == 1
+
+    scan = scans[0]
     assert scan.module == 'MyApp'
     assert scan.moduleId == 'cocoapods:MyApp'
 
@@ -72,11 +74,11 @@ def test_scan_parses_dependency_tree_and_checksums(tmp_path):
     assert core.checksum == '750adf017a716fe6f235d0c8d95406e358be216'
 
 
-def test_scan_returns_none_when_lockfile_is_empty(tmp_path):
+def test_scan_returns_no_scans_when_lockfile_is_empty(tmp_path):
     project = tmp_path / 'Empty'
     project.mkdir()
     (project / 'Podfile.lock').write_text('')
 
     scanner = CocoaPodsScanner()
 
-    assert scanner.scan(project) is None
+    assert list(scanner.scan(project)) == []
