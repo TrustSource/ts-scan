@@ -30,7 +30,7 @@ class SwiftScanner(PackageManagerScanner):
     def accepts(self, path: Path) -> bool:
         return path.is_dir() and (path / 'Package.swift').exists()
 
-    def scan(self, src: t.Union[str, Path]) -> t.Optional[DependencyScan]:
+    def scan(self, src: t.Union[str, Path]) -> t.Iterable[DependencyScan]:
         path = Path(src)
 
         result = self._exec('package', 'show-dependencies', '--format', 'json',
@@ -38,7 +38,7 @@ class SwiftScanner(PackageManagerScanner):
 
         stdout = result.stdout
         if not stdout:
-            return None
+            return []
 
         if isinstance(stdout, bytes):
             stdout = stdout.decode('utf-8')
@@ -50,7 +50,7 @@ class SwiftScanner(PackageManagerScanner):
         root.package_files.append(str(path.resolve()))
         root.dependencies = [self.__create_dep(dep) for dep in data.get('dependencies', [])]
 
-        return DependencyScan.from_dep(root)
+        return [DependencyScan.from_dep(root)]
 
     def __create_dep(self, data: dict) -> Dependency:
         name = data.get('name', '')

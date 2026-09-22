@@ -48,9 +48,11 @@ def test_scan_parses_dependency_tree(tmp_path, monkeypatch):
         lambda *args, **kwargs: CompletedProcess(args, 0, stdout=json.dumps(show_dependencies).encode('utf-8'))
     )
 
-    scan = scanner.scan(tmp_path)
+    scans = list(scanner.scan(tmp_path))
 
-    assert scan is not None
+    assert len(scans) == 1
+
+    scan = scans[0]
     assert scan.module == 'MyPackage'
     assert scan.moduleId == 'swift:MyPackage'
 
@@ -71,7 +73,7 @@ def test_scan_parses_dependency_tree(tmp_path, monkeypatch):
     assert log.dependencies[0] is arg_parser
 
 
-def test_scan_returns_none_on_empty_output(tmp_path, monkeypatch):
+def test_scan_returns_no_scans_on_empty_output(tmp_path, monkeypatch):
     (tmp_path / 'Package.swift').write_text('// swift-tools-version:5.9\n')
 
     scanner = SwiftScanner()
@@ -80,4 +82,4 @@ def test_scan_returns_none_on_empty_output(tmp_path, monkeypatch):
         lambda *args, **kwargs: CompletedProcess(args, 0, stdout=b'')
     )
 
-    assert scanner.scan(tmp_path) is None
+    assert list(scanner.scan(tmp_path)) == []
