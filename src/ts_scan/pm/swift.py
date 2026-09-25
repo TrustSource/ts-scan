@@ -44,6 +44,7 @@ class SwiftScanner(PackageManagerScanner):
             stdout = stdout.decode('utf-8')
 
         data = json.loads(stdout)
+        self.__processed_deps = {}
 
         name = data.get('name', '')
         root = Dependency(key=f'swift:{name}', name=name, type='swift')
