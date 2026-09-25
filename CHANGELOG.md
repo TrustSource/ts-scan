@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### New Features
+    * Added dependency scanning for CocoaPods projects (`Podfile.lock`)
     * Added dependency scanning for Swift Package Manager projects (`Package.swift`), ported from the now-retired [ts-spm](https://github.com/TrustSource/ts-spm) plugin
 
 ## [1.9.1] - 2026-08-28

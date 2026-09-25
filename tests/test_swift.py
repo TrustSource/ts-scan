@@ -83,3 +83,37 @@ def test_scan_returns_no_scans_on_empty_output(tmp_path, monkeypatch):
     )
 
     assert list(scanner.scan(tmp_path)) == []
+
+
+def test_scan_resets_processed_dependencies_between_calls(tmp_path, monkeypatch):
+    first = {
+        'name': 'First',
+        'dependencies': [
+            {'name': 'shared', 'url': 'https://example.com/first', 'version': '1.0.0', 'dependencies': []}
+        ],
+    }
+    second = {
+        'name': 'Second',
+        'dependencies': [
+            {'name': 'shared', 'url': 'https://example.com/second', 'version': '2.0.0', 'dependencies': []}
+        ],
+    }
+
+    outputs = [first, second]
+
+    scanner = SwiftScanner()
+    monkeypatch.setattr(
+        scanner, '_exec',
+        lambda *args, **kwargs: CompletedProcess(args, 0, stdout=json.dumps(outputs.pop(0)).encode('utf-8'))
+    )
+
+    first_scan = list(scanner.scan(tmp_path))[0]
+    second_scan = list(scanner.scan(tmp_path))[0]
+
+    first_shared = first_scan.dependencies[0].dependencies[0]
+    second_shared = second_scan.dependencies[0].dependencies[0]
+
+    assert first_shared.versions == ['1.0.0']
+    assert first_shared.repoUrl == 'https://example.com/first'
+    assert second_shared.versions == ['2.0.0']
+    assert second_shared.repoUrl == 'https://example.com/second'
