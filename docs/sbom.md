@@ -26,7 +26,7 @@ PLEASE NOTE: The ```<path to the project directory>``` may also point to the nam
 
 **ts-scan** contains some general options as well as options that only apply while scanning specific package types. The package specific options are prefixed by the type of the package management system. We use the [Package URL Type](https://github.com/package-url/purl-spec/blob/master/PURL-TYPES.rst) as a prefix. The following options are valid for most supported package management system:
 
-* ```--[maven|npm|nuget|pypi]:ignore``` - Disable scanning dependencies of the type   
+* ```--[maven|gradle|npm|nuget|pypi|dart|vb6]:ignore``` - Disable scanning dependencies of the type   
 * ```--[maven|npm|nuget]:executable``` - Specify a path to the PM executable
 * ```--[maven|npm|nuget]:forward``` - Forward arguments to the PM's executable
 * ```--nuget:separateProjectScans``` - For a solution, create one scan per project using the project as the module
@@ -51,6 +51,21 @@ There also is the option to forward parameters to a package manager executable. 
 
 ```shell
 ts-scan scan --maven:foward --settings,customSettings.xml <PATH>
+```
+
+### Visual Basic 6 projects
+
+Classic VB6 projects have no package manager; their dependencies are COM type libraries, ActiveX controls and native DLLs. ***ts-scan*** reads `.vbp` project and `.vbg` project-group files directly and reports
+
+* `Reference=` and `Object=` entries as `lib:<tlb|ocx|dll>:<name>` components with the type library version and GUID
+* references to sibling VB6 projects as `vb:<project>` dependencies
+* native libraries used through `Declare Function ... Lib "..."` statements in the sources
+* the implicit Visual Basic 6 runtime (`MSVBVM60.DLL`), unless `--vb6:excludeRuntime` is given
+
+Well-known Microsoft components (Common Controls, Winsock, ADO, DAO, MSXML, the Windows system DLLs) are enriched with vendor, title, life-cycle notes and known advisories from a built-in catalogue. No Windows installation is required, the scan works on any platform:
+
+```shell
+ts-scan scan -o result.json path/to/Project.vbp
 ```
 
 ### Other options
