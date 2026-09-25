@@ -7,11 +7,15 @@ The **ts-scan** scanner is a powerful command-line tool designed for scanning pa
 
 ## Description
 
-The **ts-scan** scans a project for dependencies and stores the results using either its internal format or one of the supported SBOM formats: SPDX or CycloneDX. It currently supports **PyPI**, **Maven**, **NuGet**, **NPM**, and classic **Visual Basic 6** projects, among others, and can also utilize [Syft](https://github.com/anchore/syft) as a backend allowing it to scan Docker containers.
+The **ts-scan** scans a project for dependencies and stores the results using either its internal format or one of the supported SBOM formats: SPDX or CycloneDX. It currently supports **PyPI**, **Maven**, **Gradle**, **NuGet**, **NPM**, **Composer** (PHP), **Cargo**, **Go**, **Dart/Flutter**, **Swift Package Manager**, **CocoaPods**, and classic **Visual Basic 6** projects, and can also utilize [Syft](https://github.com/anchore/syft) as a backend allowing it to scan Docker containers.
 
 Once dependencies are collected, the **ts-scan** can be used to either upload results to the [TrustSource](https://www.trustsource.io) application, perform security analysis of components by identifying known vulnerabilities, or conduct an in-depth analysis of each package. The goal of the in-depth analysis is to extract license and copyright information, detect cryptographic algorithms, identify code snippets, or detect malware by applying its own analyzers or integrating with external tools such as [scancode-toolkit](https://github.com/aboutcode-org/scancode-toolkit), [SCANOSS](https://www.scanoss.com), and [YARA](https://virustotal.github.io/yara/).
 
 The **ts-scan** can be seamlessly integrated into CI/CD pipelines, enabling automated security and compliance checks continuously. It can be configured to break a build if vulnerabilities or legal issues are detected, ensuring compliance early in the development process. Additionally, it can be used alongside SCM hooks on developers' machines for pre-commit checks or execute long-running in-depth analyses remotely during release builds.
+
+## Not sure how to set this up for your repo?
+
+[**ts-scan-agent**](https://github.com/TrustSource/ts-scan-agent) is a companion open-source tool that looks at an arbitrary repository (including monorepos and container images) and proposes a concrete TrustSource scan concept: which parts should become TrustSource Modules, Infrastructure Modules or Linked Modules, and the exact `ts-scan` command to run for each. It's a separate, standalone project — worth a look before you work out module boundaries and CI wiring by hand.
 
 ## Installation
 
@@ -155,14 +159,37 @@ The ```-f <output format>``` option controls the output format and can be:
 * ```spdx-[tag|json|yaml|xml]``` - One of the SPDX formtas, e.g. ```spdx-json```
 * ```cyclonedx-[json|xml]``` - One of the CycloneDX formats, e.g. ```cyclonedx-json```
 
+### Supported package managers
+
+**ts-scan** detects the package management system from the files found in the scanned path. Scanners that read an already resolved lockfile need no toolchain installed and no network access; the others call the corresponding executable to resolve the graph.
+
+| Ecosystem              | Detected by                        | Resolved from                        | Executable required |
+|------------------------|------------------------------------|--------------------------------------|---------------------|
+| PyPI                   | ```setup.py```, ```pyproject.toml``` | Package metadata                   | no                  |
+| Maven                  | ```pom.xml```                      | ```mvn dependency:tree```            | ```mvn```           |
+| Gradle                 | ```build.gradle[.kts]```           | ```gradle dependencies```            | ```gradle```        |
+| NPM                    | ```package.json```                 | ```package-lock.json```              | ```npm``` (to create the lockfile) |
+| NuGet                  | ```*.sln```, ```*.csproj```, ```packages.config``` | ```packages.lock.json```, ```project.assets.json``` | ```nuget``` / ```dotnet``` |
+| Composer (PHP)         | ```composer.json```                | ```composer.lock```                  | ```composer``` (to create the lockfile) |
+| Cargo                  | ```Cargo.toml```                   | ```Cargo.lock```                     | ```cargo``` (to create the lockfile) |
+| Go                     | ```go.mod```                       | ```go list```                        | ```go```            |
+| Dart / Flutter         | ```pubspec.yaml```                 | ```dart pub deps```                  | ```dart``` / ```flutter``` |
+| Swift Package Manager  | ```Package.swift```                | ```swift package show-dependencies``` | ```swift```        |
+| CocoaPods              | ```Podfile.lock```                 | ```Podfile.lock```                   | no                  |
+| Visual Basic 6         | ```*.vbp```, ```*.vbg```           | Project and group files              | no                  |
+| Docker images, file systems | passed as a source           | [Syft](https://github.com/anchore/syft) | ```syft```       |
+
 ### Options
 
 **ts-scan** contains some general options as well as options that only apply while scanning specific package types. The package specific options are prefixed by the type of the package management system. We use the [Package URL Type](https://github.com/package-url/purl-spec/blob/master/PURL-TYPES.rst) as a prefix. The following options are valid for most supported package management system:
 
-* ```--[maven|gradle|npm|nuget|pypi|dart|cocoapods|vb6]:ignore``` - Disable scanning dependencies of the type
-* ```--[maven|gradle|npm|nuget|dart]:executable``` - Specify a path to the PM executable
-* ```--[maven|gradle|npm|nuget|dart]:forward``` - Forward arguments to the PM's executable
+* ```--[maven|gradle|npm|nuget|pypi|dart|swift|composer|cocoapods|vb6]:ignore``` - Disable scanning dependencies of the type
+* ```--[maven|gradle|npm|nuget|dart|swift|composer]:executable``` - Specify a path to the PM executable
+* ```--[maven|gradle|npm|nuget|dart|swift|composer]:forward``` - Forward arguments to the PM's executable
 * ```--nuget:separateProjectScans``` - For a solution, create one scan per project using the project as the module
+* ```--[npm|dart|composer]:includeDevDependencies``` - Include development dependencies in the scan results
+* ```--composer:includePlatformPackages``` - Include the PHP platform requirements (```php```, ```ext-*```, ```lib-*```, ```composer-*```)
+* ```--[npm|cargo|composer]:enableMetadataRetrieval``` - Enrich packages with metadata from the online registry
 
 The full list of options including PM specific options can be printed using:
 
