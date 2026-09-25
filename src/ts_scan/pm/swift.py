@@ -32,6 +32,7 @@ class SwiftScanner(PackageManagerScanner):
 
     def scan(self, src: t.Union[str, Path]) -> t.Iterable[DependencyScan]:
         path = Path(src)
+        self.__processed_deps = {}
 
         result = self._exec('package', 'show-dependencies', '--format', 'json',
                             cwd=path, capture_output=True)
@@ -44,7 +45,6 @@ class SwiftScanner(PackageManagerScanner):
             stdout = stdout.decode('utf-8')
 
         data = json.loads(stdout)
-        self.__processed_deps = {}
 
         name = data.get('name', '')
         root = Dependency(key=f'swift:{name}', name=name, type='swift')
