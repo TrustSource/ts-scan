@@ -31,6 +31,7 @@ class CocoaPodsScanner(PackageManagerScanner):
     def scan(self, src: t.Union[str, Path]) -> t.Iterable[DependencyScan]:
         path = Path(src)
         lockfile_path = path / 'Podfile.lock'
+        self.__processed_deps = {}
 
         with lockfile_path.open() as fp:
             lockfile = yaml.safe_load(fp)

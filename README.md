@@ -156,7 +156,7 @@ ts-scan scan -o <path to the output file> [-f <output format>] <path to the proj
 The ```-f <output format>``` option controls the output format and can be:
 
 * ```ts``` - the TrustSource internal format (default)
-* ```spdx-[tag|json|yaml|xml]``` - One of the SPDX formtas, e.g. ```spdx-json```
+* ```spdx-[tag|json|yaml|xml]``` - One of the SPDX formats, e.g. ```spdx-json```
 * ```cyclonedx-[json|xml]``` - One of the CycloneDX formats, e.g. ```cyclonedx-json```
 
 ### Supported package managers
