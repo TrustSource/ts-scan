@@ -2,6 +2,7 @@ import re
 import typing as t
 import yaml
 
+from collections import deque
 from pathlib import Path
 
 from . import Dependency, DependencyScan, PackageManagerScanner
@@ -132,18 +133,18 @@ def _resolved_declared_root_names(declared: t.List[str], pods: t.Dict[str, dict]
         return declared
 
     roots = set(_resolved_root_names(pods))
-    parents: t.Dict[str, t.Set[str]] = {name: set() for name in pods.keys()}
+    parents: t.Dict[str, t.List[str]] = {name: [] for name in pods.keys()}
     for parent_name, pod in pods.items():
         for child_name in pod.get('deps', []):
-            if child_name in parents:
-                parents[child_name].add(parent_name)
+            if child_name in parents and parent_name not in parents[child_name]:
+                parents[child_name].append(parent_name)
 
     resolved: t.List[str] = []
     for name in declared:
         if name not in pods or name in roots:
             resolved_name = name
         else:
-            resolved_name = _resolve_to_declared_root(name, pods, roots, parents)
+            resolved_name = _resolve_to_declared_root(name, roots, parents)
         if resolved_name not in resolved:
             resolved.append(resolved_name)
 
@@ -152,28 +153,20 @@ def _resolved_declared_root_names(declared: t.List[str], pods: t.Dict[str, dict]
 
 def _resolve_to_declared_root(
     name: str,
-    pods: t.Dict[str, dict],
     roots: t.Set[str],
-    parents: t.Dict[str, t.Set[str]],
+    parents: t.Dict[str, t.List[str]],
 ) -> str:
-    stack = list(parents.get(name, set()))
+    queue = deque(parents.get(name, []))
     visited = {name}
-    candidate_roots: t.Set[str] = set()
 
-    while stack:
-        current = stack.pop()
+    while queue:
+        current = queue.popleft()
         if current in visited:
             continue
         visited.add(current)
 
         if current in roots:
-            candidate_roots.add(current)
-            continue
-
-        stack.extend(parents.get(current, set()))
-
-    for pod_name in pods.keys():
-        if pod_name in candidate_roots:
-            return pod_name
+            return current
+        queue.extend(parents.get(current, []))
 
     return name
