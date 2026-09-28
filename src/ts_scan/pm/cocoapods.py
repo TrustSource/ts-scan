@@ -43,7 +43,7 @@ class CocoaPodsScanner(PackageManagerScanner):
         pods = self.__parse_pods(lockfile.get('PODS', []) or [])
         checksums = lockfile.get('SPEC CHECKSUMS', {}) or {}
         declared_root_names = [_dependency_name(entry) for entry in (lockfile.get('DEPENDENCIES', []) or [])]
-        root_names = _resolved_declared_root_names(declared_root_names, pods)
+        root_names = _resolved_declared_root_names(declared_root_names, pods) or _resolved_root_names(pods)
 
         root = Dependency(key=f'cocoapods:{path.name}', name=path.name, type='cocoapods')
         root.package_files.append(str(lockfile_path.resolve()))
