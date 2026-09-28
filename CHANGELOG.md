@@ -6,15 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [Unreleased]
 
 ### New Features
-<<<<<<< HEAD
     * Added dependency scanning for PHP projects managed with Composer
     * Added `--composer:includeDevDependencies` to include Composer development dependencies
     * Added `--composer:includePlatformPackages` to include PHP platform requirements (`php`, `ext-*`, `lib-*`, `composer-*`) together with their well-known licenses
     * Added `--composer:enableMetadataRetrieval` to enrich packages with metadata from Packagist
-=======
     * Added dependency scanning for CocoaPods projects (`Podfile.lock`)
     * Added dependency scanning for Swift Package Manager projects (`Package.swift`), ported from the now-retired [ts-spm](https://github.com/TrustSource/ts-spm) plugin
->>>>>>> origin/main
 
 ## [1.9.1] - 2026-08-28
 
