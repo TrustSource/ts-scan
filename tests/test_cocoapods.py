@@ -123,3 +123,30 @@ SPEC CHECKSUMS:
     root = scan.dependencies[0]
 
     assert [d.name for d in root.dependencies] == ['Firebase']
+
+
+def test_scan_ignores_disconnected_resolved_roots(tmp_path):
+    project = tmp_path / 'MyApp'
+    project.mkdir()
+    lockfile = """
+PODS:
+  - Firebase (10.25.0):
+    - Firebase/Analytics (= 10.25.0)
+  - Firebase/Analytics (10.25.0)
+  - UnrelatedPod (1.0.0)
+
+DEPENDENCIES:
+  - Firebase/Analytics
+
+SPEC CHECKSUMS:
+  Firebase: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  Firebase/Analytics: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+  UnrelatedPod: cccccccccccccccccccccccccccccccccccccccc
+"""
+    (project / 'Podfile.lock').write_text(lockfile)
+
+    scanner = CocoaPodsScanner()
+    scan = list(scanner.scan(project))[0]
+    root = scan.dependencies[0]
+
+    assert [d.name for d in root.dependencies] == ['Firebase']

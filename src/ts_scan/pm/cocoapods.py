@@ -42,7 +42,7 @@ class CocoaPodsScanner(PackageManagerScanner):
         pods = self.__parse_pods(lockfile.get('PODS', []) or [])
         checksums = lockfile.get('SPEC CHECKSUMS', {}) or {}
         declared_root_names = [_dependency_name(entry) for entry in (lockfile.get('DEPENDENCIES', []) or [])]
-        root_names = _resolved_root_names(pods) or declared_root_names
+        root_names = _resolved_declared_root_names(declared_root_names, pods)
 
         root = Dependency(key=f'cocoapods:{path.name}', name=path.name, type='cocoapods')
         root.package_files.append(str(lockfile_path.resolve()))
@@ -125,3 +125,55 @@ def _resolved_root_names(pods: t.Dict[str, dict]) -> t.List[str]:
                 incoming[child] += 1
 
     return [name for name, count in incoming.items() if count == 0]
+
+
+def _resolved_declared_root_names(declared: t.List[str], pods: t.Dict[str, dict]) -> t.List[str]:
+    if not pods:
+        return declared
+
+    roots = set(_resolved_root_names(pods))
+    parents: t.Dict[str, t.Set[str]] = {name: set() for name in pods.keys()}
+    for parent_name, pod in pods.items():
+        for child_name in pod.get('deps', []):
+            if child_name in parents:
+                parents[child_name].add(parent_name)
+
+    resolved: t.List[str] = []
+    for name in declared:
+        if name not in pods or name in roots:
+            resolved_name = name
+        else:
+            resolved_name = _resolve_to_declared_root(name, pods, roots, parents)
+        if resolved_name not in resolved:
+            resolved.append(resolved_name)
+
+    return resolved
+
+
+def _resolve_to_declared_root(
+    name: str,
+    pods: t.Dict[str, dict],
+    roots: t.Set[str],
+    parents: t.Dict[str, t.Set[str]],
+) -> str:
+    stack = list(parents.get(name, set()))
+    visited = {name}
+    candidate_roots: t.Set[str] = set()
+
+    while stack:
+        current = stack.pop()
+        if current in visited:
+            continue
+        visited.add(current)
+
+        if current in roots:
+            candidate_roots.add(current)
+            continue
+
+        stack.extend(parents.get(current, set()))
+
+    for pod_name in pods.keys():
+        if pod_name in candidate_roots:
+            return pod_name
+
+    return name
