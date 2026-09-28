@@ -98,3 +98,28 @@ def test_scan_handles_dictionary_dependency_entries(tmp_path):
     root = scan.dependencies[0]
 
     assert {d.name for d in root.dependencies} == {'Alamofire', 'SDWebImage', 'SnapKit'}
+
+
+def test_scan_uses_resolved_root_pods_for_subspec_dependency(tmp_path):
+    project = tmp_path / 'MyApp'
+    project.mkdir()
+    lockfile = """
+PODS:
+  - Firebase (10.25.0):
+    - Firebase/Analytics (= 10.25.0)
+  - Firebase/Analytics (10.25.0)
+
+DEPENDENCIES:
+  - Firebase/Analytics
+
+SPEC CHECKSUMS:
+  Firebase: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  Firebase/Analytics: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+"""
+    (project / 'Podfile.lock').write_text(lockfile)
+
+    scanner = CocoaPodsScanner()
+    scan = list(scanner.scan(project))[0]
+    root = scan.dependencies[0]
+
+    assert [d.name for d in root.dependencies] == ['Firebase']

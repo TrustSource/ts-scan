@@ -41,14 +41,13 @@ class CocoaPodsScanner(PackageManagerScanner):
 
         pods = self.__parse_pods(lockfile.get('PODS', []) or [])
         checksums = lockfile.get('SPEC CHECKSUMS', {}) or {}
+        declared_root_names = [_dependency_name(entry) for entry in (lockfile.get('DEPENDENCIES', []) or [])]
+        root_names = _resolved_root_names(pods) or declared_root_names
 
         root = Dependency(key=f'cocoapods:{path.name}', name=path.name, type='cocoapods')
         root.package_files.append(str(lockfile_path.resolve()))
 
-        root.dependencies = [
-            self.__create_dep(_dependency_name(entry), pods, checksums)
-            for entry in (lockfile.get('DEPENDENCIES', []) or [])
-        ]
+        root.dependencies = [self.__create_dep(name, pods, checksums) for name in root_names]
 
         return [DependencyScan.from_dep(root)]
 
@@ -115,3 +114,14 @@ def _dependency_name(entry: t.Any) -> str:
     else:
         line = entry
     return _pod_name(line)
+
+
+def _resolved_root_names(pods: t.Dict[str, dict]) -> t.List[str]:
+    incoming = {name: 0 for name in pods.keys()}
+
+    for pod in pods.values():
+        for child in pod.get('deps', []):
+            if child in incoming:
+                incoming[child] += 1
+
+    return [name for name, count in incoming.items() if count == 0]
