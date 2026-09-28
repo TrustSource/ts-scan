@@ -82,3 +82,19 @@ def test_scan_returns_no_scans_when_lockfile_is_empty(tmp_path):
     scanner = CocoaPodsScanner()
 
     assert list(scanner.scan(project)) == []
+
+
+def test_scan_handles_dictionary_dependency_entries(tmp_path):
+    project = tmp_path / 'MyApp'
+    project.mkdir()
+    lockfile = PODFILE_LOCK.replace(
+        "  - SDWebImage (~> 5.0)\n",
+        "  - SDWebImage (~> 5.0):\n    - SDWebImage/Core\n",
+    )
+    (project / 'Podfile.lock').write_text(lockfile)
+
+    scanner = CocoaPodsScanner()
+    scan = list(scanner.scan(project))[0]
+    root = scan.dependencies[0]
+
+    assert {d.name for d in root.dependencies} == {'Alamofire', 'SDWebImage', 'SnapKit'}

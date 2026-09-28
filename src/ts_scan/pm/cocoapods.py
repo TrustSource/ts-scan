@@ -46,7 +46,7 @@ class CocoaPodsScanner(PackageManagerScanner):
         root.package_files.append(str(lockfile_path.resolve()))
 
         root.dependencies = [
-            self.__create_dep(_pod_name(entry), pods, checksums)
+            self.__create_dep(_dependency_name(entry), pods, checksums)
             for entry in (lockfile.get('DEPENDENCIES', []) or [])
         ]
 
@@ -107,3 +107,11 @@ def _pod_name_and_version(line: str) -> t.Tuple[str, t.Optional[str]]:
 
 def _pod_name(line: str) -> str:
     return _pod_name_and_version(line)[0]
+
+
+def _dependency_name(entry: t.Any) -> str:
+    if isinstance(entry, dict):
+        (line, _), = entry.items()
+    else:
+        line = entry
+    return _pod_name(line)
