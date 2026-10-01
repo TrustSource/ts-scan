@@ -82,3 +82,90 @@ def test_scan_returns_no_scans_when_lockfile_is_empty(tmp_path):
     scanner = CocoaPodsScanner()
 
     assert list(scanner.scan(project)) == []
+
+
+def test_scan_handles_dictionary_dependency_entries(tmp_path):
+    project = tmp_path / 'MyApp'
+    project.mkdir()
+    lockfile = PODFILE_LOCK.replace(
+        "  - SDWebImage (~> 5.0)\n",
+        "  - SDWebImage (~> 5.0):\n    - SDWebImage/Core\n",
+    )
+    (project / 'Podfile.lock').write_text(lockfile)
+
+    scanner = CocoaPodsScanner()
+    scan = list(scanner.scan(project))[0]
+    root = scan.dependencies[0]
+
+    assert {d.name for d in root.dependencies} == {'Alamofire', 'SDWebImage', 'SnapKit'}
+
+
+def test_scan_uses_resolved_root_pods_for_subspec_dependency(tmp_path):
+    project = tmp_path / 'MyApp'
+    project.mkdir()
+    lockfile = """
+PODS:
+  - Firebase (10.25.0):
+    - Firebase/Analytics (= 10.25.0)
+  - Firebase/Analytics (10.25.0)
+
+DEPENDENCIES:
+  - Firebase/Analytics
+
+SPEC CHECKSUMS:
+  Firebase: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  Firebase/Analytics: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+"""
+    (project / 'Podfile.lock').write_text(lockfile)
+
+    scanner = CocoaPodsScanner()
+    scan = list(scanner.scan(project))[0]
+    root = scan.dependencies[0]
+
+    assert [d.name for d in root.dependencies] == ['Firebase']
+
+
+def test_scan_ignores_disconnected_resolved_roots(tmp_path):
+    project = tmp_path / 'MyApp'
+    project.mkdir()
+    lockfile = """
+PODS:
+  - Firebase (10.25.0):
+    - Firebase/Analytics (= 10.25.0)
+  - Firebase/Analytics (10.25.0)
+  - UnrelatedPod (1.0.0)
+
+DEPENDENCIES:
+  - Firebase/Analytics
+
+SPEC CHECKSUMS:
+  Firebase: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  Firebase/Analytics: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+  UnrelatedPod: cccccccccccccccccccccccccccccccccccccccc
+"""
+    (project / 'Podfile.lock').write_text(lockfile)
+
+    scanner = CocoaPodsScanner()
+    scan = list(scanner.scan(project))[0]
+    root = scan.dependencies[0]
+
+    assert [d.name for d in root.dependencies] == ['Firebase']
+
+
+def test_scan_falls_back_to_resolved_roots_without_dependencies_section(tmp_path):
+    project = tmp_path / 'MyApp'
+    project.mkdir()
+    lockfile = """
+PODS:
+  - Alamofire (5.6.4)
+  - SDWebImage (5.15.5):
+    - SDWebImage/Core (= 5.15.5)
+  - SDWebImage/Core (5.15.5)
+"""
+    (project / 'Podfile.lock').write_text(lockfile)
+
+    scanner = CocoaPodsScanner()
+    scan = list(scanner.scan(project))[0]
+    root = scan.dependencies[0]
+
+    assert {d.name for d in root.dependencies} == {'Alamofire', 'SDWebImage'}

@@ -156,7 +156,7 @@ ts-scan scan -o <path to the output file> [-f <output format>] <path to the proj
 The ```-f <output format>``` option controls the output format and can be:
 
 * ```ts``` - the TrustSource internal format (default)
-* ```spdx-[tag|json|yaml|xml]``` - One of the SPDX formtas, e.g. ```spdx-json```
+* ```spdx-[tag|json|yaml|xml]``` - One of the SPDX formats, e.g. ```spdx-json```
 * ```cyclonedx-[json|xml]``` - One of the CycloneDX formats, e.g. ```cyclonedx-json```
 
 ### Supported package managers
@@ -204,6 +204,16 @@ While scanning for  Maven, Node and NuGet dependencies, ***ts-scan*** calls corr
 ```shell
 ts-scan scan --maven:executable /opt/local/bin/mvn <PATH>
 ```
+
+#### PHP projects
+
+A PHP project is detected by its ```composer.json```. The dependency graph is resolved from the ```composer.lock``` file, therefore a committed lockfile produces the most accurate results and requires neither a Composer installation nor network access. If no lockfile is present, **ts-scan** calls ```composer update --no-install``` to create one. Should that fail, or should Composer not be installed, the scan falls back to the requirements declared in ```composer.json```, which are then reported without resolved versions.
+
+```shell
+ts-scan scan --composer:includeDevDependencies --composer:includePlatformPackages -o scan.json <PATH>
+```
+
+Platform requirements such as ```php``` or ```ext-json``` are not Packagist packages and are therefore excluded by default. When enabled, they are added with their declared constraint and their well-known license (e.g. *PHP-3.01*) for compliance purposes.
 
 #### Forward custom parameters to a scanner executable
 

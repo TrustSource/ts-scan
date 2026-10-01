@@ -83,10 +83,13 @@ The `-f <output format>` option controls the output format and can be:
 
 **ts-scan** contains some general options as well as options that only apply while scanning specific package types. The package specific options are prefixed by the type of the package management system. We use the [Package URL Type](https://github.com/package-url/purl-spec/blob/master/PURL-TYPES.rst) as a prefix. The following options are valid for most supported package management system:
 
-- `--[maven|npm|nuget|pypi|dart|vb6]:ignore` - Disable scanning dependencies of the type
-- `--[maven|npm|nuget|dart]:executable` - Specify a path to the PM executable
-- `--[maven|npm|nuget|dart]:forward` - Forward arguments to the PM's executable
+- `--[maven|npm|nuget|pypi|dart|composer|vb6]:ignore` - Disable scanning dependencies of the type
+- `--[maven|npm|nuget|dart|composer]:executable` - Specify a path to the PM executable
+- `--[maven|npm|nuget|dart|composer]:forward` - Forward arguments to the PM's executable
 - `--nuget:separateProjectScans` - For a solution, create one scan per project using the project as the module
+- `--[npm|dart|composer]:includeDevDependencies` - Include development dependencies in the scan results
+- `--composer:includePlatformPackages` - Include the PHP platform requirements (`php`, `ext-*`, `lib-*`, `composer-*`)
+- `--[npm|cargo|composer]:enableMetadataRetrieval` - Enrich packages with metadata from the online registry
 
 The full list of options including PM specific options can be printed using:
 
@@ -101,6 +104,16 @@ While scanning for Maven, Node and NuGet dependencies, ***ts-scan*** calls corre
 ```
 ts-scan scan --maven:executable /opt/local/bin/mvn <PATH>
 ```
+
+#### PHP projects
+
+A PHP project is detected by its `composer.json`. The dependency graph is resolved from the `composer.lock` file, therefore a committed lockfile produces the most accurate results and requires neither a Composer installation nor network access. If no lockfile is present, ***ts-scan*** calls `composer update --no-install` to create one. Should that fail, or should Composer not be installed, the scan falls back to the requirements declared in `composer.json`, which are then reported without resolved versions.
+
+```
+ts-scan scan --composer:includeDevDependencies --composer:includePlatformPackages -o scan.json <PATH>
+```
+
+Platform requirements such as `php` or `ext-json` are not Packagist packages and are therefore excluded by default. When enabled, they are added with their declared constraint and their well-known license (e.g. *PHP-3.01*) for compliance purposes.
 
 #### Forward custom parameters to a scanner executable
 

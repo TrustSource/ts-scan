@@ -1,0 +1,125 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state"
+    ],
+    "content-hash": "6f1c5a2b0d4e7f8a9b0c1d2e3f405162",
+    "packages": [
+        {
+            "name": "acme/legacy-mailer",
+            "version": "1.4.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/acme/legacy-mailer.git",
+                "reference": "aa11bb22cc33dd44ee55ff6677889900aabbccdd"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/acme/legacy-mailer/zipball/aa11bb22cc33dd44ee55ff6677889900aabbccdd",
+                "shasum": "1122334455667788990011223344556677889900"
+            },
+            "require": {
+                "php": ">=8.1"
+            },
+            "type": "library",
+            "license": [
+                "BSD-3-Clause"
+            ],
+            "description": "Legacy mail delivery helpers",
+            "homepage": "https://example.com/legacy-mailer",
+            "abandoned": "acme/mailer"
+        },
+        {
+            "name": "monolog/monolog",
+            "version": "3.5.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Seldaek/monolog.git",
+                "reference": "c915e2634718dbc8a4a15c61b0e62e7a44e14448"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/c915e2634718dbc8a4a15c61b0e62e7a44e14448",
+                "shasum": "c915e2634718dbc8a4a15c61b0e62e7a44e14448"
+            },
+            "require": {
+                "php": ">=8.1",
+                "psr/log": "^2.0 || ^3.0"
+            },
+            "provide": {
+                "psr/log-implementation": "3.0.0"
+            },
+            "type": "library",
+            "license": [
+                "MIT"
+            ],
+            "description": "Sends your logs to files, sockets, inboxes, databases and various web services",
+            "homepage": "https://github.com/Seldaek/monolog"
+        },
+        {
+            "name": "psr/log",
+            "version": "3.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/php-fig/log.git",
+                "reference": "fe5ea303b0887d5caefd3d431c3e61ad47037001"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/php-fig/log/zipball/fe5ea303b0887d5caefd3d431c3e61ad47037001",
+                "shasum": "fe5ea303b0887d5caefd3d431c3e61ad47037001"
+            },
+            "require": {
+                "php": ">=8.0.0"
+            },
+            "type": "library",
+            "license": [
+                "MIT"
+            ],
+            "description": "Common interface for logging libraries",
+            "homepage": "https://github.com/php-fig/log"
+        }
+    ],
+    "packages-dev": [
+        {
+            "name": "phpunit/phpunit",
+            "version": "10.5.9",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/sebastianbergmann/phpunit.git",
+                "reference": "0bf70e2c8ce6e1a71d38dc7f03ea86142b5cc5d2"
+            },
+            "require": {
+                "php": ">=8.1",
+                "sebastian/diff": "^5.0"
+            },
+            "type": "library",
+            "license": [
+                "BSD-3-Clause"
+            ],
+            "description": "The PHP Unit Testing framework"
+        },
+        {
+            "name": "sebastian/diff",
+            "version": "v5.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/sebastianbergmann/diff.git",
+                "reference": "ab83243ecc233de5655b76f577711de9f842e712"
+            },
+            "require": {
+                "php": ">=8.1"
+            },
+            "type": "library",
+            "license": [
+                "BSD-3-Clause"
+            ],
+            "description": "Diff implementation"
+        }
+    ],
+    "platform": {
+        "php": ">=8.1",
+        "ext-json": "*"
+    },
+    "platform-dev": {},
+    "plugin-api-version": "2.6.0"
+}
