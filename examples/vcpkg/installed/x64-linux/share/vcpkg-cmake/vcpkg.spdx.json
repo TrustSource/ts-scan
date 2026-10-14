@@ -1,0 +1,63 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "vcpkg-cmake",
+  "documentNamespace": "https://example.invalid/sbom/vcpkg-cmake",
+  "creationInfo": {
+    "creators": [
+      "Tool: vcpkg-fixture"
+    ],
+    "created": "2026-01-01T00:00:00Z"
+  },
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-port",
+      "name": "vcpkg-cmake",
+      "versionInfo": "2024-04-23",
+      "downloadLocation": "NOASSERTION",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "homepage": "https://example.invalid/vcpkg-cmake",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:vcpkg/vcpkg-cmake@2024-04-23?triplet=x64-linux"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-binary",
+      "name": "vcpkg-cmake:x64-linux",
+      "versionInfo": "abi-vcpkg-cmake",
+      "downloadLocation": "NONE",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-resource-0",
+      "name": "vcpkg-cmake-source",
+      "versionInfo": "2024-04-23",
+      "downloadLocation": "https://example.invalid/vcpkg-cmake.tar.gz",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-port",
+      "relationshipType": "GENERATES",
+      "relatedSpdxElement": "SPDXRef-binary"
+    }
+  ]
+}

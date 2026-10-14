@@ -1,0 +1,69 @@
+Package: curl
+Architecture: arm64-linux
+Multi-Arch: same
+Status: install ok installed
+Version: 8.10.1
+Port-Version: 0
+Abi: abi-curl
+Description: Example curl
+ continuation text
+Depends: zlib, vcpkg-cmake:x64-linux
+
+Package: libpng
+Architecture: arm64-linux
+Multi-Arch: same
+Status: install ok installed
+Version: 1.6.44
+Port-Version: 2
+Abi: abi-libpng
+Description: Example libpng
+ continuation text
+Depends: zlib
+
+Package: zlib
+Architecture: arm64-linux
+Multi-Arch: same
+Status: install ok installed
+Version: 1.3.0
+Port-Version: 0
+Abi: abi-zlib
+Description: Example zlib
+ continuation text
+Depends: vcpkg-cmake:x64-linux
+
+Package: vcpkg-cmake
+Architecture: x64-linux
+Multi-Arch: same
+Status: install ok installed
+Version: 2024-04-23
+Port-Version: 0
+Abi: abi-vcpkg-cmake
+Description: Example vcpkg-cmake
+ continuation text
+
+Package: fmt
+Architecture: arm64-linux
+Multi-Arch: same
+Status: install ok installed
+Version: 11.0.2
+Port-Version: 0
+Abi: abi-fmt
+Description: Example fmt
+ continuation text
+
+Package: removed
+Architecture: arm64-linux
+Multi-Arch: same
+Status: install ok installed
+Version: 1.0
+Port-Version: 0
+Abi: abi-removed
+Description: Example removed
+ continuation text
+
+Package: curl
+Architecture: arm64-linux
+Multi-Arch: same
+Status: install ok installed
+Feature: ssl
+Depends: libpng

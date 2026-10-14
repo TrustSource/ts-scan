@@ -15,7 +15,7 @@ from spdx_tools.spdx.model.relationship import Relationship, RelationshipType
 from spdx_tools.spdx.model.spdx_none import SpdxNone
 from spdx_tools.spdx.formats import FileFormat, file_name_to_format
 
-from ..pm import Dependency, DependencyScan, License
+from ..pm import Dependency, DependencyScan, License, LicenseKind
 from ..cli import msg
 
 
@@ -171,13 +171,17 @@ def _create_dep(pkg: Package) -> t.Optional[Dependency]:
         except ValueError:
             purl = None
 
-        if pkg.version and purl and (dep := Dependency.create_from_purl(purl)):
-            dep.versions.append(pkg.version)
+        if purl and (dep := Dependency.create_from_purl(purl)):
+            if pkg.version and not dep.version:
+                dep.versions = [pkg.version]
 
     if dep is not None and pkg.license_declared is not None:
         lic_expr = pkg.license_declared
         if isinstance(lic_expr, LicenseExpression):
-            dep.licenses = [License(name=str(s)) for s in t.cast(t.Any, lic_expr).symbols]
+            dep.licenses = [License(name=str(lic_expr))]
+
+    if dep is not None and not dep.licenses and isinstance(pkg.license_concluded, LicenseExpression):
+        dep.licenses = [License(name=str(pkg.license_concluded), kind=LicenseKind.EFFECTIVE)]
 
     return dep
 

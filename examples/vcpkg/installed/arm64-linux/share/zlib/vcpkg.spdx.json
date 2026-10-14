@@ -1,0 +1,63 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "zlib",
+  "documentNamespace": "https://example.invalid/sbom/zlib",
+  "creationInfo": {
+    "creators": [
+      "Tool: vcpkg-fixture"
+    ],
+    "created": "2026-01-01T00:00:00Z"
+  },
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-port",
+      "name": "zlib",
+      "versionInfo": "1.3.1#1",
+      "downloadLocation": "NOASSERTION",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "homepage": "https://example.invalid/zlib",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:vcpkg/zlib@1.3.1?port_version=1&triplet=arm64-linux"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-binary",
+      "name": "zlib:arm64-linux",
+      "versionInfo": "abi-zlib",
+      "downloadLocation": "NONE",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-resource-0",
+      "name": "zlib-source",
+      "versionInfo": "1.3.1",
+      "downloadLocation": "https://example.invalid/zlib.tar.gz",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-port",
+      "relationshipType": "GENERATES",
+      "relatedSpdxElement": "SPDXRef-binary"
+    }
+  ]
+}

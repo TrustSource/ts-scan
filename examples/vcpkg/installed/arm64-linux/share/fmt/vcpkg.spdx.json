@@ -1,0 +1,63 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "fmt",
+  "documentNamespace": "https://example.invalid/sbom/fmt",
+  "creationInfo": {
+    "creators": [
+      "Tool: vcpkg-fixture"
+    ],
+    "created": "2026-01-01T00:00:00Z"
+  },
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-port",
+      "name": "fmt",
+      "versionInfo": "11.0.2",
+      "downloadLocation": "NOASSERTION",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "homepage": "https://example.invalid/fmt",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:vcpkg/fmt@11.0.2?triplet=arm64-linux"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-binary",
+      "name": "fmt:arm64-linux",
+      "versionInfo": "abi-fmt",
+      "downloadLocation": "NONE",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-resource-0",
+      "name": "fmt-source",
+      "versionInfo": "11.0.2",
+      "downloadLocation": "https://example.invalid/fmt.tar.gz",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-port",
+      "relationshipType": "GENERATES",
+      "relatedSpdxElement": "SPDXRef-binary"
+    }
+  ]
+}

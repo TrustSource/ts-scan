@@ -1,0 +1,9 @@
+Package: removed
+Architecture: arm64-linux
+Multi-Arch: same
+Status: deinstall ok not-installed
+Version: 1.0
+Port-Version: 0
+Abi: abi-removed
+Description: Example removed
+ continuation text

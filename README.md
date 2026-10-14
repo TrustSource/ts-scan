@@ -77,6 +77,12 @@ docker run -it --rm -v <PROJECT_PATH>:/project trustsource/ts-scan scan -o /proj
 
 ## Usage
 
+vcpkg projects and installation snapshots are supported through local installed
+metadata. Use `--vcpkg:installedDir`, `--vcpkg:triplet`, and repeatable
+`--vcpkg:roots` to select the installation and dependency closure. Without roots,
+the scan reports an installed-package inventory. See the
+[vcpkg example](examples/vcpkg/README.md) for usage and limitations.
+
 The **ts-scan** functionality is divided into a set of commands based on the intended goal. The following commands are available:
 
 | Command	              | Description 	                                                             |
