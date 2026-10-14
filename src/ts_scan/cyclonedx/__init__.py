@@ -145,7 +145,7 @@ def _create_dependency(comp: Component) -> t.Optional[Dependency]:
     if (purl := comp_api.purl) and (dep := Dependency.create_from_purl(purl)):
         version = comp_api.version if comp_api.version else purl.version
         if version:
-            dep.versions.append(version)
+            dep.versions = [version]
 
         lics = []
         for lic in t.cast(t.Iterable[t.Any], comp_api.licenses):

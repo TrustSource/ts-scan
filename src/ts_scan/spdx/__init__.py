@@ -172,7 +172,7 @@ def _create_dep(pkg: Package) -> t.Optional[Dependency]:
             purl = None
 
         if pkg.version and purl and (dep := Dependency.create_from_purl(purl)):
-            dep.versions.append(pkg.version)
+            dep.versions = [pkg.version]
 
     if dep is not None and pkg.license_declared is not None:
         lic_expr = pkg.license_declared

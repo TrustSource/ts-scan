@@ -77,6 +77,11 @@ docker run -it --rm -v <PROJECT_PATH>:/project trustsource/ts-scan scan -o /proj
 
 ## Usage
 
+Conan 2 projects containing `conanfile.py` or `conanfile.txt` are supported.
+The scanner resolves dependencies through `conan graph info`, or reads a build's
+JSON graph with `--conan:graphFile`. See the [Conan example](examples/conan/README.md)
+for profiles, offline scanning, and build/test dependency options.
+
 The **ts-scan** functionality is divided into a set of commands based on the intended goal. The following commands are available:
 
 | Command	              | Description 	                                                             |

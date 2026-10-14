@@ -1,0 +1,121 @@
+{
+  "graph": {
+    "nodes": {
+      "0": {
+        "ref": "conanfile",
+        "name": null,
+        "version": null,
+        "context": "host",
+        "dependencies": {
+          "1": {
+            "direct": true,
+            "build": false,
+            "test": false,
+            "skip": false
+          },
+          "2": {
+            "direct": true,
+            "build": false,
+            "test": false,
+            "skip": false
+          },
+          "3": {
+            "direct": true,
+            "build": true,
+            "test": false,
+            "skip": false
+          },
+          "4": {
+            "direct": true,
+            "build": false,
+            "test": true,
+            "skip": false
+          },
+          "5": {
+            "direct": false,
+            "build": false,
+            "test": false,
+            "skip": false
+          }
+        }
+      },
+      "1": {
+        "ref": "zlib/1.3.1#recipe-zlib",
+        "name": "zlib",
+        "version": "1.3.1",
+        "license": "Zlib",
+        "homepage": "https://zlib.net",
+        "url": "https://github.com/conan-io/conan-center-index",
+        "description": "Compression library",
+        "rrev": "recipe-zlib",
+        "package_id": "binary-zlib",
+        "context": "host",
+        "settings": {
+          "os": "Linux",
+          "arch": "x86_64"
+        },
+        "options": {
+          "shared": "False"
+        },
+        "dependencies": {
+          "5": {
+            "direct": true,
+            "build": false,
+            "test": false,
+            "skip": false
+          }
+        }
+      },
+      "2": {
+        "ref": "mylib/1.0@acme/stable#recipe-mylib",
+        "name": "mylib",
+        "version": "1.0",
+        "user": "acme",
+        "channel": "stable",
+        "license": [
+          "MIT"
+        ],
+        "context": "host",
+        "dependencies": {
+          "1": {
+            "direct": true,
+            "build": false,
+            "test": false,
+            "skip": false
+          },
+          "5": {
+            "direct": false,
+            "build": false,
+            "test": false,
+            "skip": false
+          }
+        }
+      },
+      "3": {
+        "ref": "cmake/3.30.0",
+        "name": "cmake",
+        "version": "3.30.0",
+        "context": "build",
+        "dependencies": {}
+      },
+      "4": {
+        "ref": "catch2/3.7.1",
+        "name": "catch2",
+        "version": "3.7.1",
+        "context": "host",
+        "test": true,
+        "dependencies": {}
+      },
+      "5": {
+        "ref": "helper/1.0",
+        "name": "helper",
+        "version": "1.0",
+        "context": "host",
+        "dependencies": {}
+      }
+    },
+    "root": {
+      "0": null
+    }
+  }
+}

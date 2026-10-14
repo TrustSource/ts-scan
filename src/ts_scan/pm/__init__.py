@@ -206,6 +206,9 @@ class Dependency:
 
     crypto_algorithms: t.List['CryptoAlgorithm'] = field(default_factory=lambda: [])
 
+    qualifiers: t.Dict[str, str] = field(default_factory=dict,
+                                       metadata=config(exclude=lambda v: not v))
+
     def __post_init__(self):
         if self.key is None:
             self.key = f'{self.type}:{self.name}'
@@ -219,7 +222,8 @@ class Dependency:
         return PackageURL(type=self.type,
                           namespace=self.namespace,
                           name=self.name,
-                          version=self.version)
+                          version=self.version,
+                          qualifiers=self.qualifiers)
 
     @staticmethod
     def create_from_purl(purl: t.Union[str, PackageURL],
@@ -239,6 +243,8 @@ class Dependency:
         if _purl.namespace:
             key += ':' + _purl.namespace
         key += ':' + _purl.name
+        if _purl.qualifiers:
+            key += '?' + _purl.to_string().split('?', 1)[1].split('#', 1)[0]
 
         versions = [_purl.version] if _purl.version else []
 
@@ -250,6 +256,7 @@ class Dependency:
                           type=_purl.type,
                           namespace=_purl.namespace if _purl.namespace else '',
                           versions=versions,
+                          qualifiers=dict(_purl.qualifiers or {}),
                           meta={'purl': _purl.to_string()})
 
     def add_crypto_algorithm(self, algorithm: str, strength: str):
