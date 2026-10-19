@@ -1,13 +1,17 @@
 # Conan 2 example
 
-Scan a project using the same profiles, settings, and options as its build:
+Scan a project with the standard Conan configuration:
 
 ```shell
-.venv/bin/python ./ts-scan scan examples/conan \
-  --conan:forward=-pr:h=default,-pr:b=default -o /tmp/conan-scan.json
+.venv/bin/python ./ts-scan scan examples/conan -o /tmp/conan-scan.json
 ```
 
-Conan 2 must be installed and its profiles configured. The scanner invokes
+Conan 2 must be installed. If Conan reports that its default build/host profile
+is missing, the scanner runs `conan profile detect --exist-ok` and retries once.
+Existing profiles are preserved; missing custom profiles remain errors. For CI
+or cross-compilation, pass your build's profiles, settings, and options through
+`--conan:forward`, for example `--conan:forward=-pr:h=release,-pr:b=tools`.
+The scanner invokes
 `conan graph info`, honoring an existing `conan.lock`, without installing or
 building package binaries. Graph resolution executes Conan recipes and may
 download recipes from configured remotes. Pass `--conan:forward=--no-remote`

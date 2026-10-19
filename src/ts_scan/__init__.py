@@ -125,18 +125,27 @@ def do_scan(paths: t.List[Path], **kwargs) -> t.Iterable[DependencyScan]:
 
         msg.info(f'Running dependency scan...')
         scanned_at_least_once = False
+        produced_scan = False
+        empty_scanner = False
 
         for scanner in scanners:
             accepted, scans = apply_scanner(scanner, p)
             
             if accepted:
                 scanned_at_least_once = True
+                produced_scan = produced_scan or bool(scans)
+                empty_scanner = empty_scanner or not scans
             
             yield from scans
            
 
         if scanned_at_least_once:
-            msg.good(f'Dependency scan completed.')
+            if produced_scan and not empty_scanner:
+                msg.good('Dependency scan completed.')
+            elif produced_scan:
+                msg.warn('Dependency scan incomplete: some detected projects produced no scan.')
+            else:
+                msg.warn('No dependency scan was produced.')
         else:
             from .analyse.deepscan import is_deepscan_installed, report_deepscan_unavailable
 

@@ -119,6 +119,79 @@ def test_resolution_failure_does_not_claim_complete_scan(tmp_path, monkeypatch, 
     assert 'incomplete' in capsys.readouterr().out
 
 
+def test_missing_default_profile_is_detected_and_graph_retried(tmp_path, monkeypatch):
+    scanner = ConanScanner(forward=('-pr:h=release',))
+    calls = []
+
+    def execute(*args, **kwargs):
+        calls.append((args, kwargs))
+        if len(calls) == 1:
+            raise CalledProcessError(1, args, stderr=b"ERROR: The default build profile '/home/me/.conan2/profiles/default' doesn't exist.\n")
+        return CompletedProcess(args, 0, stdout=json.dumps(graph()).encode())
+
+    monkeypatch.setattr(scanner, '_exec', execute)
+    assert list(scanner.scan(tmp_path))
+    assert calls[1] == (('profile', 'detect', '--exist-ok'),
+                        {'cwd': tmp_path, 'capture_output': True, 'forward_args': False})
+    assert calls[0] == calls[2]
+
+
+def test_missing_custom_profile_does_not_trigger_detection(tmp_path, monkeypatch, capsys):
+    scanner = ConanScanner()
+    calls = []
+
+    def execute(*args, **kwargs):
+        calls.append(args)
+        raise CalledProcessError(1, args, stderr=b"ERROR: Profile not found: release")
+
+    monkeypatch.setattr(scanner, '_exec', execute)
+    assert list(scanner.scan(tmp_path)) == []
+    assert len(calls) == 1
+    assert 'Profile not found: release' in capsys.readouterr().out
+
+
+def test_profile_detection_does_not_receive_forwarded_graph_arguments(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr('ts_scan.pm.shutil.which', lambda value: '/bin/conan')
+
+    def run(args, **kwargs):
+        calls.append(args)
+        if len(calls) == 1:
+            raise CalledProcessError(1, args, stderr=b"ERROR: The default build profile 'default' doesn't exist.")
+        return CompletedProcess(args, 0, stdout=json.dumps(graph()).encode())
+
+    monkeypatch.setattr('ts_scan.pm.subprocess.run', run)
+    assert list(ConanScanner(forward=('-pr:h=release',)).scan(tmp_path))
+    assert calls[1] == ['/bin/conan', 'profile', 'detect', '--exist-ok']
+    assert calls[0][-1] == calls[2][-1] == '-pr:h=release'
+
+
+def test_failed_detection_is_reported_without_an_endless_retry(tmp_path, monkeypatch, capsys):
+    calls = []
+    scanner = ConanScanner()
+
+    def execute(*args, **kwargs):
+        calls.append(args)
+        detail = b"ERROR: The default build profile 'default' doesn't exist." if len(calls) == 1 else b'ERROR: No compiler detected'
+        raise CalledProcessError(1, args, stderr=detail)
+
+    monkeypatch.setattr(scanner, '_exec', execute)
+    assert list(scanner.scan(tmp_path)) == []
+    assert len(calls) == 2
+    assert 'No compiler detected' in capsys.readouterr().out
+
+
+def test_empty_conan_scan_does_not_report_completion(tmp_path, monkeypatch, capsys):
+    import ts_scan
+    (tmp_path / 'conanfile.txt').touch()
+    monkeypatch.setattr(ts_scan, '__get_pm_scanner_classes', lambda: [ConanScanner])
+    monkeypatch.setattr(ConanScanner, 'scan', lambda self, src: [])
+    assert list(ts_scan.do_scan([tmp_path])) == []
+    output = capsys.readouterr().out
+    assert 'No dependency scan was produced' in output
+    assert 'Dependency scan completed' not in output
+
+
 def test_forwarded_build_arguments_reach_subprocess(tmp_path, monkeypatch):
     calls = []
     monkeypatch.setattr('ts_scan.pm.shutil.which', lambda value: '/bin/conan')

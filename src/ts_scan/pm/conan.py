@@ -1,5 +1,6 @@
 """Conan 2 dependency graphs, resolved by Conan or supplied by the build."""
 import json
+import re
 import subprocess
 import typing as t
 from pathlib import Path
@@ -63,17 +64,32 @@ class ConanScanner(PackageManagerScanner):
                 args = ['graph', 'info', str(source), '--format=json']
                 if (project / 'conan.lock').is_file():
                     args.append('--lockfile=' + str(project / 'conan.lock'))
-                result = self._exec(*args, cwd=project, capture_output=True)
+                try:
+                    result = self._exec(*args, cwd=project, capture_output=True)
+                except subprocess.CalledProcessError as err:
+                    # Conan requires a default build profile even for graph info.
+                    # Bootstrap only a missing default, never a missing custom profile.
+                    detail = self._command_error(err)
+                    if not re.search(r"default (?:build |host )?profile[^\n]*doesn't exist", detail, re.IGNORECASE):
+                        raise
+                    msg.info('Conan default profile is missing. Detecting the local build profile...')
+                    self._exec('profile', 'detect', '--exist-ok', cwd=project,
+                               capture_output=True, forward_args=False)
+                    result = self._exec(*args, cwd=project, capture_output=True)
                 data = json.loads(result.stdout)
             return [self._from_graph(data, project)]
         except (ExecutableNotFoundError, subprocess.CalledProcessError,
                 OSError, ValueError) as err:
-            msg.warn(f'Conan scan incomplete: {err}. No resolved scan was produced. '
-                     'Supply --conan:graphFile or check Conan 2, profiles, and recipe availability.')
-            if self.verbose and isinstance(err, subprocess.CalledProcessError) and err.stderr:
-                msg.warn(err.stderr.decode('utf-8', errors='replace')
-                         if isinstance(err.stderr, bytes) else err.stderr)
+            detail = self._command_error(err) if isinstance(err, subprocess.CalledProcessError) else str(err)
+            msg.warn(f'Conan scan incomplete: {detail.rstrip(".")}. No resolved scan was produced.')
             return []
+
+    @staticmethod
+    def _command_error(err: subprocess.CalledProcessError) -> str:
+        output = err.stderr or err.stdout
+        if output:
+            return (output.decode('utf-8', errors='replace') if isinstance(output, bytes) else output).strip()
+        return str(err)
 
     def _from_graph(self, data: t.Any, project: Path) -> DependencyScan:
         graph = data.get('graph') if isinstance(data, dict) else None

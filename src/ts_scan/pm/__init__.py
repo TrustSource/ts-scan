@@ -75,12 +75,13 @@ class Scanner(abc.ABC):
 
     def _exec(self, *args, capture_output=False,
               executable_override: t.Optional[str] = None,
+              forward_args: bool = True,
               **kwargs) -> subprocess.CompletedProcess:
         exec_path = self.executable_path or executable_override or self.__class__.executable()
 
         if exec_path is not None and (cmd := shutil.which(str(exec_path))):
             return subprocess.run(
-                [cmd] + list(args) + self.__forward,
+                [cmd] + list(args) + (self.__forward if forward_args else []),
                 shell=(platform == 'win32'),
                 check=True,
                 capture_output=capture_output or not self.verbose,
