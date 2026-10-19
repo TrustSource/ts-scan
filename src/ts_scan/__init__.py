@@ -45,6 +45,7 @@ def __get_pm_scanner_classes() -> t.List[t.Type[Scanner]]:
     from .pm.cocoapods import CocoaPodsScanner
     from .pm.vb6 import VB6Scanner
     from .pm.vcpkg import VcpkgScanner
+    from .pm.conan import ConanScanner
 
     return [
         PypiScanner,
@@ -60,6 +61,7 @@ def __get_pm_scanner_classes() -> t.List[t.Type[Scanner]]:
         CocoaPodsScanner,
         VB6Scanner,
         VcpkgScanner,
+        ConanScanner,
     ]
 
 

@@ -83,6 +83,11 @@ through vcpkg when package data is absent. Options such as `--vcpkg:installedDir
 `--vcpkg:triplet`, and `--vcpkg:roots` override discovery and scope. See the
 [vcpkg example](examples/vcpkg/README.md) for usage and limitations.
 
+Conan 2 projects containing `conanfile.py` or `conanfile.txt` are supported.
+The scanner resolves dependencies through `conan graph info`, or reads a build's
+JSON graph with `--conan:graphFile`. See the [Conan example](examples/conan/README.md)
+for profiles, offline scanning, and build/test dependency options.
+
 The **ts-scan** functionality is divided into a set of commands based on the intended goal. The following commands are available:
 
 | Command	              | Description 	                                                             |
