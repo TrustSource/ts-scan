@@ -136,9 +136,9 @@ def inout_default_options(_in: bool, _out: bool, _fmt: bool):
                                type=click.Path(exists=True, path_type=Path))(f)
         if _out:
             f = click.option('-o', '--output', 'output_path',
-                             type=click.Path(path_type=Path),
+                             type=click.Path(path_type=Path, dir_okay=False),
                              required=False,
-                             help='Output path for the scan')(f)
+                             help='Output file for the scan')(f)
         if _fmt:
             f = click.option('-f', '--format', 'scan_format',
                              type=click.Choice(choices=scan_formats),
