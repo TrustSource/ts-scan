@@ -77,10 +77,10 @@ docker run -it --rm -v <PROJECT_PATH>:/project trustsource/ts-scan scan -o /proj
 
 ## Usage
 
-vcpkg projects and installation snapshots are supported through local installed
-metadata. Use `--vcpkg:installedDir`, `--vcpkg:triplet`, and repeatable
-`--vcpkg:roots` to select the installation and dependency closure. Without roots,
-the scan reports an installed-package inventory. See the
+vcpkg projects work with `ts-scan scan <project>`: the scanner discovers existing
+package data in standard project/CMake locations and installs manifest dependencies
+through vcpkg when package data is absent. Options such as `--vcpkg:installedDir`,
+`--vcpkg:triplet`, and `--vcpkg:roots` override discovery and scope. See the
 [vcpkg example](examples/vcpkg/README.md) for usage and limitations.
 
 The **ts-scan** functionality is divided into a set of commands based on the intended goal. The following commands are available:

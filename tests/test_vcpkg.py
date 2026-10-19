@@ -1,6 +1,7 @@
 import io
 import json
 import shutil
+from subprocess import CalledProcessError, CompletedProcess
 from pathlib import Path
 
 import pytest
@@ -161,10 +162,131 @@ def test_invalid_database_does_not_produce_scan(project, contents, capsys):
     assert 'incomplete' in capsys.readouterr().out
 
 
-def test_missing_installation_does_not_trigger_resolution(tmp_path, capsys):
+def test_no_install_override_does_not_trigger_resolution(tmp_path, capsys):
     (tmp_path / 'vcpkg.json').write_text('{"dependencies":["zlib"]}')
-    assert list(VcpkgScanner().scan(tmp_path)) == []
+    assert list(VcpkgScanner(noInstall=True).scan(tmp_path)) == []
     assert 'No vcpkg status database' in capsys.readouterr().out
+
+
+def test_example_scans_without_any_vcpkg_options(project, monkeypatch):
+    s = VcpkgScanner()
+
+    def unexpected(*args, **kwargs):
+        pytest.fail('Existing local package data should not invoke vcpkg')
+
+    monkeypatch.setattr(s, '_exec', unexpected)
+    scan = list(s.scan(project))[0]
+    assert scan.dependencies[0].meta['vcpkg']['installed_dir'] == str(project / 'installed')
+    assert scan.dependencies[0].meta['vcpkg']['metadata_complete']
+
+
+@pytest.mark.parametrize('build', ['build', 'build/debug', 'cmake-build-debug', 'out/build/default'])
+def test_discovers_standard_cmake_build_folders(project, build):
+    destination = project / build / 'vcpkg_installed'
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    (project / 'installed').rename(destination)
+    scan = list(VcpkgScanner().scan(project))[0]
+    assert scan.dependencies[0].meta['vcpkg']['installed_dir'] == str(destination)
+
+
+def test_cmake_cache_resolves_custom_install_directory(project):
+    installed = project / 'custom-libraries'
+    (project / 'installed').rename(installed)
+    build = project / 'build'
+    build.mkdir()
+    (build / 'CMakeCache.txt').write_text('VCPKG_INSTALLED_DIR:PATH=../custom-libraries\n')
+    scan = list(VcpkgScanner().scan(project))[0]
+    assert scan.dependencies[0].meta['vcpkg']['installed_dir'] == str(installed)
+
+
+def test_installed_directory_environment_is_respected(project, monkeypatch):
+    monkeypatch.setenv('VCPKG_INSTALLED_DIR', str(project / 'installed'))
+    assert list(VcpkgScanner().scan(project))
+
+
+def test_classic_vcpkg_root_discovery(project, monkeypatch):
+    (project / 'vcpkg.json').unlink()
+    checkout = project / 'checkout'
+    checkout.mkdir()
+    (project / 'installed').rename(checkout / 'installed')
+    monkeypatch.setenv('VCPKG_ROOT', str(checkout))
+    scan = list(VcpkgScanner().scan(project))[0]
+    assert scan.dependencies[0].meta['vcpkg']['installed_dir'] == str(checkout / 'installed')
+
+
+def test_ambiguous_builds_report_override_instead_of_guessing(project, capsys):
+    for build in ('build/debug', 'build/release'):
+        shutil.copytree(project / 'installed', project / build / 'vcpkg_installed')
+    shutil.rmtree(project / 'installed')
+    assert list(VcpkgScanner().scan(project)) == []
+    assert 'Multiple vcpkg build installations' in capsys.readouterr().out
+
+
+def test_missing_packages_are_installed_with_discovered_toolchain_root(project, monkeypatch):
+    snapshot = project / 'installed'
+    # Keep fixture data outside discovery locations until our simulated install.
+    snapshot.rename(project / 'snapshot')
+    checkout = project / 'tools' / 'vcpkg'
+    (checkout / 'scripts/buildsystems').mkdir(parents=True)
+    (checkout / '.vcpkg-root').touch()
+    toolchain = checkout / 'scripts/buildsystems/vcpkg.cmake'
+    toolchain.touch()
+    (project / 'build').mkdir()
+    (project / 'build/CMakeCache.txt').write_text(f'CMAKE_TOOLCHAIN_FILE:FILEPATH={toolchain}\n')
+    monkeypatch.delenv('VCPKG_ROOT', raising=False)
+    s = VcpkgScanner(triplet='arm64-linux', roots=('curl',))
+    calls = []
+
+    def install(*args, **kwargs):
+        calls.append((args, kwargs))
+        shutil.copytree(project / 'snapshot', project / 'vcpkg_installed')
+        return CompletedProcess(args, 0)
+
+    monkeypatch.setattr(s, '_exec', install)
+    assert list(s.scan(project))
+    args, kwargs = calls[0]
+    assert args[0] == 'install'
+    assert '--x-manifest-root=' + str(project) in args
+    assert '--x-install-root=' + str(project / 'vcpkg_installed') in args
+    assert '--vcpkg-root=' + str(checkout) in args
+    assert '--triplet=arm64-linux' in args
+    assert kwargs == {'cwd': project, 'capture_output': True}
+
+
+def test_explicit_snapshot_is_not_replaced_or_installed(project, monkeypatch, capsys):
+    s = VcpkgScanner(installedDir=project / 'missing')
+    monkeypatch.setattr(s, '_exec', lambda *args, **kwargs: pytest.fail('Explicit snapshot must be read-only'))
+    assert list(s.scan(project)) == []
+    assert 'No vcpkg status database' in capsys.readouterr().out
+
+
+def test_install_failure_reports_vcpkg_diagnostic(project, monkeypatch, capsys):
+    shutil.rmtree(project / 'installed')
+    s = VcpkgScanner()
+
+    def fail(*args, **kwargs):
+        raise CalledProcessError(1, args, stderr=b'Could not detect vcpkg-root; configure VCPKG_ROOT')
+
+    monkeypatch.setattr(s, '_exec', fail)
+    assert list(s.scan(project)) == []
+    assert 'Could not detect vcpkg-root' in capsys.readouterr().out
+
+
+def test_empty_scanner_does_not_report_success(project, monkeypatch, capsys):
+    import ts_scan
+    monkeypatch.setattr(ts_scan, '__get_pm_scanner_classes', lambda: [VcpkgScanner])
+    monkeypatch.setattr(VcpkgScanner, 'scan', lambda self, src: [])
+    assert list(ts_scan.do_scan([project])) == []
+    output = capsys.readouterr().out
+    assert 'No dependency scan was produced' in output
+    assert 'Dependency scan completed' not in output
+
+
+def test_cli_default_command_works_without_flags(project, tmp_path):
+    output = tmp_path / 'scan.json'
+    result = CliRunner().invoke(cli, ['scan', str(project), '-o', str(output)])
+    assert result.exit_code == 0, result.output
+    assert json.loads(output.read_text())[0]['dependencies'][0]['meta']['vcpkg']['metadata_complete']
 
 
 def test_cli_registration_and_root_selection(project, tmp_path):

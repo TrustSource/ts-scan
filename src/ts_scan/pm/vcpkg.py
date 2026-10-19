@@ -1,14 +1,18 @@
-"""Read vcpkg installation snapshots without invoking vcpkg or modifying its database."""
+"""Discover vcpkg installations and resolve missing manifest dependencies."""
 import copy
 import json
+import os
 import re
+import shutil
+import subprocess
 import typing as t
 from pathlib import Path
 
 import click
 from packageurl import PackageURL
 
-from . import Dependency, DependencyScan, License, LicenseKind, PackageManagerScanner
+from . import (Dependency, DependencyScan, ExecutableNotFoundError, License,
+               LicenseKind, PackageManagerScanner)
 from ..cli import msg
 
 
@@ -74,47 +78,168 @@ def _dependency_specs(value: str, triplet: str) -> t.Set[Spec]:
 
 class VcpkgScanner(PackageManagerScanner):
     def __init__(self, installedDir: t.Optional[Path] = None,
-                 triplet: t.Optional[str] = None, roots: tuple = (), **kwargs):
+                 triplet: t.Optional[str] = None, roots: tuple = (),
+                 noInstall: bool = False, **kwargs):
         super().__init__(**kwargs)
         self.installed_dir = Path(installedDir).resolve() if installedDir is not None else None
         self.triplet = triplet
         self.roots = roots
+        self.no_install = noInstall
 
     @staticmethod
     def name() -> str:
         return 'Vcpkg'
+
+    @staticmethod
+    def executable() -> str:
+        return 'vcpkg'
 
     @classmethod
     def options(cls) -> PackageManagerScanner.OptionsType:
         return super().options() | {
             'installedDir': {
                 'type': click.Path(exists=True, file_okay=False, path_type=Path),
-                'help': 'vcpkg installation directory; defaults to <source>/vcpkg_installed'
+                'help': 'Read an existing vcpkg installation directory instead of automatic discovery/resolution'
             },
             'triplet': {'type': str, 'help': 'Select an installed target triplet'},
             'roots': {
                 'type': str, 'multiple': True,
                 'help': 'Scan the closure of an installed port[:triplet]; repeat for multiple roots'
-            }
+            },
+            'noInstall': {
+                'default': False, 'is_flag': True,
+                'help': 'Only discover existing package data; do not install missing manifest dependencies'
+            },
         }
+
+    @staticmethod
+    def _has_database(path: Path) -> bool:
+        updates = path / 'vcpkg' / 'updates'
+        return (path / 'vcpkg' / 'status').is_file() or (
+            updates.is_dir() and any(p.is_file() and p.name != 'incomplete' for p in updates.iterdir()))
+
+    @staticmethod
+    def _cmake_caches(project: Path) -> t.List[Path]:
+        caches = {project / 'CMakeCache.txt', project / 'build' / 'CMakeCache.txt'}
+        for pattern in ('build*/CMakeCache.txt', 'build/*/CMakeCache.txt',
+                        'cmake-build*/CMakeCache.txt', 'out/build/*/CMakeCache.txt'):
+            caches.update(project.glob(pattern))
+        return sorted(path for path in caches if path.is_file())
+
+    @staticmethod
+    def _cache_values(path: Path) -> t.Dict[str, str]:
+        values = {}
+        for line in path.read_text(encoding='utf-8').splitlines():
+            if line.startswith(('#', '//')):
+                continue
+            key, separator, value = line.partition('=')
+            if separator:
+                values[key.split(':', 1)[0]] = value
+        return values
+
+    def _find_root(self, project: Path, caches: t.List[Path]) -> t.Optional[Path]:
+        if os.environ.get('VCPKG_ROOT'):
+            return Path(os.environ['VCPKG_ROOT']).expanduser().resolve()
+        candidates = []
+        for cache in caches:
+            toolchain = self._cache_values(cache).get('CMAKE_TOOLCHAIN_FILE')
+            if toolchain:
+                path = Path(toolchain)
+                path = path if path.is_absolute() else cache.parent / path
+                if path.name == 'vcpkg.cmake' and len(path.parents) >= 3:
+                    candidates.append(path.resolve().parents[2])
+        executable = shutil.which(str(self.executable_path or self.executable()))
+        if executable:
+            candidates.extend(Path(executable).resolve().parents)
+        candidates.extend(parent / 'vcpkg' for parent in (project, *project.parents))
+        candidates.extend((Path.home() / 'vcpkg', Path.home() / 'src' / 'vcpkg',
+                           Path.home() / '.vcpkg'))
+        return next((path for path in candidates if (path / '.vcpkg-root').is_file()), None)
+
+    def _find_installation(self, project: Path) -> Path:
+        if self.installed_dir is not None:
+            return self.installed_dir
+        configured = os.environ.get('VCPKG_INSTALLED_DIR')
+        if configured:
+            return Path(configured).expanduser().resolve()
+        for path in (project, project / 'vcpkg_installed', project / 'installed'):
+            if self._has_database(path):
+                return path
+        caches = self._cmake_caches(project)
+        builds = set()
+        for cache in caches:
+            values = self._cache_values(cache)
+            if self.triplet and values.get('VCPKG_TARGET_TRIPLET', self.triplet) != self.triplet:
+                continue
+            path = Path(values.get('VCPKG_INSTALLED_DIR', str(cache.parent / 'vcpkg_installed')))
+            path = path if path.is_absolute() else cache.parent / path
+            if self._has_database(path):
+                builds.add(path.resolve())
+        # Standard CMake build folders can have package data even without a cache.
+        for pattern in ('build/vcpkg_installed', 'build*/vcpkg_installed',
+                        'build/*/vcpkg_installed', 'cmake-build*/vcpkg_installed',
+                        'out/build/*/vcpkg_installed'):
+            for path in project.glob(pattern):
+                if self._has_database(path) and (not self.triplet or (path / self.triplet).is_dir()):
+                    builds.add(path.resolve())
+        if len(builds) > 1:
+            raise ValueError('Multiple vcpkg build installations found; select one with --vcpkg:installedDir')
+        if builds:
+            return next(iter(builds))
+        # A manifest owns its installation. Do not substitute a shared classic
+        # inventory for that project's dependencies.
+        if not (project / 'vcpkg.json').is_file():
+            root = self._find_root(project, caches)
+            if root is not None and self._has_database(root / 'installed'):
+                return root / 'installed'
+        return project / 'vcpkg_installed'
+
+    def _install_manifest(self, project: Path, installed: Path) -> None:
+        args = ['install', '--x-manifest-root=' + str(project),
+                '--x-install-root=' + str(installed), '--disable-metrics']
+        if self.triplet:
+            args.append('--triplet=' + self.triplet)
+        root = self._find_root(project, self._cmake_caches(project))
+        if root is not None:
+            args.append('--vcpkg-root=' + str(root))
+        msg.info('Resolving and installing vcpkg manifest dependencies...')
+        executable = root / ('vcpkg.exe' if os.name == 'nt' else 'vcpkg') if root else None
+        if executable is not None and executable.is_file():
+            self._exec(*args, cwd=project, capture_output=True, executable_override=str(executable))
+        else:
+            self._exec(*args, cwd=project, capture_output=True)
 
     def accepts(self, path: Path) -> bool:
         if path.is_file():
             return path.name == 'vcpkg.json'
-        return path.is_dir() and (self.installed_dir is not None
-                                 or (path / 'vcpkg.json').is_file()
-                                 or (path / 'vcpkg' / 'status').is_file()
-                                 or (path / 'vcpkg' / 'updates').is_dir()
-                                 or (path / 'vcpkg_installed' / 'vcpkg').is_dir())
+        if not path.is_dir():
+            return False
+        if (self.installed_dir is not None
+                or (path / 'vcpkg.json').is_file()
+                or (path / 'vcpkg' / 'status').is_file()
+                or (path / 'vcpkg' / 'updates').is_dir()
+                or (path / 'vcpkg_installed' / 'vcpkg').is_dir()
+                or (path / 'installed' / 'vcpkg').is_dir()):
+            return True
+        for cache in self._cmake_caches(path):
+            values = self._cache_values(cache)
+            if 'VCPKG_INSTALLED_DIR' in values or 'vcpkg.cmake' in values.get('CMAKE_TOOLCHAIN_FILE', ''):
+                return True
+        return any(self._has_database(candidate) for pattern in (
+            'build*/vcpkg_installed', 'build/*/vcpkg_installed',
+            'cmake-build*/vcpkg_installed', 'out/build/*/vcpkg_installed')
+                   for candidate in path.glob(pattern))
 
     def scan(self, src: t.Union[str, Path]) -> t.Iterable[DependencyScan]:
         source = Path(src).resolve()
         project = source if source.is_dir() else source.parent
-        installed = self.installed_dir or (
-            project if (project / 'vcpkg').is_dir() else project / 'vcpkg_installed')
         try:
             if self.triplet is not None and not re.fullmatch(_NAME, self.triplet):
                 raise ValueError('Invalid vcpkg triplet')
+            installed = self._find_installation(project)
+            if (not self._has_database(installed) and self.installed_dir is None
+                    and not self.no_install and (project / 'vcpkg.json').is_file()):
+                self._install_manifest(project, installed)
             records = self._database(installed)
             packages, edges = self._packages(records)
             selected = sorted(spec for spec in packages if self.triplet is None or spec[1] == self.triplet)
@@ -170,9 +295,13 @@ class VcpkgScanner(PackageManagerScanner):
             if scope == 'inventory':
                 msg.info('Scanning a vcpkg installed-package inventory; project usage is not inferred.')
             return [DependencyScan.from_dep(root)]
-        except (OSError, ValueError) as err:
-            msg.warn(f'Vcpkg scan incomplete: {err}. No resolved scan was produced. '
-                     'Use an installation snapshot from a completed build.')
+        except (OSError, ValueError, ExecutableNotFoundError, subprocess.CalledProcessError) as err:
+            detail = str(err)
+            if isinstance(err, subprocess.CalledProcessError):
+                output = err.stderr or err.stdout
+                if output:
+                    detail = output.decode('utf-8', errors='replace') if isinstance(output, bytes) else output
+            msg.warn(f'Vcpkg scan incomplete: {detail}. No resolved scan was produced.')
             return []
 
     @staticmethod
