@@ -93,7 +93,9 @@ class ConanScanner(PackageManagerScanner):
 
     def _from_graph(self, data: t.Any, project: Path) -> DependencyScan:
         graph = data.get('graph') if isinstance(data, dict) else None
-        nodes = graph.get('nodes') if isinstance(graph, dict) else None
+        if not isinstance(graph, dict):
+            raise ValueError('Expected a Conan 2 graph object')
+        nodes = graph.get('nodes')
         if not isinstance(nodes, dict) or not nodes:
             raise ValueError('Expected a Conan 2 graph.nodes object')
         if graph.get('error'):

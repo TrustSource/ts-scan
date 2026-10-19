@@ -130,7 +130,7 @@ class ComposerScanner(PackageManagerScanner):
     def accepts(self, path: Path) -> bool:
         return path.is_dir() and (path / 'composer.json').exists()
 
-    def scan(self, src: t.Union[str, Path]) -> t.Iterable[DependencyScan]:
+    def scan(self, src: t.Union[str, Path]) -> t.List[DependencyScan]:
         path = Path(src)
 
         manifest_path = path / 'composer.json'

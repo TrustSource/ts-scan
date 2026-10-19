@@ -9,7 +9,7 @@ from abc import ABC
 from enum import Enum
 from sys import platform
 from pathlib import Path
-from packageurl import PackageURL
+from packageurl import PackageURL, normalize_qualifiers
 
 from dataclasses import dataclass, field
 from dataclasses_json import config, dataclass_json
@@ -162,14 +162,14 @@ class DependencyScan:
         #     module_id += ':' + dep.version
         return DependencyScan(module=dep.name, moduleId=module_id, dependencies=[dep])
 
-    def iterdeps(self) -> t.Iterable['Dependency']:
+    def iterdeps(self) -> t.Iterator['Dependency']:
         deps = list(self.dependencies)
         while deps:
             d = deps.pop()
             deps.extend(d.dependencies)
             yield d
 
-    def iterdeps_once(self) -> t.Iterable['Dependency']:
+    def iterdeps_once(self) -> t.Iterator['Dependency']:
         visited = set()
         for dep in self.iterdeps():
             if dep.purl not in visited:
@@ -209,6 +209,12 @@ class Dependency:
 
     qualifiers: t.Dict[str, str] = field(default_factory=dict,
                                        metadata=config(exclude=lambda v: not v))
+
+    if t.TYPE_CHECKING:
+        def to_dict(self) -> t.Dict[str, t.Any]: ...
+
+        @classmethod
+        def from_dict(cls, value: t.Mapping[str, t.Any]) -> 'Dependency': ...
 
     def __post_init__(self):
         if self.key is None:
@@ -257,7 +263,7 @@ class Dependency:
                           type=_purl.type,
                           namespace=_purl.namespace if _purl.namespace else '',
                           versions=versions,
-                          qualifiers=dict(_purl.qualifiers or {}),
+                          qualifiers=normalize_qualifiers(_purl.qualifiers, encode=None) or {},
                           meta={'purl': _purl.to_string()})
 
     def add_crypto_algorithm(self, algorithm: str, strength: str):

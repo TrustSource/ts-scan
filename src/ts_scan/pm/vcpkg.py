@@ -9,7 +9,7 @@ import typing as t
 from pathlib import Path
 
 import click
-from packageurl import PackageURL
+from packageurl import PackageURL, normalize_qualifiers
 
 from . import (Dependency, DependencyScan, ExecutableNotFoundError, License,
                LicenseKind, PackageManagerScanner)
@@ -376,7 +376,10 @@ class VcpkgScanner(PackageManagerScanner):
             if len(ports) != 1 or ports[0].get('name') != dep.name:
                 raise ValueError('Missing or mismatched SPDX port record')
             port = ports[0]
-            expected = dep.version + (f"#{dep.meta['vcpkg']['port_version']}" if dep.meta['vcpkg']['port_version'] else '')
+            version = dep.version
+            if version is None:
+                raise ValueError('Missing installed package version')
+            expected = version + (f"#{dep.meta['vcpkg']['port_version']}" if dep.meta['vcpkg']['port_version'] else '')
             if port.get('versionInfo') != expected:
                 raise ValueError('SPDX port version does not match installed database')
             refs = port.get('externalRefs', [])
@@ -388,7 +391,7 @@ class VcpkgScanner(PackageManagerScanner):
                 raise ValueError('Ambiguous SPDX port PURL')
             if purls:
                 purl = purls[0]
-                qualifiers = purl.qualifiers or {}
+                qualifiers = normalize_qualifiers(purl.qualifiers, encode=None) or {}
                 if (purl.type != 'vcpkg' or purl.namespace or purl.name != dep.name
                         or purl.version != dep.version
                         or int(qualifiers.get('port_version', '0')) != dep.meta['vcpkg']['port_version']

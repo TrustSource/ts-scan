@@ -324,8 +324,10 @@ def test_import_native_vcpkg_spdx_uses_port_version_and_concluded_license(projec
 
 def test_plain_purl_compatibility_and_qualified_identity():
     dep = Dependency.create_from_purl('pkg:pypi/requests@2.32.3')
+    assert dep is not None
     assert dep.key == 'pypi:requests'
     assert 'qualifiers' not in dep.to_dict()
     linux = Dependency.create_from_purl('pkg:vcpkg/zlib@1.3.1?triplet=x64-linux')
     windows = Dependency.create_from_purl('pkg:vcpkg/zlib@1.3.1?triplet=x64-windows')
+    assert linux is not None and windows is not None
     assert linux.key != windows.key

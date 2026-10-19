@@ -58,7 +58,7 @@ class VB6Scanner(PackageManagerScanner):
             return False
         return any(self._project_files(path)) or any(self._group_files(path))
 
-    def scan(self, src: t.Union[str, Path]) -> t.Iterable[DependencyScan]:
+    def scan(self, src: t.Union[str, Path]) -> t.List[DependencyScan]:
         path = Path(src)
         if path.is_file() and path.suffix.casefold() == '.vbg':
             return [self._scan_group(path)]
