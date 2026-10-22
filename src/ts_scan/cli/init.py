@@ -1,13 +1,15 @@
 import click
 import toml
 
+from click.core import ParameterSource
+
 from pathlib import Path
 
-from . import cli, msg, param_default_value
+from . import cli, msg, param_default_value, write_private_file
 
 
 @cli.command('init', help='Initializes a new TrustSource project')
-@cli.api_default_options(is_project_name_required=False)
+@cli.api_default_options(is_project_name_required=False, is_api_key_required=False)
 @click.argument('path', type=click.Path(exists=True, path_type=Path, file_okay=False))
 @click.pass_context
 def init_project(ctx, path: Path, **kwargs):
@@ -22,10 +24,17 @@ def init_project(ctx, path: Path, **kwargs):
             if isinstance(param, click.Option):
                 if param.name is None:
                     continue
+                # A key taken from the environment stays there instead of being persisted to disk
+                if param.name == 'api_key' and \
+                        ctx.get_parameter_source('api_key') == ParameterSource.ENVIRONMENT:
+                    continue
+
                 value = kwargs.get(param.name)
                 if value is not None and value != param_default_value(param, ctx):
                     proj_cfg[param.name] = value
 
-        with proj_cfg_path.open('w') as fp:
-            cfg_str = toml.dumps(proj_cfg)
-            fp.write(cfg_str)
+        write_private_file(proj_cfg_path, toml.dumps(proj_cfg))
+
+        if 'api_key' in proj_cfg:
+            msg.warn(f"{proj_cfg_path} contains your API key. Do not commit it: add it to .gitignore, "
+                     "or omit --api-key and set TS_API_KEY or the user settings file instead.")

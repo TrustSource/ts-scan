@@ -13,6 +13,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
     * Added dependency scanning for CocoaPods projects (`Podfile.lock`)
     * Added dependency scanning for Swift Package Manager projects (`Package.swift`), ported from the now-retired [ts-spm](https://github.com/TrustSource/ts-spm) plugin
 
+### Security
+    * `ts-scan init` and the default user config are now created readable by the owner only (`0600`)
+    * `ts-scan init` warns when it writes an API key, and no longer persists a key taken from `TS_API_KEY`
+
+### Fixes
+    * `ts-scan init` no longer requires `--api-key`, as documented
+
 ## [1.9.1] - 2026-08-28
 
 ### Fixes
