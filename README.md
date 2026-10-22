@@ -151,6 +151,8 @@ ts-scan init --project-name <TrustSource project name> --api-key <TrustSource AP
 
 Both parameters are optional, for example only a project name can be stored inside the project while the API key is stored in the [user settings file](#user-settings).
 
+**Note**: the file `tsproject.toml` is created readable by you only. If it contains an API key, keep it out of version control (add it to `.gitignore`) or prefer the `TS_API_KEY` environment variable.
+
 **Note**: the project settings override the user settings file and the explicitly passed command line options override the project settings. For example if the API key is passed on the command line, it will override the API key stored in the project settings file.
 
 ## Scan

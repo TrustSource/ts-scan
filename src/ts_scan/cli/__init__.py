@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import os
 import click
 import typing as t
 import toml
@@ -85,6 +86,16 @@ def cli(ctx, config: Path, profile: str):
                 ctx.default_map.update(proj_cfg)
 
 
+def write_private_file(path: Path, content: str) -> None:
+    """Creates a new file readable by the current user only (0600 on POSIX).
+
+    Fails if the file already exists, so a pre-planted file or symlink is never written through.
+    """
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, 'w') as fp:
+        fp.write(content)
+
+
 def _create_default_config() -> Path:
     cfg = {
         'default': {}
@@ -92,11 +103,8 @@ def _create_default_config() -> Path:
 
     cfg_path = Path(_default_config_location).expanduser()
     if not cfg_path.exists():
-        cfg_path.parent.mkdir(parents=True, exist_ok=True)
-
-        with cfg_path.open('w') as fp:
-            cfg_str = toml.dumps(cfg)
-            fp.write(cfg_str)
+        cfg_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        write_private_file(cfg_path, toml.dumps(cfg))
 
     return cfg_path
 
@@ -109,7 +117,8 @@ def _load_project_config(path: Path) -> dict:
     return {}
 
 
-def api_default_options(project_name=True, is_project_name_required=True, project_name_help_hint=''):
+def api_default_options(project_name=True, is_project_name_required=True, project_name_help_hint='',
+                        is_api_key_required=True):
     def _apply(f):
         if project_name:
             help_msg = 'Project name'
@@ -120,7 +129,7 @@ def api_default_options(project_name=True, is_project_name_required=True, projec
                              type=str, required=is_project_name_required, help=help_msg)(f)
 
         f = click.option('--api-key', 'api_key',
-                         type=str, required=True, help='TrustSource API Key')(f)
+                         type=str, required=is_api_key_required, help='TrustSource API Key')(f)
 
         f = click.option('--base-url', 'base_url',
                          default='https://api.trustsource.io', help='TrustSource API base URL')(f)
