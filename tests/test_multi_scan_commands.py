@@ -44,6 +44,7 @@ def test_upload_sends_each_scan_as_a_separate_request_in_file_order(tmp_path, mo
         def __init__(self, base_url, api_key):
             assert base_url == 'https://api.example.test'
             assert api_key == 'secret'
+            self.base_url = f'{base_url}/v2'
 
         def upload_scan(self, data):
             uploaded.append(data)

@@ -139,21 +139,30 @@ ts-scan -p dev upload MyScan.json
 
 In this case the **ts-scan** will use the ```api_key``` and ```project_name``` from the ```dev``` profile for the upload.
 
+To store the API key and base URL in a profile without editing the file, use the **configure** command. Without options it shows the profile, with the API key masked:
+
+```shell
+ts-scan configure --api-key <TrustSource API key>
+ts-scan -p dev configure --api-key <API key from the Dev account> --base-url https://api.dev.trustsource.io
+```
+
+The base URL may be given with or without the API version: `/v2` is appended only if it is missing.
+
+**Note**: the API key and the base URL are *tool settings*. They are taken from the command line, the environment (e.g. `TS_UPLOAD_API_KEY`, `TS_UPLOAD_BASE_URL`) or the user settings file only, and are fixed when **ts-scan** starts. A scanned project cannot change them (see [Init](#init)).
+
 ## Init
 
-The **init** command initializes a TrustSource project. It creates a configuration file in the provided directory, which can be used to store the project name and API key for future use. This is particularly useful for developers, where you may want to avoid passing the API key and project name as a command-line argument every time a new scan is going to be uploaded.
+The **init** command initializes a TrustSource project. It creates a project settings file `tsproject.toml` in the provided directory, which stores the project name, so it does not have to be passed every time a new scan is uploaded.
 
 To initialize a project, use:
 
 ```shell
-ts-scan init --project-name <TrustSource project name> --api-key <TrustSource API key> <path to the project directory>
+ts-scan init --project-name <TrustSource project name> <path to the project directory>
 ```
 
-Both parameters are optional, for example only a project name can be stored inside the project while the API key is stored in the [user settings file](#user-settings).
+**Note**: the project settings describe *what* is scanned, never *where* the results go. `api_key` and `base_url` in a `tsproject.toml` are ignored with a warning, so a scanned repository cannot redirect your API key to another endpoint. Store them with [configure](#user-settings) or pass them on the command line or in the environment.
 
-**Note**: the file `tsproject.toml` is created readable by you only. If it contains an API key, keep it out of version control (add it to `.gitignore`) or prefer the `TS_API_KEY` environment variable.
-
-**Note**: the project settings override the user settings file and the explicitly passed command line options override the project settings. For example if the API key is passed on the command line, it will override the API key stored in the project settings file.
+**Note**: the project settings override the user settings file and the explicitly passed command line options override the project settings.
 
 ## Scan
 

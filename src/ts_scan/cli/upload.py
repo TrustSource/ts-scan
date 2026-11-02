@@ -8,7 +8,7 @@ from pathlib import Path
 
 from . import cli, msg, load_scans_from_file
 from ..pm import DependencyScan, dump_scans
-from ..api import TrustSourceAPI
+from ..api import TrustSourceAPI, API_VERSION_SUFFIX
 from ..analyse.deepscan import (DeepScanNotInstalledError, require_deepscan,
                                 upload_scan as upload_deepscan)
 
@@ -38,7 +38,7 @@ def upload_scan(path: Path,
                 werror: bool):
 
     api = TrustSourceAPI(base_url, api_key)
-    ds_base_url = f'{base_url}/v2/repository'
+    ds_base_url = f'{api.base_url}/repository'
 
     scans = load_scans_from_file(path, scan_format)
 
@@ -52,7 +52,7 @@ def upload_scan(path: Path,
         upload_result = _upload_scan(scan, project_name, api)
 
         if wait_for_analysis and upload_result:
-            _wait_for_analysis_and_evaluate(upload_result, api, base_url,
+            _wait_for_analysis_and_evaluate(upload_result, api, api.base_url,
                                             exit_on_legal, exit_on_vulns, werror,
                                             wait_timeout)
 
@@ -195,6 +195,10 @@ def _build_analysis_link(base_url: str, analysis_result: dict) -> t.Optional[str
 
 
 def _app_base_url(base_url: str) -> str:
+    base_url = base_url.rstrip('/')
+    if base_url.endswith(API_VERSION_SUFFIX):
+        base_url = base_url[:-len(API_VERSION_SUFFIX)]
+
     parsed = urlsplit(base_url)
     netloc = parsed.netloc
 

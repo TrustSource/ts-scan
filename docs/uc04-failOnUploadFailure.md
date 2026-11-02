@@ -33,11 +33,10 @@ Missing Authentication Token
 >
 > `Missing Authentication Token` is the response AWS API Gateway returns for an
 > **unknown route** — it does not necessarily mean the API key is missing. The
-> most common cause is a wrong `--base-url`. `ts-scan` appends the version and
-> resource path itself (it posts to `<base-url>/v2/core/scans`), so the base URL
-> must be the host only, e.g. `https://api.trustsource.io` — **not**
-> `https://api.trustsource.io/v2`. Adding the version yields `/v2/v2/...` and the
-> gateway rejects it.
+> most common cause is a wrong `--base-url`. `ts-scan` posts to
+> `<base-url>/core/scans` and appends `/v2` to the base URL only if it is missing,
+> so both `https://api.trustsource.io` and `https://api.trustsource.io/v2` work.
+> Check the host and any path in front of the version.
 
 ## Steps to Success
 

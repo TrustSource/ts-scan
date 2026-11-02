@@ -4,6 +4,7 @@
 
 import os
 import click
+import tempfile
 import typing as t
 import toml
 
@@ -11,8 +12,13 @@ from wasabi.printer import Printer
 from pathlib import Path
 
 from ..pm import DependencyScan, load_scans
+from ..api import DEFAULT_BASE_URL
 
 _default_config_location = '~/.ts-scan/config'
+
+# Tool settings: taken from the command line, the environment or the ts-scan config only,
+# never from the project settings of a scanned directory
+TOOL_ONLY_OPTIONS = ('api_key', 'base_url')
 
 msg = Printer(line_max=240, colors={'info': 'cyan'})
 
@@ -25,6 +31,7 @@ def start():
     import ts_scan.cli.import_sbom
     import ts_scan.cli.convert
     import ts_scan.cli.init
+    import ts_scan.cli.configure
 
     cli()
 
@@ -60,6 +67,10 @@ def cli(ctx, config: Path, profile: str):
     ctx.obj['config_path'] = cfg_path
 
     defaults = cfg_data.get(profile)
+
+    # 'configure' may create a new profile
+    if defaults is None and ctx.invoked_subcommand == 'configure':
+        defaults = {}
 
     if defaults is None:
         msg.fail(f"Profile '{profile}' not found in the config file.")
@@ -109,12 +120,35 @@ def _create_default_config() -> Path:
     return cfg_path
 
 
+def update_private_file(path: Path, content: str) -> None:
+    """Creates or replaces a file readable by the current user only (0600 on POSIX).
+
+    The content is written to a new temporary file that atomically replaces the target, so an
+    existing file or symlink at the target is never written through.
+    """
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f'.{path.name}.')
+    try:
+        with os.fdopen(fd, 'w') as fp:
+            fp.write(content)
+        os.replace(tmp, path)
+    except BaseException:
+        os.unlink(tmp)
+        raise
+
+
 def _load_project_config(path: Path) -> dict:
     cfg_path = path / 'tsproject.toml'
-    if cfg_path.exists():
-        return toml.load(cfg_path)
+    if not cfg_path.exists():
+        return {}
 
-    return {}
+    proj_cfg = toml.load(cfg_path)
+    for key in TOOL_ONLY_OPTIONS:
+        if key in proj_cfg:
+            del proj_cfg[key]
+            msg.warn(f"Ignoring '{key}' in {cfg_path}: the API endpoint and key are only taken from "
+                     "the command line, the environment or the ts-scan config (see 'ts-scan configure')")
+
+    return proj_cfg
 
 
 def api_default_options(project_name=True, is_project_name_required=True, project_name_help_hint='',
@@ -132,7 +166,8 @@ def api_default_options(project_name=True, is_project_name_required=True, projec
                          type=str, required=is_api_key_required, help='TrustSource API Key')(f)
 
         f = click.option('--base-url', 'base_url',
-                         default='https://api.trustsource.io', help='TrustSource API base URL')(f)
+                         default=DEFAULT_BASE_URL,
+                         help="TrustSource API base URL, '/v2' is appended if missing")(f)
         return f
 
     return _apply
