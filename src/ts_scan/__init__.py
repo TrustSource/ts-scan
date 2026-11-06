@@ -4,7 +4,7 @@ import typing as t
 from pathlib import Path
 from subprocess import CalledProcessError
 
-from .pm import Scanner, Dependency, DependencyScan, License, get_license_from_text
+from .pm import Scanner, Dependency, DependencyScan, DependencyResolutionError, License, get_license_from_text
 from .cli import cli, msg
 
 def _get_version_from_metadata(default: str = '1.0.0') -> str:
@@ -182,6 +182,9 @@ def _execute_scans(
 ) -> t.Iterable[DependencyScan]:
     try:
         yield from scanner.scan(src)
+
+    except DependencyResolutionError:
+        raise
 
     except CalledProcessError as err:
         if scanner.verbose:

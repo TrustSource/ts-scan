@@ -12,6 +12,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
     * Added `--composer:enableMetadataRetrieval` to enrich packages with metadata from Packagist
     * Added dependency scanning for CocoaPods projects (`Podfile.lock`)
     * Added dependency scanning for Swift Package Manager projects (`Package.swift`), ported from the now-retired [ts-spm](https://github.com/TrustSource/ts-spm) plugin
+    * Added `--pypi:extras` to include the optional dependencies of selected extras of the scanned Python project
+    * Added `--pypi:indexUrl` and `--pypi:extraIndexUrl` to resolve Python dependencies from a company package repository instead of PyPI; `${VAR}` references are replaced with environment variables, so that credentials need not be stored in the project settings
+
+### Improvements
+    * Resolved Python dependencies with `pip install --dry-run --report`, so that transitive packages are reported with the versions a user of the project would install, instead of the versions installed alongside ts-scan or no version at all (#40)
+    * Aborted the scan with exit code 2 if the Python dependencies cannot be resolved, e.g. without access to the package index, instead of reporting incomplete or wrong dependencies
+    * Read the project metadata through pip as well, so that the build backend of the scanned project is taken from the configured package index; the silent fallback to a non-isolated build is removed (#35)
+    * Reported PyPI packages under their normalized name (PEP 503), e.g. `pypi:importlib-metadata` instead of `pypi:importlib_metadata`; component keys of such packages change accordingly
+    * Replaced the `shippinglabel` and `build` dependencies with `packaging`
+
+### Fixes
+    * Stopped following Python requirements of optional extras that were not requested, e.g. documentation and test tools of dependencies such as `sphinx-lint` or `pytest` (#40)
+    * Evaluated environment markers of Python requirements, e.g. `python_version < "3.8"` or `platform_system == "Windows"` (#40)
+    * Expanded every Python package only once per requested extra and stopped at dependency cycles (#40)
+    * Applied the project settings in `tsproject.toml` to `ts-scan scan`; they were only read by commands taking a single path
 
 ## [1.9.1] - 2026-08-28
 

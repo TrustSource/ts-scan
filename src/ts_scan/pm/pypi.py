@@ -2,15 +2,22 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import os
 import re
-import build.util
+import sys
+import json
+import tempfile
+import subprocess
 import typing as t
 
 from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
 from importlib.metadata import distribution, PackageNotFoundError
-from shippinglabel.requirements import parse_requirements
+from packaging.requirements import Requirement, InvalidRequirement
+from packaging.utils import canonicalize_name
 
-from . import PackageManagerScanner, DependencyScan, Dependency, License, get_license_from_text
+from . import (PackageManagerScanner, DependencyScan, Dependency, DependencyResolutionError, ExecutableNotFoundError,
+               License, get_license_from_text)
 
 
 _supported_pkg_files = [
@@ -20,145 +27,275 @@ _supported_pkg_files = [
 
 
 class PypiScanner(PackageManagerScanner):
-    def __init__(self, **kwargs):
+    def __init__(self,
+                 extras: t.Optional[t.Tuple[str, ...]] = None,
+                 indexUrl: t.Optional[str] = None,
+                 extraIndexUrl: t.Optional[t.Tuple[str, ...]] = None,
+                 **kwargs):
         super().__init__(**kwargs)
 
-        self.__processed_deps = set()
+        self.extras = {canonicalize_name(e.strip()) for ext in extras or () for e in ext.split(',') if e.strip()}
+        self.indexUrl = indexUrl
+        self.extraIndexUrl = list(extraIndexUrl or ())
+
+        # Canonical package name -> extras for which its requirements were already followed
+        self.__expanded: t.Dict[str, t.Set[str]] = {}
+        # Canonical package name -> metadata of the resolved distribution (from 'pip install --dry-run --report')
+        self.__resolved: t.Dict[str, '_JsonMetadata'] = {}
 
     @staticmethod
     def name() -> str:
         return "PyPI"
+
+    @classmethod
+    def options(cls) -> PackageManagerScanner.OptionsType:
+        return super().options() | {
+            'extras': {
+                'type': str,
+                'required': False,
+                'multiple': True,
+                'help': 'Include optional dependencies of the given extras of the scanned project (comma-separated or repeated)'
+            },
+            'indexUrl': {
+                'type': str,
+                'required': False,
+                'help': 'Base URL of the package index (PEP 503 simple API) to resolve dependencies from instead of PyPI, '
+                        'e.g. a company repository; ${VAR} references are replaced with environment variables'
+            },
+            'extraIndexUrl': {
+                'type': str,
+                'required': False,
+                'multiple': True,
+                'help': 'Additional package index to resolve dependencies from; ${VAR} references are replaced with '
+                        'environment variables'
+            }
+        }
 
     def accepts(self, path: Path) -> bool:
         return path.is_dir() and any((path / pkg_file).exists() for pkg_file in _supported_pkg_files)
 
     def scan(self, src: t.Union[str, Path]) -> t.Iterable[DependencyScan]:
         path = Path(src)
-        metadata = _project_wheel_metadata(path)
 
-        if dep := self._create_dep_from_metadata(metadata, project_path=path):
+        self.__expanded = {}
+        self.__resolved, metadata = self._resolve(path)
+
+        if dep := self._create_dep_from_metadata(metadata, extras=self.extras, project_path=path):
             return [DependencyScan.from_dep(dep)]
         else:
             return []
 
+    def _resolve(self, path: Path) -> t.Tuple[t.Dict[str, '_JsonMetadata'], '_JsonMetadata']:
+        """
+        Resolves the dependencies of the project as 'pip install' would, without installing anything.
+        Without access to the package index the dependencies cannot be determined, the scan is aborted then.
+        :param path: Project path
+        :return: Metadata of the resolved distributions by canonical name and metadata of the project
+        """
+        index_urls = [_expand_url(url) for url in ([self.indexUrl] if self.indexUrl else []) + self.extraIndexUrl]
+
+        index_args = []
+        if self.indexUrl:
+            index_args += ['--index-url', index_urls[0]]
+        for url in index_urls[1 if self.indexUrl else 0:]:
+            index_args += ['--extra-index-url', url]
+
+        target = str(path.resolve())
+        if self.extras:
+            target += f'[{",".join(sorted(self.extras))}]'
+
+        with tempfile.TemporaryDirectory() as tmp:
+            report_file = Path(tmp) / 'report.json'
+            try:
+                self._exec('-m', 'pip', 'install', target, *index_args,
+                           '--dry-run', '--ignore-installed', '--quiet', '--no-input',
+                           '--disable-pip-version-check', '--report', str(report_file),
+                           executable_override=sys.executable,
+                           forward_args=False,
+                           capture_output=True,
+                           text=True)
+
+                with report_file.open() as fp:
+                    report = json.load(fp)
+
+            except (OSError, ValueError, ExecutableNotFoundError, subprocess.CalledProcessError) as err:
+                if isinstance(err, subprocess.CalledProcessError) and err.stderr:
+                    lines = [ln.strip() for ln in err.stderr.strip().splitlines() if ln.strip()]
+                    details = ' '.join([ln for ln in lines if ln.startswith('ERROR:')][-3:] or lines[-1:])
+                else:
+                    details = str(err)
+
+                if index_urls:
+                    sources = ', '.join(_redact_url(url) for url in index_urls)
+                else:
+                    sources = 'the index configured for pip (default: https://pypi.org/simple)'
+
+                raise DependencyResolutionError(
+                    f'Cannot resolve the {self.name()} dependencies of {path}: {details.rstrip(".")}. '
+                    f'Without access to the package sources of the project ({sources}) its transitive dependencies '
+                    f'cannot be determined. Configure the package index with --pypi:indexUrl or with '
+                    f'"pypi_indexUrl" in the tsproject.toml of the project.'
+                ) from err
+
+        resolved, project = {}, None
+        for item in report.get('install', []):
+            if (metadata := item.get('metadata')) and (name := metadata.get('name')):
+                resolved[canonicalize_name(name)] = _JsonMetadata(metadata)
+
+                if item.get('requested') and 'dir_info' in item.get('download_info', {}):
+                    project = resolved[canonicalize_name(name)]
+
+        if project is None:
+            raise DependencyResolutionError(f'Cannot resolve the {self.name()} dependencies of {path}: '
+                                            'pip did not report the project itself.')
+
+        return resolved, project
+
     def _create_dep_from_metadata(self, metadata: t.Any,
+                                  extras: t.AbstractSet[str] = frozenset(),
                                   project_path: t.Optional[Path] = None) -> Dependency:
         """
         Creates a dependency from the dist package metadate
         :param metadata: PackageMetadata
+        :param extras: Extras of the package requested by the dependent package
         :return:
         """
         name = metadata.get('Name', '')
-        key = 'pypi:' + name.lower()
+        canonical_name = canonicalize_name(name)
 
-        dep = Dependency(key=key, name=name, type='pypi')
+        dep = Dependency(key=f'pypi:{canonical_name}', name=name, type='pypi')
 
         if version := metadata.get('Version', None):
             dep.versions.append(version)
 
-        if name not in self.__processed_deps:
-            self.__processed_deps.add(name)
+        reqs = _parse_requirements(metadata.get_all('Requires-Dist', []))
 
-            dep.description = metadata.get('Summary', '')
+        if (expanded_extras := self.__expanded.get(canonical_name)) is not None:
+            # Already processed: only follow the requirements enabled by extras requested for the first time
+            if new_extras := set(extras) - expanded_extras:
+                known = {canonicalize_name(r.name) for r in _active_requirements(reqs, expanded_extras)}
+                expanded_extras.update(new_extras)
+                dep.dependencies = [d for req in _active_requirements(reqs, new_extras)
+                                    if canonicalize_name(req.name) not in known and (d := self._create_dep(req))]
+            return dep
 
-            if proj_urls := metadata.get_all('Project-URL', []):
-                for proj_url in proj_urls:
-                    proj_url = proj_url.split(',', 1)
+        self.__expanded[canonical_name] = set(extras)
 
-                    lbl = _normalize_label(proj_url[0].strip())
-                    url = proj_url[1].strip()
+        dep.description = metadata.get('Summary', '')
 
-                    if lbl in ('source', 'sources', 'repository', 'sourcecode', 'github'):
-                        dep.repoUrl = url
-                    elif lbl == 'homepage':
-                        dep.homepageUrl = url
+        if proj_urls := metadata.get_all('Project-URL', []):
+            for proj_url in proj_urls:
+                proj_url = proj_url.split(',', 1)
+
+                lbl = _normalize_label(proj_url[0].strip())
+                url = proj_url[1].strip() if len(proj_url) > 1 else ''
+
+                if lbl in ('source', 'sources', 'repository', 'sourcecode', 'github'):
+                    dep.repoUrl = url
+                elif lbl == 'homepage':
+                    dep.homepageUrl = url
+        else:
+            # Deprecated fields
+            dep.repoUrl = metadata.get('Download-URL', '') or ''
+            dep.homepageUrl = metadata.get('Home-page', '') or ''
+
+        # Use the installed distribution for files only if it is the very same version
+        dist = _find_distribution(name)
+        if dist is not None and version and dist.version != version:
+            dist = None
+
+        dist_path = None
+        dist_editable_path = None
+
+        if dist is not None:
+            # noinspection PyTypeChecker
+            site_packages = Path(str(dist.locate_file('')))
+            for file in dist.files or []:
+                if file.name == 'METADATA' and file.parent.name.endswith('.dist-info'):
+                    dist_path = site_packages / file.parent
+
+                if file.name.startswith('__editable__') and file.name.endswith('.pth'):
+                    # Open manually as dist.read_text() does not work here
+                    with (site_packages / file.name).open() as fp:
+                        dist_editable_path = fp.read().strip()
+
+        # Collect license information
+        lic_file = None
+        lic_file_info = metadata.get_all('License-File', [])
+
+        if len(lic_file_info) > 1:
+            lic_file = next((lf for lf in lic_file_info if 'license' in lf.lower()), None)
+        elif lic_file_info:
+            lic_file = lic_file_info[0]
+
+        if lic_file and dist_path is not None:
+            lic_file_path = dist_path / f'licenses/{lic_file}'
+
+            if lic_file_path.exists():
+                dep.license_file = str(lic_file_path)
             else:
-                # Deprecated fields
-                dep.repoUrl = metadata.get('Download-URL', '')
-                dep.homepageUrl = metadata.get('Home-page', '')
-
-            dist = _find_distribution(name)
-            dist_path = None
-            dist_editable_path = None
-
-            if dist is not None:
-                # noinspection PyTypeChecker
-                site_packages = Path(str(dist.locate_file('')))
-                for file in dist.files or []:
-                    if file.name == 'METADATA' and file.parent.name.endswith('.dist-info'):
-                        dist_path = site_packages / file.parent
-
-                    if file.name.startswith('__editable__') and file.name.endswith('.pth'):
-                        # Open manually as dist.read_text() does not work here
-                        with (site_packages / file.name).open() as fp:
-                            dist_editable_path = fp.read().strip()
-
-            # Collect license information
-            lic_file = None
-            lic_file_info = metadata.get_all('License-File', [])
-
-            if len(lic_file_info) > 1:
-                lic_file = next((lf for lf in lic_file_info if 'license' in lf.lower()), None)
-            elif lic_file_info:
-                lic_file = lic_file_info[0]
-
-            if lic_file and dist_path is not None:
-                lic_file_path = dist_path / f'licenses/{lic_file}'
-
+                lic_file_path = dist_path / lic_file
                 if lic_file_path.exists():
                     dep.license_file = str(lic_file_path)
-                else:
-                    lic_file_path = dist_path / lic_file
-                    if lic_file_path.exists():
-                        dep.license_file = str(lic_file_path)
-            elif project_path and (lic_file_path := _find_project_license_file(project_path, lic_file_info)):
-                dep.license_file = str(lic_file_path)
+        elif project_path and (lic_file_path := _find_project_license_file(project_path, lic_file_info)):
+            dep.license_file = str(lic_file_path)
 
-            if lic := metadata.get('License-Expression'):
-                dep.licenses.append(License(name=lic))
-            elif (lic_text := metadata.get('License')) and not dep.license_file:
-                if lics := get_license_from_text(lic_text, as_lic_text_only=False):
-                    dep.licenses.extend(License(name=lic) for lic in lics[1])
-                # If the license text is very short, it might be a license name
-                elif len(lic_text) < 30:
-                    dep.licenses.append(License(name=lic_text))
+        if lic := metadata.get('License-Expression'):
+            dep.licenses.append(License(name=lic))
+        elif (lic_text := metadata.get('License')) and not dep.license_file:
+            if lics := get_license_from_text(lic_text, as_lic_text_only=False):
+                dep.licenses.extend(License(name=lic) for lic in lics[1])
+            # If the license text is very short, it might be a license name
+            elif len(lic_text) < 30:
+                dep.licenses.append(License(name=lic_text))
 
-            # Collect package files
-            if dist_editable_path:
-                dep.package_files.append(dist_editable_path)
-            elif dist and (top_level := dist.read_text('top_level.txt')):
-                # noinspection PyTypeChecker
-                files = (Path(str(dist.locate_file(f))).resolve() for f in top_level.split('\n') if f)
-                dep.package_files.extend(str(f) for f in files if f.exists())
-            elif project_path:
-                dep.package_files.append(str(project_path.resolve()))
+        # Collect package files
+        if dist_editable_path:
+            dep.package_files.append(dist_editable_path)
+        elif dist and (top_level := dist.read_text('top_level.txt')):
+            # noinspection PyTypeChecker
+            files = (Path(str(dist.locate_file(f))).resolve() for f in top_level.split('\n') if f)
+            dep.package_files.extend(str(f) for f in files if f.exists())
+        elif project_path:
+            dep.package_files.append(str(project_path.resolve()))
 
-            # Collect dependencies
-
-            # if dist_path:
-            #     direct_url_file = dist_path / 'direct_url.json'
-            #     if direct_url_file.exists():
-            #         with direct_url_file.open() as fp:
-            #             data = json.load(fp)
-            #             if data.get('dir_info', {}).get('editable', False):
-            #                 url = data['url']
-            #                 if url.startswith('file://'):
-            #                     dep.package_files.append(urllib.parse.urlparse(url).path)
-            #                 else:
-            #                     dep.package_files.append(url)
-
-            # reqs = metadata.get_all('Requires-Dist', [])
-            if reqs := metadata.get_all('Requires-Dist', []):
-                req_pkgs = list(_extract_required_pkgs(reqs))
-                dep.dependencies = [d for pkg in req_pkgs if (d := self._create_dep(pkg))]
+        # Collect dependencies, following only requirements whose markers apply
+        dep.dependencies = [d for req in _active_requirements(reqs, extras) if (d := self._create_dep(req))]
 
         return dep
 
-    def _create_dep(self, pkg: str) -> t.Optional[Dependency]:
-        if pkg_info := _find_distribution(pkg):
-            return self._create_dep_from_metadata(pkg_info.metadata)
+    def _create_dep(self, req: Requirement) -> t.Optional[Dependency]:
+        extras = {canonicalize_name(e) for e in req.extras}
 
-        return Dependency(key=f'pypi:{pkg.lower()}', name=pkg, type='pypi')
+        if metadata := self.__resolved.get(canonicalize_name(req.name)):
+            return self._create_dep_from_metadata(metadata, extras=extras)
+
+        return Dependency(key=f'pypi:{canonicalize_name(req.name)}', name=req.name, type='pypi')
+
+
+class _JsonMetadata:
+    """
+    Read access to the JSON form of core metadata (PEP 566), as reported by pip,
+    with the interface of importlib.metadata.PackageMetadata
+    """
+    def __init__(self, data: t.Dict[str, t.Any]):
+        self.__data = data
+
+    @staticmethod
+    def __key(field: str) -> str:
+        return field.lower().replace('-', '_')
+
+    def get(self, field: str, default: t.Any = None) -> t.Any:
+        value = self.__data.get(self.__key(field), default)
+        if isinstance(value, list):
+            return value[0] if value else default
+        return value
+
+    def get_all(self, field: str, default: t.Any = None) -> t.Any:
+        value = self.__data.get(self.__key(field))
+        if value is None:
+            return default
+        return value if isinstance(value, list) else [value]
 
 
 _import_statement_regex = re.compile(r'(?:from|import) ([A-Z0-9_]+).*', flags=re.IGNORECASE)
@@ -173,9 +310,36 @@ def _extract_imported_pkgs(path: Path) -> t.List[str]:
             return []
 
 
-def _extract_required_pkgs(reqs: t.List[str]) -> t.Iterable[str]:
-    parsed_reqs, _ = parse_requirements(reqs)
-    return {req.name for req in parsed_reqs}
+def _parse_requirements(reqs: t.Iterable[str]) -> t.List[Requirement]:
+    parsed = []
+    for req in reqs:
+        try:
+            parsed.append(Requirement(req))
+        except InvalidRequirement:
+            pass
+    return parsed
+
+
+def _active_requirements(reqs: t.Iterable[Requirement], extras: t.AbstractSet[str]) -> t.List[Requirement]:
+    """
+    Selects the requirements that apply to the current environment for the given extras of the package.
+    Requirements of extras which are not requested ('extra == "..."') and requirements for other
+    platforms or Python versions are skipped.
+    """
+    envs = [{'extra': e} for e in sorted(extras)] + [{'extra': ''}]
+    active: t.Dict[str, Requirement] = {}
+
+    for req in reqs:
+        if req.marker is not None and not any(req.marker.evaluate(env) for env in envs):
+            continue
+
+        if (name := canonicalize_name(req.name)) not in active:
+            active[name] = Requirement(str(req))
+        else:
+            # The same package may be required several times, e.g. with different extras
+            active[name].extras.update(req.extras)
+
+    return list(active.values())
 
 
 def _find_distribution(name: str):
@@ -185,11 +349,25 @@ def _find_distribution(name: str):
         return None
 
 
-def _project_wheel_metadata(path: Path) -> t.Any:
-    try:
-        return build.util.project_wheel_metadata(path, isolated=True)
-    except Exception:
-        return build.util.project_wheel_metadata(path, isolated=False)
+def _expand_url(url: str) -> str:
+    """Replaces ${VAR} references, e.g. for credentials, which must not be stored in the project settings"""
+    expanded = os.path.expandvars(url)
+    if unset := re.findall(r'\$\{?(\w+)\}?', expanded):
+        raise DependencyResolutionError(f'Cannot resolve the PyPI dependencies: the environment variable(s) '
+                                        f'{", ".join(unset)} used in the package index URL {_redact_url(url)} '
+                                        f'are not set.')
+    return expanded
+
+
+def _redact_url(url: str) -> str:
+    """Hides credentials in a URL for log output"""
+    parts = urlsplit(url)
+    if parts.username or parts.password:
+        host = parts.hostname or ''
+        if parts.port:
+            host += f':{parts.port}'
+        return urlunsplit(parts._replace(netloc=f'***@{host}'))
+    return url
 
 
 def _find_project_license_file(path: Path, metadata_license_files: t.Iterable[str]) -> t.Optional[Path]:

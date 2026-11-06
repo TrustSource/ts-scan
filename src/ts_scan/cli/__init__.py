@@ -71,7 +71,12 @@ def cli(ctx, config: Path, profile: str):
 
     if args := ctx.obj['args']:
         params = parse_cmd_params_from_args(ctx.command.commands[ctx.invoked_subcommand], args.copy())
-        if path := params.get('path'):
+        path = params.get('path')
+        if path is None:
+            # 'scan' takes several sources, the project settings are read from the first local one
+            path = next((src for src in params.get('sources') or () if isinstance(src, Path)), None)
+
+        if path:
             if path.is_file():
                 try:
                     scans = load_scans(path, ctx.params.get('scan_format', scan_format_default))

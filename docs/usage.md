@@ -90,6 +90,8 @@ The `-f <output format>` option controls the output format and can be:
 - `--[npm|dart|composer]:includeDevDependencies` - Include development dependencies in the scan results
 - `--composer:includePlatformPackages` - Include the PHP platform requirements (`php`, `ext-*`, `lib-*`, `composer-*`)
 - `--[npm|cargo|composer]:enableMetadataRetrieval` - Enrich packages with metadata from the online registry
+- `--pypi:extras` - Include the optional dependencies of the given extras of the scanned project (comma-separated or repeated)
+- `--pypi:indexUrl` / `--pypi:extraIndexUrl` - Resolve Python dependencies from a company package repository instead of PyPI
 
 The full list of options including PM specific options can be printed using:
 
@@ -104,6 +106,25 @@ While scanning for Maven, Node and NuGet dependencies, ***ts-scan*** calls corre
 ```
 ts-scan scan --maven:executable /opt/local/bin/mvn <PATH>
 ```
+
+#### Python projects
+
+A Python project is detected by its `setup.py` or `pyproject.toml`. ***ts-scan*** resolves the project and its dependencies with `pip install --dry-run --ignore-installed --report`, i.e. exactly as `pip install <PATH>` would for the Python version ts-scan runs with, without installing anything. Optional extras of the project and of its dependencies are only followed if they are requested, and requirements for other platforms or Python versions are skipped.
+
+```
+ts-scan scan --pypi:extras server,postgres -o scan.json <PATH>
+```
+
+The transitive dependencies can only be determined with access to the package sources of the project. By default pip uses its own configuration (`pip.conf`, `PIP_INDEX_URL`), i.e. the public PyPI. A company package repository, e.g. a Nexus or Artifactory proxy, is configured in the `tsproject.toml` in the root of the project, so that every scan of the repository uses it:
+
+```toml
+pypi_indexUrl = "https://ci:${NEXUS_TOKEN}@nexus.example.com/repository/pypi/simple"
+# pypi_extraIndexUrl = ["https://internal.example.com/simple"]
+```
+
+`${VAR}` references are replaced with environment variables, so credentials stay out of the repository and are passed in as CI secrets; they are never written to the output. The same settings are available as `--pypi:indexUrl` and `--pypi:extraIndexUrl`. Note that an additional index allows a package of the same name from either index to be installed (dependency confusion); prefer a single repository that proxies PyPI.
+
+If the dependencies cannot be resolved, e.g. because the package index is not reachable or a package is not available there, the scan is aborted with exit code 2 and no output is written. A scan with missing or guessed versions would be wrong.
 
 #### PHP projects
 
