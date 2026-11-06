@@ -1,6 +1,6 @@
 # Installation
 
-Installation is fairly simple. We do provide a ts-scan as PIP package. To install, you will require a recent (v3.10, v3.11 or v3.12 are tested) Python version installed and pip (v22+). Generally **pip**  is already contained in your Python distribution but if not, follow pip's [installation instruction](https://pip.pypa.io/en/stable/installing/).
+Installation is fairly simple. We do provide a ts-scan as PIP package. To install, you will require a recent Python version (3.12 or newer) installed and pip (v22+). Generally **pip**  is already contained in your Python distribution but if not, follow pip's [installation instruction](https://pip.pypa.io/en/stable/installing/).
 
 
 ### Installation from the PyPI repository

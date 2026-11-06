@@ -35,7 +35,9 @@ def analyse_scan(path: Path,
     except DeepScanNotInstalledError as err:
         raise click.ClickException(str(err)) from err
 
-    from ..analyse.scanoss import analyse_scan as analyse_scan_with_scanoss
+    # SCANOSS is imported only when used, so '--disable-scanoss' works without it installed
+    if not disable_scanoss:
+        from ..analyse.scanoss import analyse_scan as analyse_scan_with_scanoss
 
     deepscan_args = list(xdeepscan)
 

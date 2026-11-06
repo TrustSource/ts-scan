@@ -2,10 +2,20 @@
 # package ecosystems to update and where the package manifests are located.
 # Please see the documentation for all configuration options:
 # https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+#
+# examples/ holds test fixtures for the scanners (Composer, NuGet, Conan, vcpkg, VB6). They are
+# input data for the tests, never installed or shipped, and some of them deliberately reference
+# outdated or vulnerable packages. Alerts for them are dismissed as "not used"; do not update them.
 
 version: 2
 updates:
   - package-ecosystem: "pip" # See documentation for possible values
     directory: "/" # Location of package manifests
+    schedule:
+      interval: "monthly"
+
+  # Keeps the actions in .github/workflows current, e.g. off deprecated Node.js runtimes
+  - package-ecosystem: "github-actions"
+    directory: "/"
     schedule:
       interval: "monthly"
