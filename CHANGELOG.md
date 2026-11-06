@@ -5,13 +5,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ## [Unreleased]
 
+### Breaking Changes
+    * The API key and base URL are tool settings: they are taken from the command line, the environment or the user settings file (`~/.ts-scan/config`) only. `api_key` and `base_url` in a project's `tsproject.toml` are ignored with a warning
+    * `ts-scan init` no longer accepts `--api-key` and `--base-url`; use the new `ts-scan configure` command instead
+
 ### New Features
+    * Added `ts-scan configure` to store the API key and base URL in a profile of the user settings file
+    * The base URL may now include the API version: `/v2` is appended only if it is missing, so both `https://api.trustsource.io` and `https://api.trustsource.io/v2` work
     * Added dependency scanning for PHP projects managed with Composer
     * Added `--composer:includeDevDependencies` to include Composer development dependencies
     * Added `--composer:includePlatformPackages` to include PHP platform requirements (`php`, `ext-*`, `lib-*`, `composer-*`) together with their well-known licenses
     * Added `--composer:enableMetadataRetrieval` to enrich packages with metadata from Packagist
     * Added dependency scanning for CocoaPods projects (`Podfile.lock`)
     * Added dependency scanning for Swift Package Manager projects (`Package.swift`), ported from the now-retired [ts-spm](https://github.com/TrustSource/ts-spm) plugin
+
+### Security
+    * `ts-scan init` and the default user config are now created readable by the owner only (`0600`)
+    * A scanned directory can no longer redirect API calls: a `base_url` in its `tsproject.toml` previously sent the user's API key to an arbitrary endpoint
+    * The user settings file is kept owner-only (`0600`) when `ts-scan configure` updates it
 
 ## [1.9.1] - 2026-08-28
 

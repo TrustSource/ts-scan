@@ -5,6 +5,17 @@ import typing as t
 from copy import copy
 from pathlib import Path
 
+DEFAULT_BASE_URL = 'https://api.trustsource.io/v2'
+API_VERSION_SUFFIX = '/v2'
+
+
+def normalize_base_url(base_url: str) -> str:
+    """Returns the base URL ending with the API version, appending '/v2' if it is missing."""
+    base_url = base_url.rstrip('/')
+    if not base_url.endswith(API_VERSION_SUFFIX):
+        base_url += API_VERSION_SUFFIX
+    return base_url
+
 
 class TrustSourceAPI:
     class Error(Exception):
@@ -18,7 +29,7 @@ class TrustSourceAPI:
             super().__init__(msg)
 
     def __init__(self, base_url: str, api_key: str):
-        self.__base_url = base_url
+        self.__base_url = normalize_base_url(base_url)
         self.__headers = {
             'Content-Type': 'application/json',
             'user-agent': f'ts-scan/1.1.0',
@@ -26,23 +37,22 @@ class TrustSourceAPI:
             # 'X-APIKEY': api_key
         }
 
+    @property
+    def base_url(self) -> str:
+        return self.__base_url
+
     def _post(self,
               path: str,
               headers: t.Optional[dict] = None,
               data: t.Optional[t.Any] = None,
               json_data: t.Optional[dict] = None,
-              params: t.Optional[dict] = None,
-              base_url=None) -> dict:
-
-        if not base_url:
-            base_url = self.__base_url
-
+              params: t.Optional[dict] = None) -> dict:
         _headers = copy(self.__headers)
 
         if headers:
             _headers.update(headers)
 
-        resp = requests.post(f'{base_url}/{path}',
+        resp = requests.post(f'{self.__base_url}/{path}',
                              json=json_data,
                              data=data,
                              headers=_headers,
@@ -69,15 +79,15 @@ class TrustSourceAPI:
             raise TrustSourceAPI.Error(resp.text)
 
     def upload_scan(self, data: dict) -> dict:
-        return self._post('v2/core/scans', json_data=data)
+        return self._post('core/scans', json_data=data)
 
     def find_cves(self, comps: t.List[str]) -> t.List[dict]:
-        return self._post('v2/vulnerabilities/cveFindByKey', json_data={
+        return self._post('vulnerabilities/cveFindByKey', json_data={
             'comps': [{'key': comp} for comp in comps]
         }).get('comps', [])
 
     def check_components(self, proj_name: str, mod_name: str, comps: t.List[dict]) -> dict:
-        return self._post('v2/compliance/check/component', json_data={
+        return self._post('compliance/check/component', json_data={
             'projectName': proj_name,
             'moduleName': mod_name,
             'components': comps
@@ -85,7 +95,7 @@ class TrustSourceAPI:
 
     def import_sbom(self, sbom_path: Path, sbom_format: str, params: dict) -> dict:
         with sbom_path.open('r') as fp:
-            return self._post(f'v2/core/imports/scan/{sbom_format}', data=fp.read(), params=params)
+            return self._post(f'core/imports/scan/{sbom_format}', data=fp.read(), params=params)
 
     def get_analysis_results(self, scan_id: str) -> dict:
-        return self._get(f'v2/core/scans/{scan_id}')
+        return self._get(f'core/scans/{scan_id}')
