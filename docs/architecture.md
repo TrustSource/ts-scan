@@ -39,6 +39,27 @@ We currently do not provide such an image. It would be quiet large and we do not
 
 
 
+## Configuration Layers
+
+*ts-scan* separates two kinds of settings:
+
+| Layer | Location | Contents | Decided by |
+|---|---|---|---|
+| Tool settings | command line, environment, user settings file `~/.ts-scan/config` (profiles) | `api_key`, `base_url` | whoever runs *ts-scan* (developer, CI) |
+| Project settings | `tsproject.toml` in the scanned directory | `project_name`, scan options | the scanned repository |
+
+Tool settings are resolved once at start-up and passed to the API client, which normalizes the base URL to end with the API version (`/v2`). Project settings are merged in afterwards through a single loader that drops tool settings.
+
+## Architecture Decision Records
+
+### ADR-001: API endpoint and key are tool settings only (2026-11-02, v2.0.0)
+
+**Context:** project settings from the scanned directory were merged into the option defaults without restriction. A `tsproject.toml` in a foreign repository could set `base_url` and thereby send the API key of the user or CI pipeline to an endpoint of its choice.
+
+**Decision:** `api_key` and `base_url` are taken from the command line, the environment or the user settings file only. The project settings loader ignores them with a warning. `ts-scan init` no longer accepts them; the new `ts-scan configure` command writes them to a profile of the user settings file. The base URL carries the API version, API paths do not.
+
+**Consequences:** breaking change for projects that kept the key or a custom endpoint in `tsproject.toml`; they have to move it to the user settings file, the environment or the command line. A scanned repository can still choose the project name.
+
 ## Further development
 
 It is possible - and highly desired - to extend **ts-scan** with additional package management systems. In the [developer's guide](/ts-scan/guidelines) we describe how simple it is, to extend it using the plugin mechanism of Python.
