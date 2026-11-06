@@ -20,6 +20,11 @@ _default_config_location = '~/.ts-scan/config'
 # never from the project settings of a scanned directory
 TOOL_ONLY_OPTIONS = ('api_key', 'base_url')
 
+# Options which run programs or write files: a scanned directory must not set them either,
+# otherwise scanning a foreign repository executes code chosen by that repository
+EXECUTION_OPTIONS = ('output_path', 'node_enableLifecycleScripts')
+EXECUTION_OPTION_SUFFIXES = ('_executable', '_forward')
+
 msg = Printer(line_max=240, colors={'info': 'cyan'})
 
 
@@ -153,7 +158,27 @@ def _load_project_config(path: Path) -> dict:
             msg.warn(f"Ignoring '{key}' in {cfg_path}: the API endpoint and key are only taken from "
                      "the command line, the environment or the ts-scan config (see 'ts-scan configure')")
 
+    for key in list(proj_cfg):
+        if key in EXECUTION_OPTIONS or key.endswith(EXECUTION_OPTION_SUFFIXES):
+            del proj_cfg[key]
+            msg.warn(f"Ignoring '{key}' in {cfg_path}: options which run programs or write files are only "
+                     "taken from the command line, the environment or the ts-scan config")
+
+        elif _references_environment(proj_cfg[key]):
+            # Expanded values would be sent to an endpoint chosen by the scanned directory, e.g. an index URL
+            del proj_cfg[key]
+            msg.warn(f"Ignoring '{key}' in {cfg_path}: environment variables are only expanded in values from "
+                     "the command line, the environment or the ts-scan config")
+
     return proj_cfg
+
+
+def _references_environment(value: t.Any) -> bool:
+    if isinstance(value, str):
+        return '$' in value
+    if isinstance(value, (list, tuple)):
+        return any(_references_environment(v) for v in value)
+    return False
 
 
 def api_default_options(project_name=True, is_project_name_required=True, project_name_help_hint='',
