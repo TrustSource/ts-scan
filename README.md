@@ -1,4 +1,4 @@
-![Supported Versions](https://img.shields.io/badge/Python-%203.10,%203.11,%203.12-blue) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/TrustSource/ts-scan/badge)](https://scorecard.dev/viewer/?uri=github.com/TrustSource/ts-scan) ![License](https://img.shields.io/badge/License-Apache--2.0-green)
+![Supported Versions](https://img.shields.io/badge/Python-%203.12,%203.13,%203.14-blue) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/TrustSource/ts-scan/badge)](https://scorecard.dev/viewer/?uri=github.com/TrustSource/ts-scan) ![License](https://img.shields.io/badge/License-Apache--2.0-green)
 
 # TrustSource Scanner
 
@@ -19,7 +19,7 @@ The **ts-scan** can be seamlessly integrated into CI/CD pipelines, enabling auto
 
 ## Installation
 
-**ts-scan** is available as a *PyPI* package. To install, you will require a recent *Python (>= 3.10)* version installed and *pip (>=22.0)*. Generally *pip* is already contained in your *Python* distribution but if not, follow pip's [installation instruction](https://pip.pypa.io/en/stable/installing/).
+**ts-scan** is available as a *PyPI* package. To install, you will require a recent *Python (>= 3.12)* version installed and *pip (>=22.0)*. Generally *pip* is already contained in your *Python* distribution but if not, follow pip's [installation instruction](https://pip.pypa.io/en/stable/installing/).
 
 ### Installation from the PyPI repository
 
