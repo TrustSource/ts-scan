@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
     * `ts-scan init` and the default user config are now created readable by the owner only (`0600`)
     * A scanned directory can no longer redirect API calls: a `base_url` in its `tsproject.toml` previously sent the user's API key to an arbitrary endpoint
     * The user settings file is kept owner-only (`0600`) when `ts-scan configure` updates it
+    * Updated all GitHub Actions to current versions without the deprecated Node.js 20 runtime, and replaced the third-party Bandit action, which pulled `actions/upload-artifact@main` unpinned, with a direct Bandit run; Dependabot now also keeps the actions up to date
 
 ## [1.9.1] - 2026-08-28
 
