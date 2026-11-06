@@ -94,11 +94,13 @@ class PypiScanner(PackageManagerScanner):
         """
         index_urls = [_expand_url(url) for url in ([self.indexUrl] if self.indexUrl else []) + self.extraIndexUrl]
 
-        index_args = []
+        # Index URLs may contain credentials: pass them in the environment, not as arguments,
+        # which are visible in the process list and in the representation of a CalledProcessError
+        env = dict(os.environ)
         if self.indexUrl:
-            index_args += ['--index-url', index_urls[0]]
-        for url in index_urls[1 if self.indexUrl else 0:]:
-            index_args += ['--extra-index-url', url]
+            env['PIP_INDEX_URL'] = index_urls[0]
+        if extra_urls := index_urls[1 if self.indexUrl else 0:]:
+            env['PIP_EXTRA_INDEX_URL'] = ' '.join(extra_urls)
 
         target = str(path.resolve())
         if self.extras:
@@ -107,21 +109,23 @@ class PypiScanner(PackageManagerScanner):
         with tempfile.TemporaryDirectory() as tmp:
             report_file = Path(tmp) / 'report.json'
             try:
-                self._exec('-m', 'pip', 'install', target, *index_args,
+                self._exec('-m', 'pip', 'install', target,
                            '--dry-run', '--ignore-installed', '--quiet', '--no-input',
                            '--disable-pip-version-check', '--report', str(report_file),
                            executable_override=sys.executable,
                            forward_args=False,
                            capture_output=True,
-                           text=True)
+                           text=True,
+                           env=env)
 
                 with report_file.open() as fp:
                     report = json.load(fp)
 
             except (OSError, ValueError, ExecutableNotFoundError, subprocess.CalledProcessError) as err:
-                if isinstance(err, subprocess.CalledProcessError) and err.stderr:
-                    lines = [ln.strip() for ln in err.stderr.strip().splitlines() if ln.strip()]
+                if isinstance(err, subprocess.CalledProcessError):
+                    lines = [ln.strip() for ln in (err.stderr or '').strip().splitlines() if ln.strip()]
                     details = ' '.join([ln for ln in lines if ln.startswith('ERROR:')][-3:] or lines[-1:])
+                    details = _redact_urls(details) or f'pip exited with code {err.returncode}'
                 else:
                     details = str(err)
 
@@ -368,6 +372,11 @@ def _redact_url(url: str) -> str:
             host += f':{parts.port}'
         return urlunsplit(parts._replace(netloc=f'***@{host}'))
     return url
+
+
+def _redact_urls(text: str) -> str:
+    """Hides credentials of all URLs in a text, e.g. in pip messages"""
+    return re.sub(r'(\w+://)[^/@\s]+@', r'\1***@', text)
 
 
 def _find_project_license_file(path: Path, metadata_license_files: t.Iterable[str]) -> t.Optional[Path]:

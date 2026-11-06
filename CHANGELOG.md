@@ -13,7 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
     * Added dependency scanning for CocoaPods projects (`Podfile.lock`)
     * Added dependency scanning for Swift Package Manager projects (`Package.swift`), ported from the now-retired [ts-spm](https://github.com/TrustSource/ts-spm) plugin
     * Added `--pypi:extras` to include the optional dependencies of selected extras of the scanned Python project
-    * Added `--pypi:indexUrl` and `--pypi:extraIndexUrl` to resolve Python dependencies from a company package repository instead of PyPI; `${VAR}` references are replaced with environment variables, so that credentials need not be stored in the project settings
+    * Added `--pypi:indexUrl` and `--pypi:extraIndexUrl` to resolve Python dependencies from a company package repository instead of PyPI; `${VAR}` references are replaced with environment variables, so that credentials need not be stored in the project settings; index URLs are passed to pip in the environment and redacted in all messages
 
 ### Improvements
     * Resolved Python dependencies with `pip install --dry-run --report`, so that transitive packages are reported with the versions a user of the project would install, instead of the versions installed alongside ts-scan or no version at all (#40)

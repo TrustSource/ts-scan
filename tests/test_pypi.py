@@ -52,14 +52,17 @@ def fake_pip(monkeypatch):
     def _install(install=None, stderr=None):
         def _exec(self, *args, **kwargs):
             calls.append(list(args))
+            envs.append(kwargs.get('env') or {})
             if stderr is not None:
-                raise subprocess.CalledProcessError(1, 'pip', stderr=stderr)
+                raise subprocess.CalledProcessError(1, ['python', *args], stderr=stderr)
             report = Path(args[list(args).index('--report') + 1])
             report.write_text(json.dumps({'version': '1', 'install': install or []}))
 
         monkeypatch.setattr(PypiScanner, '_exec', _exec)
         return calls
 
+    envs = []
+    _install.envs = envs
     return _install
 
 
@@ -214,7 +217,8 @@ def test_scan_ignores_installed_files_of_a_different_version(scan_with):
     assert click.license_file is None
 
 
-def test_scan_resolves_the_project_and_its_dependencies_with_pip(fake_pip, tmp_path):
+def test_scan_resolves_the_project_and_its_dependencies_with_pip(fake_pip, monkeypatch, tmp_path):
+    monkeypatch.delenv('PIP_INDEX_URL', raising=False)
     calls = fake_pip([
         _item('my-app', '1.0', 'click>=8.1', project=True),
         _item('click', '8.5.1'),
@@ -228,7 +232,7 @@ def test_scan_resolves_the_project_and_its_dependencies_with_pip(fake_pip, tmp_p
     args = calls[0]
     assert args[:4] == ['-m', 'pip', 'install', f'{tmp_path.resolve()}[dev]']
     assert {'--dry-run', '--ignore-installed'} <= set(args)
-    assert '--index-url' not in args
+    assert 'PIP_INDEX_URL' not in fake_pip.envs[0]
 
 
 def test_scan_uses_the_configured_package_indexes(fake_pip, monkeypatch, tmp_path):
@@ -238,9 +242,11 @@ def test_scan_uses_the_configured_package_indexes(fake_pip, monkeypatch, tmp_pat
     PypiScanner(indexUrl='https://ci:${NEXUS_TOKEN}@nexus.example.com/repository/pypi/simple',
                 extraIndexUrl=('https://internal.example.com/simple',)).scan(tmp_path)
 
-    args = calls[0]
-    assert args[args.index('--index-url') + 1] == 'https://ci:s3cr3t@nexus.example.com/repository/pypi/simple'
-    assert args[args.index('--extra-index-url') + 1] == 'https://internal.example.com/simple'
+    env = fake_pip.envs[0]
+    assert env['PIP_INDEX_URL'] == 'https://ci:s3cr3t@nexus.example.com/repository/pypi/simple'
+    assert env['PIP_EXTRA_INDEX_URL'] == 'https://internal.example.com/simple'
+    # Credentials are not passed as arguments, which are visible in the process list
+    assert not any('s3cr3t' in arg for arg in calls[0])
 
 
 def test_scan_aborts_when_a_variable_in_the_index_url_is_not_set(fake_pip, monkeypatch, tmp_path):
@@ -307,7 +313,18 @@ def test_scan_reads_the_package_index_from_the_project_settings(fake_pip, monkey
     result = CliRunner().invoke(cli, ['scan', '-o', str(tmp_path / 'scan.json'), str(project)])
 
     assert result.exit_code == 0, result.output
-    args = calls[0]
-    assert args[args.index('--index-url') + 1] == 'https://ci:s3cr3t@nexus.example.com/simple'
-    assert [args[i + 1] for i, a in enumerate(args) if a == '--extra-index-url'] == \
-        ['https://a.example.com/simple', 'https://b.example.com/simple']
+    env = fake_pip.envs[0]
+    assert env['PIP_INDEX_URL'] == 'https://ci:s3cr3t@nexus.example.com/simple'
+    assert env['PIP_EXTRA_INDEX_URL'] == 'https://a.example.com/simple https://b.example.com/simple'
+
+
+@pytest.mark.parametrize('stderr', ['', 'ERROR: 401 Client Error for url: https://ci:s3cr3t@nexus.example.com/simple/click/\n'])
+def test_resolution_errors_never_contain_credentials(fake_pip, monkeypatch, tmp_path, stderr):
+    monkeypatch.setenv('NEXUS_TOKEN', 's3cr3t')
+    fake_pip(stderr=stderr)
+
+    with pytest.raises(DependencyResolutionError) as err:
+        PypiScanner(indexUrl='https://ci:${NEXUS_TOKEN}@nexus.example.com/simple').scan(tmp_path)
+
+    assert 's3cr3t' not in str(err.value)
+    assert 'pip exited with code 1' in str(err.value) if not stderr else 'https://***@nexus.example.com' in str(err.value)
