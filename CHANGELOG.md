@@ -20,11 +20,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
     * Added dependency scanning for CocoaPods projects (`Podfile.lock`)
     * Added dependency scanning for Swift Package Manager projects (`Package.swift`), ported from the now-retired [ts-spm](https://github.com/TrustSource/ts-spm) plugin
 
+### Fixes
+    * `ts-scan analyse --disable-scanoss` no longer requires SCANOSS to be installed
+
 ### Security
     * `ts-scan init` and the default user config are now created readable by the owner only (`0600`)
     * A scanned directory can no longer redirect API calls: a `base_url` in its `tsproject.toml` previously sent the user's API key to an arbitrary endpoint
     * The user settings file is kept owner-only (`0600`) when `ts-scan configure` updates it
     * Updated all GitHub Actions to current versions without the deprecated Node.js 20 runtime, and replaced the third-party Bandit action, which pulled `actions/upload-artifact@main` unpinned, with a direct Bandit run; all actions are pinned to a full commit SHA, which Dependabot now also keeps up to date
+    * Added a test workflow running the test suite on Python 3.12, 3.13 and 3.14
 
 ## [1.9.1] - 2026-08-28
 
