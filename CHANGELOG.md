@@ -29,6 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
     * Read the project metadata through pip as well, so that the build backend of the scanned project is taken from the configured package index; the silent fallback to a non-isolated build is removed (#35)
     * Replaced the `shippinglabel` and `build` dependencies with `packaging`
     * Aborted the pip dependency resolution of Python scans after 10 minutes instead of waiting forever on an unreachable package index, and redacted credentials in pip messages also if the URL has no scheme (`user:password@host`)
+    * API requests to TrustSource time out after 60 seconds instead of waiting forever; set `TS_REQUEST_TIMEOUT` (seconds) to change the limit. A timeout is reported as an API error
 
 ### Fixes
     * Stopped following Python requirements of optional extras that were not requested, e.g. documentation and test tools of dependencies such as `sphinx-lint` or `pytest` (#40)

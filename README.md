@@ -150,6 +150,8 @@ The base URL may be given with or without the API version: `/v2` is appended onl
 
 **Note**: the API key and the base URL are *tool settings*. They are taken from the command line, the environment (e.g. `TS_UPLOAD_API_KEY`, `TS_UPLOAD_BASE_URL`) or the user settings file only, and are fixed when **ts-scan** starts. A scanned project cannot change them (see [Init](#init)). The same applies to options that run programs or write files (`--<pm>:executable`, `--<pm>:forward`, `-o/--output`, `--node:enableLifecycleScripts`) and to values that reference environment variables (`${VAR}`).
 
+**Note**: requests to the TrustSource API time out after 60 seconds. If large uploads need longer, set the environment variable `TS_REQUEST_TIMEOUT` to the limit in seconds, e.g. `export TS_REQUEST_TIMEOUT=180`.
+
 ## Init
 
 The **init** command initializes a TrustSource project. It creates a project settings file `tsproject.toml` in the provided directory, which stores the project name, so it does not have to be passed every time a new scan is uploaded.
