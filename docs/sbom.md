@@ -26,9 +26,9 @@ PLEASE NOTE: The ```<path to the project directory>``` may also point to the nam
 
 **ts-scan** contains some general options as well as options that only apply while scanning specific package types. The package specific options are prefixed by the type of the package management system. We use the [Package URL Type](https://github.com/package-url/purl-spec/blob/master/PURL-TYPES.rst) as a prefix. The following options are valid for most supported package management system:
 
-* ```--[maven|npm|nuget|pypi]:ignore``` - Disable scanning dependencies of the type   
-* ```--[maven|npm|nuget]:executable``` - Specify a path to the PM executable
-* ```--[maven|npm|nuget]:forward``` - Forward arguments to the PM's executable
+* ```--[maven|node|nuget|pypi]:ignore``` - Disable scanning dependencies of the type   
+* ```--[maven|node|nuget]:executable``` - Specify a path to the PM executable
+* ```--[maven|node|nuget]:forward``` - Forward arguments to the PM's executable
 * ```--nuget:separateProjectScans``` - For a solution, create one scan per project using the project as the module
 
 The full list of options including PM specific options can be printed using:

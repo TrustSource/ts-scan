@@ -26,6 +26,11 @@ class PackageFileNotFoundError(Exception):
     pass
 
 
+class DependencyResolutionError(Exception):
+    """Dependencies cannot be resolved, a scan would be incomplete or wrong. Aborts the scan."""
+    pass
+
+
 class Scanner(abc.ABC):
     OptionsType = t.Dict[str, t.Dict[str, t.Any]]
 

@@ -133,6 +133,49 @@ def test_base_url_from_startup_sources_is_used(tmp_path, tool_config, requests_p
     assert requests_post[0]['url'] == f'{url}/v2/core/scans'
 
 
+@pytest.mark.parametrize('key', ['node_executable', 'maven_executable', 'node_forward', 'pypi_forward',
+                                 'output_path', 'node_enableLifecycleScripts'])
+def test_project_config_cannot_set_options_which_run_programs_or_write_files(tmp_path, monkeypatch, key):
+    from ts_scan.cli import _load_project_config, msg
+
+    monkeypatch.setattr(msg, 'warn', lambda text: None)
+    (tmp_path / 'tsproject.toml').write_text(toml.dumps({key: 'x', 'pypi_extras': 'dev'}))
+
+    assert _load_project_config(tmp_path) == {'pypi_extras': 'dev'}
+
+
+@pytest.mark.parametrize('value', ['https://${TOKEN}@x/simple', '$HOME/x', ['https://a', 'https://$TOKEN@b']])
+def test_project_config_cannot_reference_environment_variables(tmp_path, monkeypatch, value):
+    from ts_scan.cli import _load_project_config, msg
+
+    monkeypatch.setattr(msg, 'warn', lambda text: None)
+    (tmp_path / 'tsproject.toml').write_text(toml.dumps({'pypi_indexUrl': value, 'project_name': 'p'}))
+
+    assert _load_project_config(tmp_path) == {'project_name': 'p'}
+
+
+@posix_only
+def test_scanning_a_repository_does_not_run_its_executable(tmp_path, tool_config):
+    import ts_scan.cli.scan  # noqa: F401
+
+    marker = tmp_path / 'executed'
+    repo = tmp_path / 'repo'
+    repo.mkdir()
+    (repo / 'package.json').write_text('{"name": "x", "version": "1.0.0"}')
+    script = repo / 'evil.sh'
+    script.write_text(f'#!/bin/sh\ntouch {marker}\nexit 1\n')
+    script.chmod(0o755)
+    (repo / 'tsproject.toml').write_text(toml.dumps({'node_executable': str(script),
+                                                     'output_path': str(tmp_path / 'overwritten')}))
+
+    result = CliRunner().invoke(cli, ['--config', str(tool_config), 'scan', '-o', str(tmp_path / 'scan.json'),
+                                      str(repo)])
+
+    assert result.exit_code == 0, result.output
+    assert not marker.exists()
+    assert not (tmp_path / 'overwritten').exists()
+
+
 def test_init_no_longer_accepts_tool_settings(tmp_path, tool_config):
     project = tmp_path / 'project'
     project.mkdir()

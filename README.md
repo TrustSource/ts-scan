@@ -148,7 +148,9 @@ ts-scan -p dev configure --api-key <API key from the Dev account> --base-url htt
 
 The base URL may be given with or without the API version: `/v2` is appended only if it is missing.
 
-**Note**: the API key and the base URL are *tool settings*. They are taken from the command line, the environment (e.g. `TS_UPLOAD_API_KEY`, `TS_UPLOAD_BASE_URL`) or the user settings file only, and are fixed when **ts-scan** starts. A scanned project cannot change them (see [Init](#init)).
+**Note**: the API key and the base URL are *tool settings*. They are taken from the command line, the environment (e.g. `TS_UPLOAD_API_KEY`, `TS_UPLOAD_BASE_URL`) or the user settings file only, and are fixed when **ts-scan** starts. A scanned project cannot change them (see [Init](#init)). The same applies to options that run programs or write files (`--<pm>:executable`, `--<pm>:forward`, `-o/--output`, `--node:enableLifecycleScripts`) and to values that reference environment variables (`${VAR}`).
+
+**Note**: requests to the TrustSource API time out after 60 seconds. If large uploads need longer, set the environment variable `TS_REQUEST_TIMEOUT` to the limit in seconds, e.g. `export TS_REQUEST_TIMEOUT=180`.
 
 ## Init
 
@@ -160,9 +162,15 @@ To initialize a project, use:
 ts-scan init --project-name <TrustSource project name> <path to the project directory>
 ```
 
-**Note**: the project settings describe *what* is scanned, never *where* the results go. `api_key` and `base_url` in a `tsproject.toml` are ignored with a warning, so a scanned repository cannot redirect your API key to another endpoint. Store them with [configure](#user-settings) or pass them on the command line or in the environment.
+**Note**: the project settings describe *what* is scanned, never *where* the results go or *which programs* run. A scanned repository may be foreign, so the following entries in its `tsproject.toml` are ignored with a warning:
 
-**Note**: the project settings override the user settings file and the explicitly passed command line options override the project settings.
+* `api_key` and `base_url`, so it cannot redirect your API key to another endpoint,
+* options that run programs or write files: `<pm>_executable`, `<pm>_forward`, `output_path` and `node_enableLifecycleScripts`, so it cannot make **ts-scan** execute code of its choice,
+* values that reference environment variables (`$VAR`, `${VAR}`), so it cannot send your environment, e.g. CI secrets, to an endpoint of its choice.
+
+Store such settings with [configure](#user-settings), in the user settings file, or pass them on the command line or in the environment.
+
+**Note**: the project settings override the user settings file; the environment (`TS_<COMMAND>_<OPTION>`, e.g. `TS_SCAN_PYPI_INDEXURL`) and the explicitly passed command line options override the project settings.
 
 ## Scan
 
@@ -187,7 +195,7 @@ The ```-f <output format>``` option controls the output format and can be:
 
 | Ecosystem              | Detected by                        | Resolved from                        | Executable required |
 |------------------------|------------------------------------|--------------------------------------|---------------------|
-| PyPI                   | ```setup.py```, ```pyproject.toml``` | Package metadata                   | no                  |
+| PyPI                   | ```setup.py```, ```pyproject.toml``` | ```pip install --dry-run --report``` | ```pip``` and access to the package index |
 | Maven                  | ```pom.xml```                      | ```mvn dependency:tree```            | ```mvn```           |
 | Gradle                 | ```build.gradle[.kts]```           | ```gradle dependencies```            | ```gradle```        |
 | NPM                    | ```package.json```                 | ```package-lock.json```              | ```npm``` (to create the lockfile) |
@@ -205,13 +213,15 @@ The ```-f <output format>``` option controls the output format and can be:
 
 **ts-scan** contains some general options as well as options that only apply while scanning specific package types. The package specific options are prefixed by the type of the package management system. We use the [Package URL Type](https://github.com/package-url/purl-spec/blob/master/PURL-TYPES.rst) as a prefix. The following options are valid for most supported package management system:
 
-* ```--[maven|gradle|npm|nuget|pypi|dart|swift|composer|cocoapods|vb6]:ignore``` - Disable scanning dependencies of the type
-* ```--[maven|gradle|npm|nuget|dart|swift|composer]:executable``` - Specify a path to the PM executable
-* ```--[maven|gradle|npm|nuget|dart|swift|composer]:forward``` - Forward arguments to the PM's executable
+* ```--[maven|gradle|node|nuget|pypi|dart|swift|composer|cocoapods|vb6]:ignore``` - Disable scanning dependencies of the type
+* ```--[maven|gradle|node|nuget|dart|swift|composer]:executable``` - Specify a path to the PM executable
+* ```--[maven|gradle|node|nuget|dart|swift|composer]:forward``` - Forward arguments to the PM's executable
 * ```--nuget:separateProjectScans``` - For a solution, create one scan per project using the project as the module
-* ```--[npm|dart|composer]:includeDevDependencies``` - Include development dependencies in the scan results
+* ```--[node|dart|composer]:includeDevDependencies``` - Include development dependencies in the scan results
 * ```--composer:includePlatformPackages``` - Include the PHP platform requirements (```php```, ```ext-*```, ```lib-*```, ```composer-*```)
-* ```--[npm|cargo|composer]:enableMetadataRetrieval``` - Enrich packages with metadata from the online registry
+* ```--[node|cargo|composer]:enableMetadataRetrieval``` - Enrich packages with metadata from the online registry
+* ```--pypi:extras``` - Include the optional dependencies of the given extras of the scanned project (comma-separated or repeated)
+* ```--pypi:indexUrl``` / ```--pypi:extraIndexUrl``` - Resolve Python dependencies from a company package repository instead of PyPI
 
 The full list of options including PM specific options can be printed using:
 
@@ -226,6 +236,34 @@ While scanning for  Maven, Node and NuGet dependencies, ***ts-scan*** calls corr
 ```shell
 ts-scan scan --maven:executable /opt/local/bin/mvn <PATH>
 ```
+
+Executable paths and forwarded parameters are tool settings: they are taken from the command line, the environment or the user settings file, never from the `tsproject.toml` of the scanned project.
+
+#### Python projects
+
+A Python project is detected by its ```setup.py``` or ```pyproject.toml```. **ts-scan** resolves the project and its dependencies with ```pip install --dry-run --ignore-installed --report```, i.e. exactly as ```pip install <PATH>``` would for the Python version ts-scan runs with, without installing anything. Optional extras of the project and of its dependencies are only followed if they are requested, and requirements for other platforms or Python versions are skipped.
+
+```shell
+ts-scan scan --pypi:extras server,postgres -o scan.json <PATH>
+```
+
+The transitive dependencies can only be determined with access to the package sources of the project. By default pip uses its own configuration (```pip.conf```, ```PIP_INDEX_URL```), i.e. the public PyPI. A company package repository, e.g. a Nexus or Artifactory proxy, can be configured in the ```tsproject.toml``` in the root of the project, so that every scan of the repository uses it:
+
+```toml
+pypi_indexUrl = "https://nexus.example.com/repository/pypi/simple"
+# pypi_extraIndexUrl = ["https://internal.example.com/simple"]
+```
+
+Credentials do not belong into the repository. The project settings may therefore not reference environment variables; such values are ignored with a warning. Provide an index that requires authentication as a tool setting instead, where ```${VAR}``` references are replaced with environment variables, e.g. with a CI secret:
+
+```shell
+export TS_SCAN_PYPI_INDEXURL='https://ci:${NEXUS_TOKEN}@nexus.example.com/repository/pypi/simple'
+ts-scan scan -o scan.json <PATH>
+```
+
+The same is possible with ```--pypi:indexUrl``` / ```--pypi:extraIndexUrl``` on the command line; both the command line and the environment override the project settings. An index in the user settings file applies to projects that configure none. Alternatively, pip takes the credentials for a host from ```~/.netrc``` or a keyring. **ts-scan** passes the index URLs to pip in the environment and never writes credentials to its output. Note that an additional index allows a package of the same name from either index to be installed (dependency confusion); prefer a single repository that proxies PyPI.
+
+If the dependencies cannot be resolved, e.g. because the package index is not reachable or a package is not available there, the scan is aborted with exit code 2 and no output is written. A scan with missing or guessed versions would be wrong.
 
 #### PHP projects
 

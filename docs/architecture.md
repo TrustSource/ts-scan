@@ -45,10 +45,10 @@ We currently do not provide such an image. It would be quiet large and we do not
 
 | Layer | Location | Contents | Decided by |
 |---|---|---|---|
-| Tool settings | command line, environment, user settings file `~/.ts-scan/config` (profiles) | `api_key`, `base_url` | whoever runs *ts-scan* (developer, CI) |
-| Project settings | `tsproject.toml` in the scanned directory | `project_name`, scan options | the scanned repository |
+| Tool settings | command line, environment, user settings file `~/.ts-scan/config` (profiles) | `api_key`, `base_url`; options that run programs or write files (`<pm>_executable`, `<pm>_forward`, `output_path`, `node_enableLifecycleScripts`); values with environment references (`${VAR}`), e.g. an index URL with credentials | whoever runs *ts-scan* (developer, CI) |
+| Project settings | `tsproject.toml` in the scanned directory | `project_name`, scan options, e.g. `pypi_indexUrl` without credentials | the scanned repository |
 
-Tool settings are resolved once at start-up and passed to the API client, which normalizes the base URL to end with the API version (`/v2`). Project settings are merged in afterwards through a single loader that drops tool settings.
+Tool settings are resolved once at start-up and passed to the API client, which normalizes the base URL to end with the API version (`/v2`). Project settings are merged in afterwards through a single loader (`_load_project_config`) that drops everything a scanned repository must not decide, with a warning. Precedence: command line > environment > project settings > user settings file.
 
 ## Architecture Decision Records
 
@@ -59,6 +59,14 @@ Tool settings are resolved once at start-up and passed to the API client, which 
 **Decision:** `api_key` and `base_url` are taken from the command line, the environment or the user settings file only. The project settings loader ignores them with a warning. `ts-scan init` no longer accepts them; the new `ts-scan configure` command writes them to a profile of the user settings file. The base URL carries the API version, API paths do not.
 
 **Consequences:** breaking change for projects that kept the key or a custom endpoint in `tsproject.toml`; they have to move it to the user settings file, the environment or the command line. A scanned repository can still choose the project name.
+
+### ADR-002: Project settings cannot run programs, write files or read the environment (2026-11-06, v2.0.0)
+
+**Context:** `ts-scan scan` did not read the `tsproject.toml` of the scanned directory at all, because the loader looked for a `path` argument and `scan` takes `sources`. Fixing that, to allow a company package index per project (`pypi_indexUrl`, #40), would have let a foreign repository set `node_executable` or `<pm>_forward` and thereby run a program of its choice, overwrite files through `output_path`, enable npm lifecycle scripts, or send environment variables (e.g. CI secrets) to an index of its choice through `${VAR}` references, which the PyPI scanner expands in index URLs.
+
+**Decision:** the project settings loader drops `<pm>_executable`, `<pm>_forward`, `output_path` and `node_enableLifecycleScripts`, and every value that contains `$`, with a warning. They are tool settings like the API key (ADR-001). An index URL without credentials may stay in the project settings; credentials are provided as a tool setting, e.g. `TS_SCAN_PYPI_INDEXURL` from a CI secret, or through pip's `~/.netrc` or keyring.
+
+**Consequences:** projects that set executables, forwarded parameters or an output file in `tsproject.toml` have to move them to the user settings file, the environment or the command line. A scanned Python project still runs its build backend while pip prepares its metadata; scanning untrusted Python projects requires an isolated environment such as the ts-scan container.
 
 ## Further development
 

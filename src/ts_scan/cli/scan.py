@@ -13,7 +13,7 @@ from .. import (msg,
                 do_scan_with_syft,
                 process_scan)
 
-from ..pm import dump_scans, ExecutableNotFoundError
+from ..pm import dump_scans, ExecutableNotFoundError, DependencyResolutionError
 
 
 @cli.command('scan', help='Scans a target and determines its composition')
@@ -64,7 +64,7 @@ def scan_dependencies(sources: t.List[t.Union[Path, str]],
                 if urls:
                     yield from do_scan_with_syft(urls, verbose=verbose, **kwargs)
 
-        except ExecutableNotFoundError as err:
+        except (ExecutableNotFoundError, DependencyResolutionError) as err:
             msg.fail(err)
             exit(2)
 

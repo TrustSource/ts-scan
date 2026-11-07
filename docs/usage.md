@@ -83,13 +83,15 @@ The `-f <output format>` option controls the output format and can be:
 
 **ts-scan** contains some general options as well as options that only apply while scanning specific package types. The package specific options are prefixed by the type of the package management system. We use the [Package URL Type](https://github.com/package-url/purl-spec/blob/master/PURL-TYPES.rst) as a prefix. The following options are valid for most supported package management system:
 
-- `--[maven|npm|nuget|pypi|dart|composer|vb6]:ignore` - Disable scanning dependencies of the type
-- `--[maven|npm|nuget|dart|composer]:executable` - Specify a path to the PM executable
-- `--[maven|npm|nuget|dart|composer]:forward` - Forward arguments to the PM's executable
+- `--[maven|node|nuget|pypi|dart|composer|vb6]:ignore` - Disable scanning dependencies of the type
+- `--[maven|node|nuget|dart|composer]:executable` - Specify a path to the PM executable
+- `--[maven|node|nuget|dart|composer]:forward` - Forward arguments to the PM's executable
 - `--nuget:separateProjectScans` - For a solution, create one scan per project using the project as the module
-- `--[npm|dart|composer]:includeDevDependencies` - Include development dependencies in the scan results
+- `--[node|dart|composer]:includeDevDependencies` - Include development dependencies in the scan results
 - `--composer:includePlatformPackages` - Include the PHP platform requirements (`php`, `ext-*`, `lib-*`, `composer-*`)
-- `--[npm|cargo|composer]:enableMetadataRetrieval` - Enrich packages with metadata from the online registry
+- `--[node|cargo|composer]:enableMetadataRetrieval` - Enrich packages with metadata from the online registry
+- `--pypi:extras` - Include the optional dependencies of the given extras of the scanned project (comma-separated or repeated)
+- `--pypi:indexUrl` / `--pypi:extraIndexUrl` - Resolve Python dependencies from a company package repository instead of PyPI
 
 The full list of options including PM specific options can be printed using:
 
@@ -104,6 +106,32 @@ While scanning for Maven, Node and NuGet dependencies, ***ts-scan*** calls corre
 ```
 ts-scan scan --maven:executable /opt/local/bin/mvn <PATH>
 ```
+
+#### Python projects
+
+A Python project is detected by its `setup.py` or `pyproject.toml`. ***ts-scan*** resolves the project and its dependencies with `pip install --dry-run --ignore-installed --report`, i.e. exactly as `pip install <PATH>` would for the Python version ts-scan runs with, without installing anything. Optional extras of the project and of its dependencies are only followed if they are requested, and requirements for other platforms or Python versions are skipped.
+
+```
+ts-scan scan --pypi:extras server,postgres -o scan.json <PATH>
+```
+
+The transitive dependencies can only be determined with access to the package sources of the project. By default pip uses its own configuration (`pip.conf`, `PIP_INDEX_URL`), i.e. the public PyPI. A company package repository, e.g. a Nexus or Artifactory proxy, can be configured in the `tsproject.toml` in the root of the project, so that every scan of the repository uses it:
+
+```toml
+pypi_indexUrl = "https://nexus.example.com/repository/pypi/simple"
+# pypi_extraIndexUrl = ["https://internal.example.com/simple"]
+```
+
+Credentials do not belong into the repository. The project settings may therefore not reference environment variables; such values are ignored with a warning. Provide an index that requires authentication as a tool setting instead, where `${VAR}` references are replaced with environment variables, e.g. with a CI secret:
+
+```shell
+export TS_SCAN_PYPI_INDEXURL='https://ci:${NEXUS_TOKEN}@nexus.example.com/repository/pypi/simple'
+ts-scan scan -o scan.json <PATH>
+```
+
+The same is possible with `--pypi:indexUrl` / `--pypi:extraIndexUrl` on the command line; both the command line and the environment override the project settings. An index in the user settings file applies to projects that configure none. Alternatively, pip takes the credentials for a host from `~/.netrc` or a keyring. ***ts-scan*** passes the index URLs to pip in the environment and never writes credentials to its output. Note that an additional index allows a package of the same name from either index to be installed (dependency confusion); prefer a single repository that proxies PyPI.
+
+If the dependencies cannot be resolved, e.g. because the package index is not reachable or a package is not available there, the scan is aborted with exit code 2 and no output is written. A scan with missing or guessed versions would be wrong.
 
 #### PHP projects
 
@@ -125,7 +153,7 @@ ts-scan scan --maven:foward --settings,customSettings.xml <PATH>
 
 #### Configuring private Repositories as source
 
-It is possible to pass arguments or complete configurations to the package manager. This may be useful in case you want it to use a private registry instead the public one, for example. The `--[maven|npm|nuget]:forward` - option allows to pass arguments to the package manager's executable.
+It is possible to pass arguments or complete configurations to the package manager. This may be useful in case you want it to use a private registry instead the public one, for example. The `--[maven|node|nuget]:forward` - option allows to pass arguments to the package manager's executable.
 
 ### Other options
 

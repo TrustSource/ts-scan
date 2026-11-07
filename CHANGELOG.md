@@ -3,11 +3,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.0.0] - 2026-11-06
 
 ### Breaking Changes
     * The API key and base URL are tool settings: they are taken from the command line, the environment or the user settings file (`~/.ts-scan/config`) only. `api_key` and `base_url` in a project's `tsproject.toml` are ignored with a warning
     * `ts-scan init` no longer accepts `--api-key` and `--base-url`; use the new `ts-scan configure` command instead
+    * Options that run programs or write files (`<pm>_executable`, `<pm>_forward`, `output_path`, `node_enableLifecycleScripts`) and values referencing environment variables are ignored with a warning in a project's `tsproject.toml`; pass them on the command line, in the environment or in the user settings file
+    * Python scans abort with exit code 2 if the dependencies cannot be resolved, e.g. without access to the package index, instead of reporting incomplete or wrong dependencies
+    * PyPI packages are reported under their normalized name (PEP 503), e.g. `pypi:importlib-metadata` instead of `pypi:importlib_metadata`; component keys of such packages change accordingly
 
 ### New Features
     * Added `ts-scan configure` to store the API key and base URL in a profile of the user settings file
@@ -18,11 +21,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
     * Added `--composer:enableMetadataRetrieval` to enrich packages with metadata from Packagist
     * Added dependency scanning for CocoaPods projects (`Podfile.lock`)
     * Added dependency scanning for Swift Package Manager projects (`Package.swift`), ported from the now-retired [ts-spm](https://github.com/TrustSource/ts-spm) plugin
+    * Added `--pypi:extras` to include the optional dependencies of selected extras of the scanned Python project
+    * Added `--pypi:indexUrl` and `--pypi:extraIndexUrl` to resolve Python dependencies from a company package repository instead of PyPI, also configurable per project in `tsproject.toml`; in tool settings `${VAR}` references are replaced with environment variables, e.g. for credentials from a CI secret; index URLs are passed to pip in the environment and redacted in all messages
+
+### Improvements
+    * Resolved Python dependencies with `pip install --dry-run --report`, so that transitive packages are reported with the versions a user of the project would install, instead of the versions installed alongside ts-scan or no version at all (#40)
+    * Read the project metadata through pip as well, so that the build backend of the scanned project is taken from the configured package index; the silent fallback to a non-isolated build is removed (#35)
+    * Replaced the `shippinglabel` and `build` dependencies with `packaging`
+    * Aborted the pip dependency resolution of Python scans after 10 minutes instead of waiting forever on an unreachable package index, and redacted credentials in pip messages also if the URL has no scheme (`user:password@host`)
+    * API requests to TrustSource time out after 60 seconds instead of waiting forever; set `TS_REQUEST_TIMEOUT` (seconds) to change the limit. A timeout is reported as an API error
+
+### Fixes
+    * Stopped following Python requirements of optional extras that were not requested, e.g. documentation and test tools of dependencies such as `sphinx-lint` or `pytest` (#40)
+    * Evaluated environment markers of Python requirements, e.g. `python_version < "3.8"` or `platform_system == "Windows"` (#40)
+    * Expanded every Python package only once per requested extra and stopped at dependency cycles (#40)
+    * Applied the project settings in `tsproject.toml` to `ts-scan scan`; they were only read by commands taking a single path
 
 ### Security
     * `ts-scan init` and the default user config are now created readable by the owner only (`0600`)
     * A scanned directory can no longer redirect API calls: a `base_url` in its `tsproject.toml` previously sent the user's API key to an arbitrary endpoint
     * The user settings file is kept owner-only (`0600`) when `ts-scan configure` updates it
+    * A scanned directory can no longer make ts-scan run programs, write files or send environment variables to an endpoint of its choice through its `tsproject.toml`
 
 ## [1.9.1] - 2026-08-28
 
