@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
     * Resolved Python dependencies with `pip install --dry-run --report`, so that transitive packages are reported with the versions a user of the project would install, instead of the versions installed alongside ts-scan or no version at all (#40)
     * Read the project metadata through pip as well, so that the build backend of the scanned project is taken from the configured package index; the silent fallback to a non-isolated build is removed (#35)
     * Replaced the `shippinglabel` and `build` dependencies with `packaging`
+    * Aborted the pip dependency resolution of Python scans after 10 minutes instead of waiting forever on an unreachable package index, and redacted credentials in pip messages also if the URL has no scheme (`user:password@host`)
 
 ### Fixes
     * Stopped following Python requirements of optional extras that were not requested, e.g. documentation and test tools of dependencies such as `sphinx-lint` or `pytest` (#40)

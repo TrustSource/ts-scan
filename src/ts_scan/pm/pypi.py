@@ -25,6 +25,9 @@ _supported_pkg_files = [
     'pyproject.toml'
 ]
 
+# Upper bound for the pip resolution: an unreachable package index must not block the scan forever
+PIP_TIMEOUT_SECONDS = 600
+
 
 class PypiScanner(PackageManagerScanner):
     def __init__(self,
@@ -116,13 +119,17 @@ class PypiScanner(PackageManagerScanner):
                            forward_args=False,
                            capture_output=True,
                            text=True,
-                           env=env)
+                           env=env,
+                           timeout=PIP_TIMEOUT_SECONDS)
 
                 with report_file.open() as fp:
                     report = json.load(fp)
 
-            except (OSError, ValueError, ExecutableNotFoundError, subprocess.CalledProcessError) as err:
-                if isinstance(err, subprocess.CalledProcessError):
+            except (OSError, ValueError, ExecutableNotFoundError, subprocess.CalledProcessError,
+                    subprocess.TimeoutExpired) as err:
+                if isinstance(err, subprocess.TimeoutExpired):
+                    details = f'pip did not finish within {PIP_TIMEOUT_SECONDS} seconds'
+                elif isinstance(err, subprocess.CalledProcessError):
                     lines = [ln.strip() for ln in (err.stderr or '').strip().splitlines() if ln.strip()]
                     details = ' '.join([ln for ln in lines if ln.startswith('ERROR:')][-3:] or lines[-1:])
                     details = _redact_urls(details) or f'pip exited with code {err.returncode}'
@@ -375,8 +382,10 @@ def _redact_url(url: str) -> str:
 
 
 def _redact_urls(text: str) -> str:
-    """Hides credentials of all URLs in a text, e.g. in pip messages"""
-    return re.sub(r'(\w+://)[^/@\s]+@', r'\1***@', text)
+    """Hides credentials of all URLs in a text, e.g. in pip messages, also if the scheme is missing"""
+    text = re.sub(r'(\w+://)[^/@\s]+@', r'\1***@', text)
+    # user:password@host without a scheme; a colon is required, so that 'git@host' stays readable
+    return re.sub(r'(?<![^\s(\'"])[^\s/@:\'"()]+:[^\s/@]+@', '***@', text)
 
 
 def _find_project_license_file(path: Path, metadata_license_files: t.Iterable[str]) -> t.Optional[Path]:

@@ -283,10 +283,47 @@ def test_scan_aborts_on_resolution_failure_with_the_default_index(fake_pip, tmp_
         PypiScanner().scan(tmp_path)
 
 
+def test_scan_aborts_when_pip_does_not_finish_in_time(fake_pip, monkeypatch, tmp_path):
+    monkeypatch.setattr(PypiScanner, '_exec',
+                        lambda self, *args, **kwargs: (_ for _ in ()).throw(
+                            subprocess.TimeoutExpired(['python', *args], kwargs['timeout'])))
+
+    with pytest.raises(DependencyResolutionError, match=f'did not finish within {pypi.PIP_TIMEOUT_SECONDS} seconds'):
+        PypiScanner().scan(tmp_path)
+
+
+def test_pip_is_called_with_a_timeout(monkeypatch, tmp_path):
+    seen = {}
+
+    def _exec(self, *args, **kwargs):
+        seen.update(kwargs)
+        Path(args[list(args).index('--report') + 1]).write_text(
+            json.dumps({'version': '1', 'install': [_item('my-app', '1.0', project=True)]}))
+
+    monkeypatch.setattr(PypiScanner, '_exec', _exec)
+    PypiScanner().scan(tmp_path)
+
+    assert seen['timeout'] == pypi.PIP_TIMEOUT_SECONDS
+
+
 def test_redact_url_hides_credentials():
     assert _redact_url('https://user:pw@host:8443/simple') == 'https://***@host:8443/simple'
     assert _redact_url('https://token@host/simple') == 'https://***@host/simple'
     assert _redact_url('https://host/simple') == 'https://host/simple'
+
+
+def test_redact_urls_hides_credentials_with_and_without_scheme():
+    assert pypi._redact_urls('ERROR: 401 for https://user:pw@host/simple') == 'ERROR: 401 for https://***@host/simple'
+    assert pypi._redact_urls('proxy error: user:pw@proxy.example.com:3128 refused') == \
+        'proxy error: ***@proxy.example.com:3128 refused'
+    assert pypi._redact_urls("cannot reach 'ci:s3cr3t@nexus.example.com'") == "cannot reach '***@nexus.example.com'"
+
+
+def test_redact_urls_keeps_text_without_credentials_readable():
+    assert pypi._redact_urls('git@github.com:org/repo.git') == 'git@github.com:org/repo.git'
+    assert pypi._redact_urls('ERROR: No matching distribution found for click>=8.1') == \
+        'ERROR: No matching distribution found for click>=8.1'
+    assert pypi._redact_urls('contact: admin@example.com') == 'contact: admin@example.com'
 
 
 def test_resolution_failure_aborts_the_whole_scan(fake_pip, tmp_path):
